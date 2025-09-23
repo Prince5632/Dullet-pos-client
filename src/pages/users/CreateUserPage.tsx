@@ -189,7 +189,7 @@ const CreateUserPage: React.FC = () => {
           {/* Profile Photo Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-gray-900">Profile Photo</h3>
-            <div className="flex items-center space-x-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
               <div className="relative">
                 {profilePhotoPreview ? (
                   <div className="relative">

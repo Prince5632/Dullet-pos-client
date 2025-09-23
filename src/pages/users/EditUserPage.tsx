@@ -7,8 +7,8 @@ import {
   ArrowLeftIcon,
   CameraIcon,
   XMarkIcon,
-  PhotoIcon,
 } from '@heroicons/react/24/outline';
+
 import { userService } from '../../services/userService';
 import { roleService } from '../../services/roleService';
 import type { UpdateUserForm, User, Role } from '../../types';
@@ -67,10 +67,9 @@ const EditUserPage: React.FC = () => {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-    setValue,
     reset,
   } = useForm<UpdateUserForm>({
-    resolver: yupResolver(editUserSchema),
+    resolver: yupResolver(editUserSchema) as any,
     mode: 'onBlur',
   });
 
@@ -227,7 +226,7 @@ const EditUserPage: React.FC = () => {
           {/* Profile Photo Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-gray-900">Profile Photo</h3>
-            <div className="flex items-center space-x-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
               <div className="relative">
                 {profilePhotoPreview ? (
                   <div className="relative">

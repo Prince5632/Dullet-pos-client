@@ -118,6 +118,98 @@ class UserService {
     }
   }
 
+  // Deactivate user (soft delete)
+  async deactivateUser(id: string): Promise<void> {
+    const response = await apiService.delete(API_CONFIG.ENDPOINTS.USER_BY_ID(id));
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to deactivate user');
+    }
+  }
+
+  // Bulk operations
+  async bulkActivateUsers(userIds: string[]): Promise<void> {
+    const promises = userIds.map(id => this.activateUser(id));
+    await Promise.all(promises);
+  }
+
+  async bulkDeactivateUsers(userIds: string[]): Promise<void> {
+    const promises = userIds.map(id => this.deactivateUser(id));
+    await Promise.all(promises);
+  }
+
+  async bulkDeleteUsers(userIds: string[]): Promise<void> {
+    const promises = userIds.map(id => this.deleteUser(id));
+    await Promise.all(promises);
+  }
+
+  // Change user password (admin function)
+  async changeUserPassword(id: string, newPassword: string): Promise<void> {
+    const response = await apiService.put(`${API_CONFIG.ENDPOINTS.USER_BY_ID(id)}/password`, {
+      password: newPassword
+    });
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to change user password');
+    }
+  }
+
+  // Get user activity/audit logs
+  async getUserActivity(id: string, params: { page?: number; limit?: number } = {}): Promise<any> {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const url = `${API_CONFIG.ENDPOINTS.USER_BY_ID(id)}/activity?${queryParams.toString()}`;
+    return await apiService.get(url);
+  }
+
+  // Export users to CSV
+  async exportUsers(filters: UserListParams = {}): Promise<Blob> {
+    const queryParams = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const url = `${API_CONFIG.ENDPOINTS.USERS}/export?${queryParams.toString()}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to export users');
+    }
+
+    return await response.blob();
+  }
+
+  // Import users from CSV
+  async importUsers(file: File): Promise<{ success: number; failed: number; errors: string[] }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await apiService.post<{ success: number; failed: number; errors: string[] }>(
+      `${API_CONFIG.ENDPOINTS.USERS}/import`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error(response.message || 'Failed to import users');
+  }
+
   // Get departments list
   getDepartments(): string[] {
     return ['Sales', 'Production', 'Management', 'Admin', 'Warehouse', 'Finance'];

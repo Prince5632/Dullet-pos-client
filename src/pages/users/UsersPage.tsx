@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   MagnifyingGlassIcon,
@@ -9,6 +9,9 @@ import {
   TrashIcon,
   UserPlusIcon,
   UserMinusIcon,
+  ArrowUpTrayIcon,
+  Squares2X2Icon,
+  DocumentArrowDownIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import { userService } from '../../services/userService';
@@ -31,6 +34,7 @@ interface UserListFilters {
 
 const UsersPage: React.FC = () => {
   const { user: currentUser } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // State
   const [users, setUsers] = useState<User[]>([]);
@@ -44,6 +48,13 @@ const UsersPage: React.FC = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   // Filters
   const [filters, setFilters] = useState<UserListFilters>({
@@ -158,7 +169,7 @@ const UsersPage: React.FC = () => {
   const handleToggleUserStatus = async (user: User) => {
     try {
       if (user.isActive) {
-        // Deactivate logic would go here
+        await userService.deactivateUser(user._id);
         toast.success('User deactivated successfully');
       } else {
         await userService.activateUser(user._id);
@@ -181,8 +192,142 @@ const UsersPage: React.FC = () => {
     setCurrentPage(1);
   };
 
+  // Selection handlers
+  const handleSelectUser = (userId: string) => {
+    const newSelected = new Set(selectedUsers);
+    if (newSelected.has(userId)) {
+      newSelected.delete(userId);
+    } else {
+      newSelected.add(userId);
+    }
+    setSelectedUsers(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedUsers.size === users.length) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(users.map(user => user._id)));
+    }
+  };
+
+  // Bulk operations
+  const handleBulkActivate = async () => {
+    try {
+      setBulkActionLoading(true);
+      await userService.bulkActivateUsers(Array.from(selectedUsers));
+      toast.success(`${selectedUsers.size} users activated successfully`);
+      setSelectedUsers(new Set());
+      loadUsers();
+    } catch (error) {
+      console.error('Failed to activate users:', error);
+      toast.error('Failed to activate users');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkDeactivate = async () => {
+    try {
+      setBulkActionLoading(true);
+      await userService.bulkDeactivateUsers(Array.from(selectedUsers));
+      toast.success(`${selectedUsers.size} users deactivated successfully`);
+      setSelectedUsers(new Set());
+      loadUsers();
+    } catch (error) {
+      console.error('Failed to deactivate users:', error);
+      toast.error('Failed to deactivate users');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      setBulkActionLoading(true);
+      await userService.bulkDeleteUsers(Array.from(selectedUsers));
+      toast.success(`${selectedUsers.size} users deleted successfully`);
+      setSelectedUsers(new Set());
+      loadUsers();
+    } catch (error) {
+      console.error('Failed to delete users:', error);
+      toast.error('Failed to delete users');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  // Export/Import handlers
+  const handleExportUsers = async () => {
+    try {
+      setExportLoading(true);
+      const blob = await userService.exportUsers(filters);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `users_export_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      toast.success('Users exported successfully');
+    } catch (error) {
+      console.error('Failed to export users:', error);
+      toast.error('Failed to export users');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleImportFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+        toast.error('Please select a CSV file');
+        return;
+      }
+      setImportFile(file);
+    }
+  };
+
+  const handleImportUsers = async () => {
+    if (!importFile) return;
+
+    try {
+      setImportLoading(true);
+      const result = await userService.importUsers(importFile);
+      toast.success(`Import completed: ${result.success} users imported, ${result.failed} failed`);
+      
+      if (result.errors.length > 0) {
+        console.error('Import errors:', result.errors);
+        toast.error(`${result.errors.length} errors occurred during import`);
+      }
+      
+      setImportModalOpen(false);
+      setImportFile(null);
+      loadUsers();
+    } catch (error) {
+      console.error('Failed to import users:', error);
+      toast.error('Failed to import users');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   // Table columns
   const columns: TableColumn<User>[] = [
+    {
+      key: 'select',
+      label: 'Select',
+      render: (_, user) => (
+        <input
+          type="checkbox"
+          checked={selectedUsers.has(user._id)}
+          onChange={() => handleSelectUser(user._id)}
+          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+      ),
+    },
     {
       key: 'user',
       label: 'User',
@@ -313,7 +458,44 @@ const UsersPage: React.FC = () => {
             Manage users, their roles, and permissions across your organization.
           </p>
         </div>
-        <div className="mt-4 sm:mt-0">
+        <div className="mt-4 sm:mt-0 flex flex-wrap items-center gap-2 sm:gap-3">
+          {/* Export Button */}
+          <button
+            onClick={handleExportUsers}
+            disabled={exportLoading}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {exportLoading ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+            ) : (
+              <DocumentArrowDownIcon className="h-4 w-4 mr-2" />
+            )}
+            Export
+          </button>
+
+          {/* Import Button */}
+          <button
+            onClick={() => setImportModalOpen(true)}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          >
+            <ArrowUpTrayIcon className="h-4 w-4 mr-2" />
+            Import
+          </button>
+
+          {/* Bulk Actions Toggle */}
+          <button
+            onClick={() => setShowBulkActions(!showBulkActions)}
+            className={`inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium transition-colors ${
+              showBulkActions
+                ? 'text-blue-700 bg-blue-50 border-blue-300'
+                : 'text-gray-700 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <Squares2X2Icon className="h-4 w-4 mr-2" />
+            Bulk Actions
+          </button>
+
+          {/* Add User Button */}
           <Link
             to="/users/create"
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
@@ -388,18 +570,76 @@ const UsersPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Bulk Actions Panel */}
+      {showBulkActions && selectedUsers.size > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <span className="text-sm font-medium text-blue-900">
+                {selectedUsers.size} user{selectedUsers.size !== 1 ? 's' : ''} selected
+              </span>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handleBulkActivate}
+                  disabled={bulkActionLoading}
+                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-green-700 bg-green-100 hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <UserPlusIcon className="h-3 w-3 mr-1" />
+                  Activate
+                </button>
+                <button
+                  onClick={handleBulkDeactivate}
+                  disabled={bulkActionLoading}
+                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-orange-700 bg-orange-100 hover:bg-orange-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <UserMinusIcon className="h-3 w-3 mr-1" />
+                  Deactivate
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={bulkActionLoading}
+                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <TrashIcon className="h-3 w-3 mr-1" />
+                  Delete
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setSelectedUsers(new Set())}
+              className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+            >
+              Clear Selection
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Results Summary */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-700">
-          {loading ? (
-            'Loading...'
-          ) : (
-            <>
-              Showing {users.length} of {totalUsers} users
-              {hasActiveFilters && ' (filtered)'}
-            </>
+        <div className="flex items-center space-x-4">
+          <p className="text-sm text-gray-700">
+            {loading ? (
+              'Loading...'
+            ) : (
+              <>
+                Showing {users.length} of {totalUsers} users
+                {hasActiveFilters && ' (filtered)'}
+              </>
+            )}
+          </p>
+          {showBulkActions && users.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={selectedUsers.size === users.length && users.length > 0}
+                onChange={handleSelectAll}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <label className="text-sm text-gray-700">Select All</label>
+            </div>
           )}
-        </p>
+        </div>
       </div>
 
       {/* Table */}
@@ -460,6 +700,79 @@ const UsersPage: React.FC = () => {
               className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
             >
               Delete User
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Import Users Modal */}
+      <Modal
+        isOpen={importModalOpen}
+        onClose={() => {
+          setImportModalOpen(false);
+          setImportFile(null);
+        }}
+        title="Import Users"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div>
+            <p className="text-gray-600 mb-4">
+              Upload a CSV file to import multiple users at once. The CSV file should include the following columns:
+            </p>
+            <div className="bg-gray-50 rounded-md p-3 mb-4">
+              <code className="text-sm text-gray-800">
+                firstName, lastName, email, phone, password, roleId, department, position
+              </code>
+            </div>
+            <p className="text-sm text-gray-500">
+              Make sure all required fields are provided and email addresses are unique.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select CSV File
+            </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleImportFileSelect}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            {importFile && (
+              <p className="mt-2 text-sm text-gray-600">
+                Selected: {importFile.name}
+              </p>
+            )}
+          </div>
+          
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={() => {
+                setImportModalOpen(false);
+                setImportFile(null);
+              }}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleImportUsers}
+              disabled={!importFile || importLoading}
+              className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {importLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Importing...
+                </>
+              ) : (
+                'Import Users'
+              )}
             </button>
           </div>
         </div>

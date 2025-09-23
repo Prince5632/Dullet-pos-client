@@ -12,6 +12,9 @@ import {
   BuildingOfficeIcon,
   IdentificationIcon,
   ShieldCheckIcon,
+  KeyIcon,
+  ClockIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 import { userService } from '../../services/userService';
 import type { User } from '../../types';
@@ -30,6 +33,13 @@ const UserDetailsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [showActivity, setShowActivity] = useState(false);
 
   // Load user data
   useEffect(() => {
@@ -96,6 +106,57 @@ const UserDetailsPage: React.FC = () => {
     }
   };
 
+  // Password reset handler
+  const handlePasswordReset = async () => {
+    if (!user) return;
+
+    if (newPassword !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters long');
+      return;
+    }
+
+    try {
+      setPasswordLoading(true);
+      await userService.changeUserPassword(user._id, newPassword);
+      toast.success('Password changed successfully');
+      setPasswordModalOpen(false);
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      console.error('Failed to change password:', error);
+      toast.error('Failed to change password');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  // Load user activity
+  const loadUserActivity = async () => {
+    if (!user) return;
+
+    try {
+      setActivityLoading(true);
+      const activity = await userService.getUserActivity(user._id, { limit: 20 });
+      setActivityLogs(activity.data || []);
+    } catch (error) {
+      console.error('Failed to load activity:', error);
+      toast.error('Failed to load user activity');
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showActivity && user) {
+      loadUserActivity();
+    }
+  }, [showActivity, user]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-96">
@@ -150,6 +211,14 @@ const UserDetailsPage: React.FC = () => {
               <UserPlusIcon className="h-4 w-4 mr-2" />
             )}
             {user.isActive ? 'Deactivate' : 'Activate'}
+          </button>
+
+          <button
+            onClick={() => setPasswordModalOpen(true)}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+          >
+            <KeyIcon className="h-4 w-4 mr-2" />
+            Reset Password
           </button>
 
           <Link
@@ -267,17 +336,17 @@ const UserDetailsPage: React.FC = () => {
                 </div>
                 
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Failed Login Attempts</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{user.failedLoginAttempts || 0}</dd>
+                  <dt className="text-sm font-medium text-gray-500">Two-Factor Auth</dt>
+                  <dd className="mt-1">
+                    <Badge variant={user.isTwoFactorEnabled ? 'success' : 'default'}>
+                      {user.isTwoFactorEnabled ? 'Enabled' : 'Disabled'}
+                    </Badge>
+                  </dd>
                 </div>
                 
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Account Locked</dt>
-                  <dd className="mt-1">
-                    <Badge variant={user.isLocked ? 'error' : 'success'}>
-                      {user.isLocked ? 'Locked' : 'Not Locked'}
-                    </Badge>
-                  </dd>
+                  <dt className="text-sm font-medium text-gray-500">Last Login IP</dt>
+                  <dd className="mt-1 text-sm text-gray-900">{user.lastLoginIP || 'N/A'}</dd>
                 </div>
               </dl>
             </div>
@@ -323,6 +392,48 @@ const UserDetailsPage: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/* User Activity */}
+          <div className="bg-white shadow-sm rounded-lg border border-gray-200">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
+              <button
+                onClick={() => setShowActivity(!showActivity)}
+                className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+              >
+                <ClockIcon className="h-4 w-4 mr-1" />
+                {showActivity ? 'Hide' : 'Show'} Activity
+              </button>
+            </div>
+            {showActivity && (
+              <div className="p-6">
+                {activityLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span className="ml-3 text-gray-600">Loading activity...</span>
+                  </div>
+                ) : activityLogs.length > 0 ? (
+                  <div className="space-y-4">
+                    {activityLogs.map((log, index) => (
+                      <div key={index} className="flex items-start space-x-3 py-3 border-b border-gray-100 last:border-b-0">
+                        <div className="flex-shrink-0">
+                          <DocumentTextIcon className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-900">{log.description}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {formatDateTime(log.timestamp)} • {log.module}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-8">No activity recorded</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -357,6 +468,89 @@ const UserDetailsPage: React.FC = () => {
               className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {actionLoading ? 'Deleting...' : 'Delete User'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Password Reset Modal */}
+      <Modal
+        isOpen={passwordModalOpen}
+        onClose={() => {
+          setPasswordModalOpen(false);
+          setNewPassword('');
+          setConfirmPassword('');
+        }}
+        title="Reset User Password"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">
+            Reset the password for{' '}
+            <span className="font-medium">
+              {user?.firstName} {user?.lastName}
+            </span>
+            . The user will be notified of the new password.
+          </p>
+
+          <div>
+            <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
+              New Password
+            </label>
+            <input
+              type="password"
+              id="newPassword"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter new password"
+              minLength={8}
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Password must be at least 8 characters long
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+              Confirm Password
+            </label>
+            <input
+              type="password"
+              id="confirmPassword"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Confirm new password"
+            />
+          </div>
+          
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={() => {
+                setPasswordModalOpen(false);
+                setNewPassword('');
+                setConfirmPassword('');
+              }}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handlePasswordReset}
+              disabled={passwordLoading || !newPassword || !confirmPassword}
+              className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {passwordLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Resetting...
+                </>
+              ) : (
+                'Reset Password'
+              )}
             </button>
           </div>
         </div>
