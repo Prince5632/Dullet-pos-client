@@ -7,6 +7,9 @@ import toast from 'react-hot-toast';
 class ApiService {
   private api: AxiosInstance;
   private token: string | null = null;
+  private refreshPromise: Promise<string> | null = null;
+  private isRefreshing: boolean = false;
+  private requestCache: Map<string, Promise<any>> = new Map();
 
   constructor() {
     this.api = axios.create({
@@ -43,17 +46,42 @@ class ApiService {
       async (error) => {
         const originalRequest = error.config;
 
-        // Handle 401 errors (unauthorized)
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // Handle 401 errors (unauthorized) - but avoid infinite loops
+        if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('refresh-token')) {
           originalRequest._retry = true;
           
-          // Try to refresh token
+          // Prevent multiple simultaneous refresh attempts
+          if (this.isRefreshing) {
+            try {
+              // Wait for the ongoing refresh to complete
+              if (this.refreshPromise) {
+                const newToken = await this.refreshPromise;
+                originalRequest.headers.Authorization = `Bearer ${newToken}`;
+                return this.api(originalRequest);
+              }
+            } catch (refreshError) {
+              return Promise.reject(refreshError);
+            }
+          }
+
+          // Start token refresh process
+          this.isRefreshing = true;
+          this.refreshPromise = this.performTokenRefresh();
+
           try {
-            await this.refreshToken();
-            return this.api(originalRequest);
+            const newToken = await this.refreshPromise;
+            if (newToken) {
+              // Retry original request with new token
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              return this.api(originalRequest);
+            }
           } catch (refreshError) {
+            console.error('Token refresh failed:', refreshError);
             this.handleAuthError();
             return Promise.reject(refreshError);
+          } finally {
+            this.isRefreshing = false;
+            this.refreshPromise = null;
           }
         }
 
@@ -71,11 +99,59 @@ class ApiService {
     }
   }
 
+  private saveTokenToStorage(token: string) {
+    localStorage.setItem('auth_token', token);
+  }
+
+  private clearTokenFromStorage() {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
+  }
+
+  private getRefreshTokenFromStorage(): string | null {
+    return localStorage.getItem('refresh_token');
+  }
+
+  private async performTokenRefresh(): Promise<string> {
+    try {
+      const refreshToken = this.getRefreshTokenFromStorage();
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
+      }
+
+      // Create a new axios instance to avoid interceptor loops
+      const refreshApi = axios.create({
+        baseURL: API_CONFIG.BASE_URL,
+        timeout: REQUEST_CONFIG.TIMEOUT,
+      });
+
+      const response = await refreshApi.post(API_CONFIG.ENDPOINTS.REFRESH_TOKEN, {
+        refreshToken,
+      });
+
+      if (response.data.success && response.data.data.token) {
+        const newToken = response.data.data.token;
+        this.setToken(newToken);
+        this.saveTokenToStorage(newToken);
+        return newToken;
+      }
+
+      throw new Error('Token refresh failed');
+    } catch (error) {
+      this.handleAuthError();
+      throw error;
+    }
+  }
+
   private handleAuthError() {
     this.clearToken();
-    toast.error('Session expired. Please login again.');
-    // Redirect to login page
-    window.location.href = '/login';
+    this.clearTokenFromStorage();
+    
+    // Only show toast and redirect if not already on login page
+    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+      toast.error('Session expired. Please login again.');
+      window.location.href = '/login';
+    }
   }
 
   private handleApiError(error: any) {

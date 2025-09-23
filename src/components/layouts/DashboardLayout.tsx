@@ -12,7 +12,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import type { NavItem } from '../../types';
 import Sidebar from '../navigation/Sidebar';
-import TopBar from '../navigation/TopBar';
+import TopBar from '../navigation/TopBar.tsx';
 
 // Navigation items with permissions
 const navigationItems: NavItem[] = [

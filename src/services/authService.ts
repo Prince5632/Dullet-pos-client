@@ -139,6 +139,7 @@ class AuthService {
     const user = this.getCurrentUser();
     return user?.department || null;
   }
+
 }
 
 export const authService = new AuthService();

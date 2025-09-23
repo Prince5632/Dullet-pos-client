@@ -144,3 +144,11 @@ export interface ChartData {
   value: number;
   color?: string;
 }
+
+// Table Types
+export interface TableColumn<T = any> {
+  key: keyof T | string;
+  label: string;
+  sortable?: boolean;
+  render?: (value: any, item: T) => React.ReactNode;
+}

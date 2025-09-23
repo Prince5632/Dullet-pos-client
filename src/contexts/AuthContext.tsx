@@ -105,7 +105,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        // Only initialize if we're still in loading state
+        if (!state.isLoading) return;
+
         if (authService.isAuthenticated()) {
+          dispatch({ type: 'AUTH_START' });
           const user = await authService.getProfile();
           dispatch({ type: 'AUTH_SUCCESS', payload: user });
         } else {
@@ -118,8 +122,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     };
 
-    initializeAuth();
-  }, []);
+    // Only run once on mount
+    if (state.isLoading && !state.isAuthenticated) {
+      initializeAuth();
+    }
+  }, []); // Empty dependency array to run only once
 
   // Login function
   const login = async (credentials: LoginRequest): Promise<void> => {
