@@ -14,6 +14,7 @@ import { roleService } from '../../services/roleService';
 import type { UpdateUserForm, User, Role } from '../../types';
 import { cn, isValidEmail, isValidPhone } from '../../utils';
 import Avatar from '../../components/ui/Avatar';
+import RoleAssignment from '../../components/permissions/RoleAssignment';
 import toast from 'react-hot-toast';
 
 // Validation schema (password is optional for updates)
@@ -67,7 +68,9 @@ const EditUserPage: React.FC = () => {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
+    setValue,
     reset,
+    watch,
   } = useForm<UpdateUserForm>({
     resolver: yupResolver(editUserSchema) as any,
     mode: 'onBlur',
@@ -104,6 +107,9 @@ const EditUserPage: React.FC = () => {
           department: userData.department,
           position: userData.position,
         });
+
+        // Set the role ID in the form
+        setValue('roleId', userData.role?._id || '');
       } catch (error) {
         console.error('Failed to load data:', error);
         toast.error('Failed to load user data');
@@ -166,7 +172,7 @@ const EditUserPage: React.FC = () => {
         lastName: data.lastName,
         email: data.email,
         phone: data.phone,
-        roleId: data.roleId,
+        roleId: data.roleId || undefined,
         department: data.department,
         position: data.position,
         profilePhoto: profilePhoto || undefined,
@@ -422,29 +428,14 @@ const EditUserPage: React.FC = () => {
 
               {/* Role */}
               <div className="md:col-span-2">
-                <label htmlFor="roleId" className="block text-sm font-medium text-gray-700">
-                  Role *
-                </label>
-                <select
-                  id="roleId"
-                  {...register('roleId')}
-                  className={cn(
-                    'mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm',
-                    errors.roleId 
-                      ? 'border-red-300 focus:border-red-500' 
-                      : 'border-gray-300 focus:border-blue-500'
-                  )}
-                >
-                  <option value="">Select role</option>
-                  {roles.map(role => (
-                    <option key={role._id} value={role._id}>
-                      {role.name} - {role.description}
-                    </option>
-                  ))}
-                </select>
-                {errors.roleId && (
-                  <p className="mt-1 text-sm text-red-600">{errors.roleId.message}</p>
-                )}
+                <RoleAssignment
+                  selectedRoleId={watch('roleId')}
+                  onRoleChange={(roleId) => setValue('roleId', roleId || '')}
+                  label="Role *"
+                  placeholder="Select a role for this user"
+                  error={errors.roleId?.message}
+                  showPermissions={true}
+                />
               </div>
             </div>
           </div>

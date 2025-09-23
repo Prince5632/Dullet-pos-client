@@ -12,6 +12,7 @@ import {
   ArrowUpTrayIcon,
   Squares2X2Icon,
   DocumentArrowDownIcon,
+  ShieldCheckIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import { userService } from '../../services/userService';
@@ -23,6 +24,7 @@ import Pagination from '../../components/ui/Pagination';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import Modal from '../../components/ui/Modal';
+import RoleAssignment from '../../components/permissions/RoleAssignment';
 import toast from 'react-hot-toast';
 
 interface UserListFilters {
@@ -55,6 +57,8 @@ const UsersPage: React.FC = () => {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importLoading, setImportLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [bulkRoleModalOpen, setBulkRoleModalOpen] = useState(false);
+  const [selectedRoleForBulk, setSelectedRoleForBulk] = useState<Role | null>(null);
 
   // Filters
   const [filters, setFilters] = useState<UserListFilters>({
@@ -314,6 +318,33 @@ const UsersPage: React.FC = () => {
     }
   };
 
+  // Bulk role assignment
+  const handleBulkRoleAssignment = async () => {
+    if (!selectedRoleForBulk || selectedUsers.size === 0) return;
+
+    try {
+      setBulkActionLoading(true);
+      
+      // Update each user's role
+      const updatePromises = Array.from(selectedUsers).map(userId => 
+        userService.updateUser(userId, { roleId: selectedRoleForBulk._id })
+      );
+      
+      await Promise.all(updatePromises);
+      
+      toast.success(`Role "${selectedRoleForBulk.name}" assigned to ${selectedUsers.size} users successfully`);
+      setBulkRoleModalOpen(false);
+      setSelectedRoleForBulk(null);
+      setSelectedUsers(new Set());
+      loadUsers();
+    } catch (error) {
+      console.error('Failed to assign roles:', error);
+      toast.error('Failed to assign roles to users');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
   // Table columns
   const columns: TableColumn<User>[] = [
     {
@@ -458,7 +489,7 @@ const UsersPage: React.FC = () => {
             Manage users, their roles, and permissions across your organization.
           </p>
         </div>
-        <div className="mt-4 sm:mt-0 flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="mt-4 sm:mt-0 flex items-center space-x-3">
           {/* Export Button */}
           <button
             onClick={handleExportUsers}
@@ -602,6 +633,14 @@ const UsersPage: React.FC = () => {
                 >
                   <TrashIcon className="h-3 w-3 mr-1" />
                   Delete
+                </button>
+                <button
+                  onClick={() => setBulkRoleModalOpen(true)}
+                  disabled={bulkActionLoading}
+                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ShieldCheckIcon className="h-3 w-3 mr-1" />
+                  Assign Role
                 </button>
               </div>
             </div>
@@ -772,6 +811,62 @@ const UsersPage: React.FC = () => {
                 </>
               ) : (
                 'Import Users'
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Bulk Role Assignment Modal */}
+      <Modal
+        isOpen={bulkRoleModalOpen}
+        onClose={() => {
+          setBulkRoleModalOpen(false);
+          setSelectedRoleForBulk(null);
+        }}
+        title="Assign Role to Users"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div>
+            <p className="text-gray-600 mb-4">
+              Assign a role to {selectedUsers.size} selected user{selectedUsers.size !== 1 ? 's' : ''}. 
+              This will replace their current roles.
+            </p>
+            
+            <RoleAssignment
+              selectedRoleId={selectedRoleForBulk?._id}
+              onRoleChange={(_, role) => setSelectedRoleForBulk(role)}
+              label="Select Role"
+              placeholder="Choose a role to assign"
+              showPermissions={true}
+            />
+          </div>
+          
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={() => {
+                setBulkRoleModalOpen(false);
+                setSelectedRoleForBulk(null);
+              }}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleBulkRoleAssignment}
+              disabled={!selectedRoleForBulk || bulkActionLoading}
+              className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {bulkActionLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Assigning...
+                </>
+              ) : (
+                'Assign Role'
               )}
             </button>
           </div>

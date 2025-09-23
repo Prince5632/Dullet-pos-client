@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -12,9 +12,9 @@ import {
   PhotoIcon,
 } from '@heroicons/react/24/outline';
 import { userService } from '../../services/userService';
-import { roleService } from '../../services/roleService';
-import type { CreateUserForm, Role } from '../../types';
+import type { CreateUserForm } from '../../types';
 import { cn, isValidEmail, isValidPhone } from '../../utils';
+import RoleAssignment from '../../components/permissions/RoleAssignment';
 import toast from 'react-hot-toast';
 
 // Validation schema
@@ -68,7 +68,6 @@ const CreateUserPage: React.FC = () => {
 
   // State
   const [loading, setLoading] = useState(false);
-  const [roles, setRoles] = useState<Role[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
@@ -79,25 +78,14 @@ const CreateUserPage: React.FC = () => {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
+    watch,
+    setValue,
   } = useForm<CreateUserForm & { confirmPassword: string }>({
     resolver: yupResolver(createUserSchema) as any,
     mode: 'onBlur',
   });
 
-  // Load roles
-  useEffect(() => {
-    const loadRoles = async () => {
-      try {
-        const allRoles = await roleService.getAllRoles();
-        setRoles(allRoles);
-      } catch (error) {
-        console.error('Failed to load roles:', error);
-        toast.error('Failed to load roles');
-      }
-    };
-
-    loadRoles();
-  }, []);
+  // No need to load roles separately as RoleAssignment component handles it
 
   // Departments
   const departments = userService.getDepartments();
@@ -458,29 +446,14 @@ const CreateUserPage: React.FC = () => {
 
               {/* Role */}
               <div className="md:col-span-2">
-                <label htmlFor="roleId" className="block text-sm font-medium text-gray-700">
-                  Role *
-                </label>
-                <select
-                  id="roleId"
-                  {...register('roleId')}
-                  className={cn(
-                    'mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm',
-                    errors.roleId 
-                      ? 'border-red-300 focus:border-red-500' 
-                      : 'border-gray-300 focus:border-blue-500'
-                  )}
-                >
-                  <option value="">Select role</option>
-                  {roles.map(role => (
-                    <option key={role._id} value={role._id}>
-                      {role.name} - {role.description}
-                    </option>
-                  ))}
-                </select>
-                {errors.roleId && (
-                  <p className="mt-1 text-sm text-red-600">{errors.roleId.message}</p>
-                )}
+                <RoleAssignment
+                  selectedRoleId={watch('roleId')}
+                  onRoleChange={(roleId) => setValue('roleId', roleId || '')}
+                  label="Role *"
+                  placeholder="Select a role for this user"
+                  error={errors.roleId?.message}
+                  showPermissions={true}
+                />
               </div>
             </div>
           </div>
