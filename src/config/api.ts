@@ -63,6 +63,7 @@ export const PAGINATION_CONFIG = {
 // App configurations
 export const APP_CONFIG = {
   APP_NAME: 'Dullet Industries POS',
+  LOGO_URL: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSl-e2zS5iPvDMHvbCfA9aCvYYlSuBukcqElS0ewrn-wKVY9b53',
   APP_VERSION: '1.0.0',
   COMPANY_NAME: 'Dullet Industries',
   COMPANY_WEBSITE: 'https://www.dulletindustries.in',

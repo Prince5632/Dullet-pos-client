@@ -36,7 +36,6 @@ const LoginPage: React.FC = () => {
   const [faceImagePreview, setFaceImagePreview] = useState<string | null>(null);
   const [isCapturingFace, setIsCapturingFace] = useState(false);
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -48,8 +47,8 @@ const LoginPage: React.FC = () => {
   } = useForm<LoginFormData>({
     resolver: yupResolver(loginSchema),
     defaultValues: {
-      email: 'admin@dulletindustries.com',
-      password: 'admin123',
+      email: '',
+      password: '',
     },
   });
 
@@ -77,18 +76,6 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  // Handle face image upload
-  const handleFaceImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setFaceImage(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setFaceImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   // Start camera for face capture
   const startFaceCapture = async () => {
@@ -147,19 +134,14 @@ const LoginPage: React.FC = () => {
   const removeFaceImage = () => {
     setFaceImage(null);
     setFaceImagePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-gray-900">Welcome back</h2>
-        <p className="mt-2 text-gray-600">
-          Sign in to your account to access the POS system
-        </p>
+        <h2 className="text-2xl font-semibold text-gray-900">Sign in</h2>
+        <p className="mt-1 text-sm text-gray-600">Use your work email and password</p>
       </div>
 
       {/* Login Form */}
@@ -174,12 +156,12 @@ const LoginPage: React.FC = () => {
             type="email"
             autoComplete="email"
             className={cn(
-              'w-full px-3 py-3 border rounded-lg shadow-sm placeholder-gray-400',
-              'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-              'transition-colors duration-200',
+              'w-full px-4 py-3 border rounded-lg shadow-sm placeholder-gray-400 text-gray-900',
+              'focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500',
+              'transition-all duration-200 bg-white',
               errors.email
                 ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                : 'border-gray-300'
+                : 'border-gray-300 hover:border-emerald-300'
             )}
             placeholder="Enter your email"
           />
@@ -199,19 +181,19 @@ const LoginPage: React.FC = () => {
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               className={cn(
-                'w-full px-3 py-3 pr-10 border rounded-lg shadow-sm placeholder-gray-400',
-                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-                'transition-colors duration-200',
+                'w-full px-4 py-3 pr-12 border rounded-lg shadow-sm placeholder-gray-400 text-gray-900',
+                'focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500',
+                'transition-all duration-200 bg-white',
                 errors.password
                   ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                  : 'border-gray-300'
+                  : 'border-gray-300 hover:border-emerald-300'
               )}
               placeholder="Enter your password"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-emerald-600 transition-colors duration-200"
             >
               {showPassword ? (
                 <EyeSlashIcon className="h-5 w-5" />
@@ -225,58 +207,51 @@ const LoginPage: React.FC = () => {
           )}
         </div>
 
-        {/* Face Image Upload */}
+        {/* Face Verification - Required */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Face Image (Optional)
-            <span className="text-gray-500 text-xs ml-1">- For attendance verification</span>
+            Face verification <span className="text-red-500">*</span>
           </label>
           
           {!faceImagePreview && !isCapturingFace && (
-            <div className="flex space-x-3">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-              >
-                Upload Image
-              </button>
+            <div className="space-y-2">
               <button
                 type="button"
                 onClick={startFaceCapture}
-                className="flex-1 px-4 py-2 border border-blue-300 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 flex items-center justify-center space-x-2"
+                className="w-full px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-lg text-sm font-medium hover:from-emerald-600 hover:to-teal-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200 flex items-center justify-center space-x-2"
               >
-                <CameraIcon className="h-4 w-4" />
-                <span>Capture</span>
+                <CameraIcon className="h-5 w-5" />
+                <span>Start face verification</span>
               </button>
+              <p className="text-xs text-gray-500 text-center">For security, capture a quick photo. It’s never shared.</p>
             </div>
           )}
 
           {/* Camera View */}
           {isCapturingFace && (
-            <div className="space-y-3">
-              <div className="relative bg-black rounded-lg overflow-hidden">
+            <div className="space-y-4">
+              <div className="relative bg-black rounded-lg overflow-hidden shadow">
                 <video
                   ref={videoRef}
-                  className="w-full h-48 object-cover"
+                  className="w-full h-64 object-cover"
                   autoPlay
                   muted
                   playsInline
                 />
-                <div className="absolute inset-0 border-2 border-blue-500 rounded-lg pointer-events-none" />
+                <div className="absolute inset-0 border-4 border-emerald-400 rounded-lg pointer-events-none" />
               </div>
               <div className="flex space-x-3">
                 <button
                   type="button"
                   onClick={captureFaceImage}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg text-sm font-medium hover:from-emerald-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200"
                 >
-                  Capture Photo
+                  Capture
                 </button>
                 <button
                   type="button"
                   onClick={stopFaceCapture}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
+                  className="px-6 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200"
                 >
                   Cancel
                 </button>
@@ -286,29 +261,25 @@ const LoginPage: React.FC = () => {
 
           {/* Image Preview */}
           {faceImagePreview && (
-            <div className="relative">
-              <img
-                src={faceImagePreview}
-                alt="Face preview"
-                className="w-full h-32 object-cover rounded-lg border border-gray-300"
-              />
-              <button
-                type="button"
-                onClick={removeFaceImage}
-                className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors duration-200"
-              >
-                <XMarkIcon className="h-4 w-4" />
-              </button>
+            <div className="space-y-3">
+              <div className="relative">
+                <img
+                  src={faceImagePreview}
+                  alt="Face verification capture"
+                  className="w-full h-40 object-cover rounded-lg border border-gray-200"
+                />
+                <button
+                  type="button"
+                  onClick={removeFaceImage}
+                  className="absolute top-2 right-2 p-2 bg-white text-gray-700 rounded-full shadow hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200"
+                  title="Retake photo"
+                >
+                  <XMarkIcon className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           )}
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFaceImageChange}
-            className="hidden"
-          />
           <canvas ref={canvasRef} className="hidden" />
         </div>
 
@@ -319,38 +290,30 @@ const LoginPage: React.FC = () => {
           </div>
         )}
 
+        {/* Face verification is required; no extra warning box to keep UI minimal */}
+
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={isSubmitting || isLoading}
+          disabled={isSubmitting || isLoading || !faceImage}
           className={cn(
-            'w-full py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white',
-            'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500',
-            'transition-all duration-200',
-            isSubmitting || isLoading
+            'w-full py-4 px-6 border border-transparent rounded-lg shadow text-base font-medium text-white',
+            'focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200',
+            isSubmitting || isLoading || !faceImage
               ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
+              : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 focus:ring-emerald-500 shadow-emerald-200'
           )}
         >
           {isSubmitting || isLoading ? (
             <div className="flex items-center justify-center space-x-2">
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              <span>Signing in...</span>
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Authenticating...</span>
             </div>
           ) : (
-            'Sign In'
+            'Sign in'
           )}
         </button>
       </form>
-
-      {/* Demo Credentials */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="text-sm font-medium text-blue-800 mb-2">Demo Credentials</h3>
-        <div className="text-sm text-blue-700 space-y-1">
-          <p><strong>Email:</strong> admin@dulletindustries.com</p>
-          <p><strong>Password:</strong> admin123</p>
-        </div>
-      </div>
     </div>
   );
 };

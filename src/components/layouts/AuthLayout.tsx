@@ -3,6 +3,9 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { APP_CONFIG } from '../../config/api';
 
+const PRODUCT_IMG =
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSl-e2zS5iPvDMHvbCfA9aCvYYlSuBukcqElS0ewrn-wKVY9b53';
+
 const AuthLayout: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -12,84 +15,116 @@ const AuthLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex">
-      {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black bg-opacity-20" />
-        
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-white bg-opacity-10 rounded-full -translate-y-40 translate-x-40" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-white bg-opacity-10 rounded-full translate-y-40 -translate-x-40" />
-        
-        <div className="relative z-10 flex flex-col justify-center px-12 py-12 text-white">
-          {/* Logo */}
-          <div className="mb-8">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <span className="text-2xl font-bold text-white">D</span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold">{APP_CONFIG.COMPANY_NAME}</h1>
-                <p className="text-blue-100 text-sm">Point of Sale System</p>
-              </div>
-            </div>
-          </div>
+    // Use grid with a slimmer left panel to cut empty space
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 lg:grid lg:grid-cols-[44%_56%]">
+      {/* Left side - Compact grey banner */}
+      <aside
+        aria-label="Brand"
+        className="relative overflow-hidden bg-gradient-to-b from-neutral-100 to-neutral-200"
+      >
+        {/* Subtle lighting */}
+        <div
+          className="absolute inset-0 opacity-50 [background:radial-gradient(900px_480px_at_-20%_-20%,rgba(255,255,255,0.75),transparent_60%),radial-gradient(800px_480px_at_120%_120%,rgba(255,255,255,0.6),transparent_60%)]"
+          aria-hidden="true"
+        />
 
-          {/* Content */}
-          <div className="max-w-md">
-            <h2 className="text-4xl font-bold mb-6 leading-tight">
-              Manage Your Business with Confidence
-            </h2>
-            <p className="text-xl text-blue-100 mb-8 leading-relaxed">
-              Streamline operations, track inventory, manage users, and grow your wheat flour business with our comprehensive POS solution.
-            </p>
-
-            {/* Features */}
-            <div className="space-y-4">
-              {[
-                'Real-time Inventory Management',
-                'Multi-location Godown Support',
-                'Advanced User Permissions',
-                'Comprehensive Reporting',
-                'Mobile-First Design'
-              ].map((feature, index) => (
-                <div key={index} className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-blue-300 rounded-full" />
-                  <span className="text-blue-100">{feature}</span>
+        <div className="relative z-10 flex h-full flex-col px-8 py-10">
+          {/* Logo row */}
+          <div className="mb-6">
+            <div className="flex items-center gap-3">
+              {APP_CONFIG.LOGO_URL ? (
+                <img
+                  src={APP_CONFIG.LOGO_URL}
+                  alt={`${APP_CONFIG.COMPANY_NAME} logo`}
+                  className="h-10 w-auto rounded-md bg-white shadow-sm ring-1 ring-neutral-200 p-1"
+                />
+              ) : (
+                <div className="h-10 w-10 rounded-lg bg-neutral-900 text-white flex items-center justify-center">
+                  <span className="text-lg font-bold">D</span>
                 </div>
-              ))}
+              )}
+              <div>
+                <p className="text-xl font-semibold text-neutral-900">{APP_CONFIG.COMPANY_NAME}</p>
+                <p className="text-sm text-neutral-600">Point of Sale</p>
+              </div>
             </div>
           </div>
 
-          {/* Bottom info */}
-          <div className="mt-auto">
-            <p className="text-blue-200 text-sm">
-              © 2024 {APP_CONFIG.COMPANY_NAME}. All rights reserved.
+          {/* Hero row: text + circular image side‑by‑side to remove dead space */}
+          <div className="flex items-center gap-8">
+            <div className="min-w-0">
+              <h2 className="text-[28px] md:text-[32px] font-semibold leading-tight text-neutral-900">
+                Smart POS for daily ops
+              </h2>
+              <p className="mt-2 text-neutral-700">
+                Fast billing, live stock, and clear insights to keep work moving.
+              </p>
+
+              {/* Compact chips */}
+              <div className="mt-4 flex flex-wrap gap-2">
+                {['Quick billing', 'Live stock', 'Secure access'].map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 rounded-full border border-neutral-300 bg-white/80 px-3 py-1 text-xs text-neutral-700"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-neutral-500" />
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* In‑flow circular product image (no absolute gaps) */}
+            <div className="shrink-0 size-44 md:size-52 rounded-full overflow-hidden bg-white shadow-md ring-1 ring-neutral-300">
+              <img
+                src={PRODUCT_IMG}
+                alt="Product pack"
+                className="h-full w-full object-cover object-center"
+                loading="lazy"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+          </div>
+
+          {/* Bottom line */}
+          <div className="mt-auto pt-8">
+            <p className="text-neutral-600 text-sm">
+              © {new Date().getFullYear()} {APP_CONFIG.COMPANY_NAME}
             </p>
           </div>
         </div>
-      </div>
+      </aside>
 
-      {/* Right side - Auth forms */}
-      <div className="flex-1 lg:w-1/2 flex flex-col justify-center px-6 py-12 lg:px-12">
-        <div className="mx-auto w-full max-w-md">
+      {/* Right side - Auth card */}
+      <main aria-label="Authentication" className="flex items-center justify-center px-6 py-12 lg:px-12">
+        <div className="w-full max-w-md">
           {/* Mobile logo */}
-          <div className="lg:hidden text-center mb-8">
-            <div className="inline-flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-xl font-bold text-white">D</span>
-              </div>
+          <div className="lg:hidden text-center mb-6">
+            <div className="inline-flex items-center gap-3">
+              {APP_CONFIG.LOGO_URL ? (
+                <img
+                  src={APP_CONFIG.LOGO_URL}
+                  alt={`${APP_CONFIG.COMPANY_NAME} logo`}
+                  className="h-9 w-auto rounded-md bg-white shadow-sm ring-1 ring-neutral-200 p-1"
+                />
+              ) : (
+                <div className="h-9 w-9 bg-blue-600 rounded-md flex items-center justify-center">
+                  <span className="text-base font-bold text-white">D</span>
+                </div>
+              )}
               <div className="text-left">
-                <h1 className="text-xl font-bold text-gray-900">{APP_CONFIG.COMPANY_NAME}</h1>
-                <p className="text-gray-600 text-sm">POS System</p>
+                <p className="text-base font-semibold text-gray-900">{APP_CONFIG.COMPANY_NAME}</p>
+                <p className="text-sm text-gray-600">POS System</p>
               </div>
             </div>
           </div>
 
-          {/* Auth form outlet */}
-          <Outlet />
+          {/* Tidy card for the form */}
+          <section className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 md:p-7">
+            <Outlet />
+          </section>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
