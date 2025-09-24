@@ -26,6 +26,7 @@ const RoleDetailsPage = lazy(() => import('../pages/roles/RoleDetailsPage'));
 // Order Management Pages
 const OrdersPage = lazy(() => import('../pages/orders/OrdersPage'));
 const CreateOrderPage = lazy(() => import('../pages/orders/CreateOrderPage'));
+const OrderApprovalPage = lazy(() => import('../pages/orders/OrderApprovalPage'));
 
 // Settings Pages
 const SettingsPage = lazy(() => import('../pages/settings/SettingsPage'));
@@ -163,6 +164,14 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute requiredPermission="orders.read">
                 <OrdersPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'approval',
+            element: (
+              <ProtectedRoute requiredPermission="orders.approve">
+                <OrderApprovalPage />
               </ProtectedRoute>
             ),
           },

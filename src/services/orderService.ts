@@ -86,6 +86,138 @@ class OrderService {
     throw new Error(response.message || 'Failed to update order status');
   }
 
+  // Approve order
+  async approveOrder(id: string, notes?: string): Promise<Order> {
+    const response = await apiService.put<{ order: Order }>(
+      `${API_CONFIG.ENDPOINTS.ORDERS}/${id}/approve`,
+      { notes }
+    );
+
+    if (response.success && response.data) {
+      return response.data.order;
+    }
+    throw new Error(response.message || 'Failed to approve order');
+  }
+
+  // Reject order
+  async rejectOrder(id: string, notes?: string): Promise<Order> {
+    const response = await apiService.put<{ order: Order }>(
+      `${API_CONFIG.ENDPOINTS.ORDERS}/${id}/reject`,
+      { notes }
+    );
+
+    if (response.success && response.data) {
+      return response.data.order;
+    }
+    throw new Error(response.message || 'Failed to reject order');
+  }
+
+  // Get pending orders for approval
+  async getPendingOrdersForApproval(params: OrderListParams = {}): Promise<PaginationResponse<{ orders: Order[] }>> {
+    const queryParams = new URLSearchParams();
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const url = `${API_CONFIG.ENDPOINTS.ORDERS}/pending/approval?${queryParams.toString()}`;
+    return await apiService.get<{ orders: Order[] }>(url) as PaginationResponse<{ orders: Order[] }>;
+  }
+
+  // Move order to production
+  async moveToProduction(id: string, notes?: string): Promise<Order> {
+    const response = await apiService.put<{ order: Order }>(
+      `${API_CONFIG.ENDPOINTS.ORDERS}/${id}/production`,
+      { notes }
+    );
+
+    if (response.success && response.data) {
+      return response.data.order;
+    }
+    throw new Error(response.message || 'Failed to move order to production');
+  }
+
+  // Mark order as ready for dispatch
+  async markAsReady(id: string, notes?: string): Promise<Order> {
+    const response = await apiService.put<{ order: Order }>(
+      `${API_CONFIG.ENDPOINTS.ORDERS}/${id}/ready`,
+      { notes }
+    );
+
+    if (response.success && response.data) {
+      return response.data.order;
+    }
+    throw new Error(response.message || 'Failed to mark order as ready');
+  }
+
+  // Dispatch order
+  async dispatchOrder(id: string, notes?: string): Promise<Order> {
+    const response = await apiService.put<{ order: Order }>(
+      `${API_CONFIG.ENDPOINTS.ORDERS}/${id}/dispatch`,
+      { notes }
+    );
+
+    if (response.success && response.data) {
+      return response.data.order;
+    }
+    throw new Error(response.message || 'Failed to dispatch order');
+  }
+
+  // Mark order as delivered
+  async markAsDelivered(id: string, notes?: string): Promise<Order> {
+    const response = await apiService.put<{ order: Order }>(
+      `${API_CONFIG.ENDPOINTS.ORDERS}/${id}/delivered`,
+      { notes }
+    );
+
+    if (response.success && response.data) {
+      return response.data.order;
+    }
+    throw new Error(response.message || 'Failed to mark order as delivered');
+  }
+
+  // Complete order
+  async completeOrder(id: string, notes?: string): Promise<Order> {
+    const response = await apiService.put<{ order: Order }>(
+      `${API_CONFIG.ENDPOINTS.ORDERS}/${id}/complete`,
+      { notes }
+    );
+
+    if (response.success && response.data) {
+      return response.data.order;
+    }
+    throw new Error(response.message || 'Failed to complete order');
+  }
+
+  // Cancel order
+  async cancelOrder(id: string, notes?: string): Promise<Order> {
+    const response = await apiService.put<{ order: Order }>(
+      `${API_CONFIG.ENDPOINTS.ORDERS}/${id}/cancel`,
+      { notes }
+    );
+
+    if (response.success && response.data) {
+      return response.data.order;
+    }
+    throw new Error(response.message || 'Failed to cancel order');
+  }
+
+  // Get orders by status
+  async getOrdersByStatus(status: string, params: OrderListParams = {}): Promise<PaginationResponse<{ orders: Order[] }>> {
+    const queryParams = new URLSearchParams();
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const url = `${API_CONFIG.ENDPOINTS.ORDERS}/status/${status}?${queryParams.toString()}`;
+    return await apiService.get<{ orders: Order[] }>(url) as PaginationResponse<{ orders: Order[] }>;
+  }
+
   // Get customer order history
   async getCustomerOrderHistory(customerId: string, params: CustomerOrderHistoryParams = {}): Promise<{
     customer: Pick<Customer, '_id' | 'customerId' | 'businessName' | 'contactPersonName'>;
@@ -143,6 +275,7 @@ class OrderService {
     pendingOrders: number;
     approvedOrders: number;
     completedOrders: number;
+    rejectedOrders: number;
     todayOrders: number;
     monthlyRevenue: number;
   }> {
@@ -151,6 +284,7 @@ class OrderService {
       pendingOrders: number;
       approvedOrders: number;
       completedOrders: number;
+      rejectedOrders: number;
       todayOrders: number;
       monthlyRevenue: number;
     }>(API_CONFIG.ENDPOINTS.ORDER_STATS);
