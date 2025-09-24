@@ -233,7 +233,7 @@ const OrdersPage: React.FC = () => {
               compact
             />
           </div>
-          <div className="flex items-center gap-1">
+          {/* <div className="flex items-center gap-1">
             <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
               orderService.getPaymentStatusColor(order.paymentStatus)
             }`}>
@@ -244,7 +244,7 @@ const OrdersPage: React.FC = () => {
             <span className="text-xs text-gray-400">
               {order.paymentStatus}
             </span>
-          </div>
+          </div> */}
         </div>
       ),
     },
