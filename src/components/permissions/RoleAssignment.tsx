@@ -113,6 +113,15 @@ const RoleAssignment: React.FC<RoleAssignmentProps> = ({
             disabled && 'bg-gray-50 cursor-not-allowed',
             !disabled && 'focus-within:ring-1'
           )}
+          role={!disabled ? 'button' : undefined}
+          tabIndex={!disabled ? 0 : -1}
+          onClick={() => { if (!disabled) setIsOpen(true); }}
+          onKeyDown={(e) => {
+            if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault();
+              setIsOpen(true);
+            }
+          }}
         >
           {selectedRole ? (
             <div className="flex items-center justify-between">
