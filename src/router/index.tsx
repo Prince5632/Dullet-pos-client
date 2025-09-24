@@ -23,6 +23,11 @@ const CreateRolePage = lazy(() => import('../pages/roles/CreateRolePage'));
 const EditRolePage = lazy(() => import('../pages/roles/EditRolePage'));
 const RoleDetailsPage = lazy(() => import('../pages/roles/RoleDetailsPage'));
 
+// Order Management Pages
+const OrdersPage = lazy(() => import('../pages/orders/OrdersPage'));
+const CreateOrderPage = lazy(() => import('../pages/orders/CreateOrderPage'));
+const OrderApprovalPage = lazy(() => import('../pages/orders/OrderApprovalPage'));
+
 // Settings Pages
 const SettingsPage = lazy(() => import('../pages/settings/SettingsPage'));
 
@@ -144,6 +149,37 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute requiredPermission="roles.update">
                 <EditRolePage />
+              </ProtectedRoute>
+            ),
+          },
+        ],
+      },
+
+      // Order Management
+      {
+        path: 'orders',
+        children: [
+          {
+            index: true,
+            element: (
+              <ProtectedRoute requiredPermission="orders.read">
+                <OrdersPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'approval',
+            element: (
+              <ProtectedRoute requiredPermission="orders.approve">
+                <OrderApprovalPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'new',
+            element: (
+              <ProtectedRoute requiredPermission="orders.create">
+                <CreateOrderPage />
               </ProtectedRoute>
             ),
           },

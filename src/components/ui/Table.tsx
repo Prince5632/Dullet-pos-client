@@ -65,7 +65,7 @@ const Table = <T extends Record<string, any>>({
   }
 
   return (
-    <div className={cn('bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden', className)}>
+    <div className={cn('overflow-hidden', className)}>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">

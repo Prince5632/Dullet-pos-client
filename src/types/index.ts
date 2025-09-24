@@ -105,6 +105,144 @@ export interface ChangePasswordForm {
   confirmPassword: string;
 }
 
+// Customer Types
+export interface Customer {
+  _id: string;
+  customerId: string;
+  businessName: string;
+  contactPersonName: string;
+  email?: string;
+  phone: string;
+  alternatePhone?: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    pincode: string;
+    country: string;
+  };
+  gstNumber?: string;
+  panNumber?: string;
+  creditLimit: number;
+  creditDays: number;
+  outstandingAmount: number;
+  isActive: boolean;
+  customerType: 'Retailer' | 'Distributor' | 'Wholesaler';
+  lastOrderDate?: string;
+  totalOrders: number;
+  totalOrderValue: number;
+  notes: string;
+  createdBy: User;
+  updatedBy?: User;
+  createdAt: string;
+  updatedAt: string;
+  // Virtual fields
+  fullAddress?: string;
+  creditUtilization?: number;
+}
+
+export interface CreateCustomerForm {
+  businessName: string;
+  contactPersonName: string;
+  email?: string;
+  phone: string;
+  alternatePhone?: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    pincode: string;
+    country?: string;
+  };
+  gstNumber?: string;
+  panNumber?: string;
+  creditLimit?: number;
+  creditDays?: number;
+  customerType: 'Retailer' | 'Distributor' | 'Wholesaler';
+  notes?: string;
+}
+
+export interface UpdateCustomerForm extends Partial<CreateCustomerForm> {}
+
+// Order Types
+export interface OrderItem {
+  _id?: string;
+  productName: 'Wheat Flour' | 'Wheat Bran' | 'Custom Product';
+  grade?: string;
+  quantity: number;
+  unit: 'KG' | 'Quintal' | 'Ton' | 'Bags';
+  ratePerUnit: number;
+  totalAmount: number;
+  packaging: 'Standard' | 'Custom' | '25kg Bags' | '50kg Bags';
+}
+
+export interface Order {
+  _id: string;
+  orderNumber: string;
+  customer: Customer;
+  items: OrderItem[];
+  subtotal: number;
+  discount: number;
+  discountPercentage: number;
+  taxAmount: number;
+  totalAmount: number;
+  status: 'pending' | 'approved' | 'rejected' | 'processing' | 'ready' | 'dispatched' | 'delivered' | 'completed' | 'cancelled';
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  orderDate: string;
+  requiredDate?: string;
+  approvedDate?: string;
+  dispatchDate?: string;
+  deliveryDate?: string;
+  paymentTerms: 'Cash' | 'Credit' | 'Advance';
+  paymentStatus: 'pending' | 'partial' | 'paid' | 'overdue';
+  paidAmount: number;
+  deliveryAddress?: {
+    street: string;
+    city: string;
+    state: string;
+    pincode: string;
+    country: string;
+  };
+  deliveryInstructions: string;
+  notes: string;
+  internalNotes: string;
+  createdBy: User;
+  approvedBy?: User;
+  updatedBy?: User;
+  createdAt: string;
+  updatedAt: string;
+  // Virtual fields
+  remainingAmount?: number;
+  orderAge?: number;
+}
+
+export interface CreateOrderForm {
+  customer: string;
+  items: OrderItem[];
+  discountPercentage?: number;
+  discount?: number;
+  taxAmount?: number;
+  paymentTerms: 'Cash' | 'Credit' | 'Advance';
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  requiredDate?: string;
+  deliveryAddress?: {
+    street: string;
+    city: string;
+    state: string;
+    pincode: string;
+    country?: string;
+  };
+  deliveryInstructions?: string;
+  notes?: string;
+}
+
+export interface UpdateOrderForm extends Partial<CreateOrderForm> {}
+
+export interface OrderStatusUpdate {
+  status: Order['status'];
+  notes?: string;
+}
+
 // Navigation Types
 export interface NavItem {
   name: string;

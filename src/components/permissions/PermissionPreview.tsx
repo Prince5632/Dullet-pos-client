@@ -124,3 +124,4 @@ const PermissionPreview: React.FC<PermissionPreviewProps> = ({
 };
 
 export default PermissionPreview;
+

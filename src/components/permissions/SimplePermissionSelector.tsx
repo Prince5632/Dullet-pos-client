@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
-import {
-  CheckIcon,
-  ShieldCheckIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
-} from '@heroicons/react/24/outline';
+import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import type { Permission } from '../../types';
-import { cn } from '../../utils';
-import Badge from '../ui/Badge';
 
 interface SimplePermissionSelectorProps {
   availablePermissions: Record<string, Permission[]>;
@@ -54,125 +47,78 @@ const SimplePermissionSelector: React.FC<SimplePermissionSelectorProps> = ({
   const handlePermissionToggle = (permissionId: string) => {
     if (disabled || readOnly) return;
 
-    const newSelected = [...selectedPermissions];
-    const index = newSelected.indexOf(permissionId);
-    
-    if (index > -1) {
-      newSelected.splice(index, 1);
-    } else {
-      newSelected.push(permissionId);
-    }
+    const newSelected = selectedPermissions.includes(permissionId)
+      ? selectedPermissions.filter(id => id !== permissionId)
+      : [...selectedPermissions, permissionId];
     
     onChange(newSelected);
   };
 
-  const handleModuleToggle = (module: string, permissions: Permission[]) => {
+  const handleModuleToggle = (moduleKey: string) => {
     if (disabled || readOnly) return;
 
-    const modulePermissionIds = permissions.map(p => p._id);
+    const modulePermissions = availablePermissions[moduleKey] || [];
+    const modulePermissionIds = modulePermissions.map(p => p._id);
     const allSelected = modulePermissionIds.every(id => selectedPermissions.includes(id));
     
-    let newSelected = [...selectedPermissions];
-    
+    let newSelected: string[];
     if (allSelected) {
-      // Remove all module permissions
-      newSelected = newSelected.filter(id => !modulePermissionIds.includes(id));
+      // Deselect all permissions in this module
+      newSelected = selectedPermissions.filter(id => !modulePermissionIds.includes(id));
     } else {
-      // Add all module permissions
-      modulePermissionIds.forEach(id => {
-        if (!newSelected.includes(id)) {
-          newSelected.push(id);
-        }
-      });
+      // Select all permissions in this module
+      const otherSelected = selectedPermissions.filter(id => !modulePermissionIds.includes(id));
+      newSelected = [...otherSelected, ...modulePermissionIds];
     }
     
     onChange(newSelected);
   };
 
-  const getModuleDisplayName = (moduleKey: string) => {
-    const names: Record<string, string> = {
-      users: 'User Management',
-      roles: 'Role Management',
-      orders: 'Order Management',
-      billing: 'Billing & Invoicing',
-      stock: 'Stock Management',
-      production: 'Production',
-      godowns: 'Warehouse Management',
-      customers: 'Customer Management',
-      employees: 'Employee Management',
-      reports: 'Reports & Analytics',
-      settings: 'System Settings'
-    };
-    return names[moduleKey] || moduleKey.charAt(0).toUpperCase() + moduleKey.slice(1);
+  const getModuleStats = (moduleKey: string) => {
+    const modulePermissions = availablePermissions[moduleKey] || [];
+    const selectedCount = modulePermissions.filter(p => selectedPermissions.includes(p._id)).length;
+    const totalCount = modulePermissions.length;
+    return { selectedCount, totalCount };
   };
 
-  const getActionDisplayName = (action: string) => {
-    const names: Record<string, string> = {
-      create: 'Create',
-      read: 'View',
-      update: 'Edit',
-      delete: 'Delete',
-      approve: 'Approve',
-      manage: 'Full Access'
-    };
-    return names[action] || action.charAt(0).toUpperCase() + action.slice(1);
+  const formatModuleName = (moduleKey: string) => {
+    return moduleKey.charAt(0).toUpperCase() + moduleKey.slice(1).replace(/([A-Z])/g, ' $1');
   };
 
   if (Object.keys(availablePermissions).length === 0) {
     return (
-      <div className="text-center py-8">
-        <ShieldCheckIcon className="mx-auto h-12 w-12 text-gray-400" />
-        <h3 className="mt-2 text-sm font-medium text-gray-900">No permissions available</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          No permissions are available to assign.
-        </p>
+      <div className="text-center py-8 text-gray-500">
+        <p>No permissions available</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {Object.entries(availablePermissions).map(([module, permissions]) => {
-        const modulePermissionIds = permissions.map(p => p._id);
-        const selectedCount = modulePermissionIds.filter(id => selectedPermissions.includes(id)).length;
-        const totalCount = permissions.length;
-        const allSelected = selectedCount === totalCount;
+    <div className="space-y-4">
+      {Object.entries(availablePermissions).map(([moduleKey, permissions]) => {
+        const isExpanded = expandedModules.has(moduleKey);
+        const { selectedCount, totalCount } = getModuleStats(moduleKey);
+        const allSelected = selectedCount === totalCount && totalCount > 0;
         const someSelected = selectedCount > 0 && selectedCount < totalCount;
-        const isExpanded = expandedModules.has(module);
 
         return (
-          <div key={module} className="border border-gray-200 rounded-lg overflow-hidden">
+          <div key={moduleKey} className="border border-gray-200 rounded-lg overflow-hidden">
             {/* Module Header */}
-            <div 
-              className={cn(
-                "px-4 py-3 bg-gray-50 border-b border-gray-200",
-                !(disabled && !readOnly) && "hover:bg-gray-100 transition-colors"
-              )}
+            <div
+              className={`px-4 py-3 bg-gray-50 border-b border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors ${
+                disabled && !readOnly ? 'cursor-not-allowed opacity-50' : ''
+              }`}
+              onClick={() => toggleModule(moduleKey)}
             >
               <div className="flex items-center justify-between">
-                <div 
-                  className={cn(
-                    "flex items-center space-x-3 flex-1",
-                    !(disabled && !readOnly) && "cursor-pointer"
+                <div className="flex items-center space-x-3">
+                  {isExpanded ? (
+                    <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+                  ) : (
+                    <ChevronRightIcon className="h-4 w-4 text-gray-500" />
                   )}
-                  onClick={() => toggleModule(module)}
-                >
-                  <button
-                    type="button"
-                    className={cn(
-                      "text-gray-400 hover:text-gray-600 p-1 rounded transition-colors",
-                      !(disabled && !readOnly) && "cursor-pointer"
-                    )}
-                    disabled={disabled && !readOnly}
-                  >
-                    {isExpanded ? (
-                      <ChevronDownIcon className="h-5 w-5" />
-                    ) : (
-                      <ChevronRightIcon className="h-5 w-5" />
-                    )}
-                  </button>
-                
-                  <div className="flex items-center space-x-2">
+                  
+                  {!readOnly && (
                     <input
                       type="checkbox"
                       checked={allSelected}
@@ -181,88 +127,80 @@ const SimplePermissionSelector: React.FC<SimplePermissionSelectorProps> = ({
                       }}
                       onChange={(e) => {
                         e.stopPropagation();
-                        handleModuleToggle(module, permissions);
+                        handleModuleToggle(moduleKey);
                       }}
-                      disabled={disabled || readOnly}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      onClick={(e) => e.stopPropagation()}
+                      disabled={disabled}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                     />
-                    <h3 className="text-base font-medium text-gray-900">
-                      {getModuleDisplayName(module)}
-                    </h3>
-                  </div>
+                  )}
+                  
+                  <h3 className="text-sm font-medium text-gray-900">
+                    {formatModuleName(moduleKey)}
+                  </h3>
                 </div>
                 
-                <Badge variant={selectedCount > 0 ? 'success' : 'default'} size="sm">
-                  {selectedCount}/{totalCount}
-                </Badge>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs text-gray-500">
+                    {selectedCount}/{totalCount} selected
+                  </span>
+                  {selectedCount > 0 && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                      {selectedCount}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Module Permissions */}
             {isExpanded && (
-              <div className="p-4 bg-white">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {permissions.map((permission) => {
-                    const isSelected = selectedPermissions.includes(permission._id);
-                    
-                    return (
+              <div className="px-4 py-3 bg-white">
+                {permissions.length === 0 ? (
+                  <p className="text-sm text-gray-500 italic">No permissions available in this module</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {permissions.map((permission) => (
                       <label
                         key={permission._id}
-                        className={cn(
-                          'flex items-center space-x-2 p-2 rounded-md border transition-colors',
-                          isSelected
-                            ? 'bg-blue-50 border-blue-200 text-blue-900'
-                            : 'bg-white border-gray-200',
-                          !(disabled || readOnly) && 'cursor-pointer hover:bg-gray-50',
-                          (disabled || readOnly) && 'cursor-not-allowed opacity-50'
-                        )}
+                        className={`flex items-center space-x-3 p-2 rounded hover:bg-gray-50 transition-colors ${
+                          disabled || readOnly ? 'cursor-not-allowed' : 'cursor-pointer'
+                        }`}
                       >
                         <input
                           type="checkbox"
-                          checked={isSelected}
+                          checked={selectedPermissions.includes(permission._id)}
                           onChange={() => handlePermissionToggle(permission._id)}
                           disabled={disabled || readOnly}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium text-gray-900">
-                            {getActionDisplayName(permission.action)}
+                            {permission.name}
                           </div>
                           {permission.description && (
-                            <div className="text-xs text-gray-500 truncate">
+                            <div className="text-xs text-gray-500">
                               {permission.description}
                             </div>
                           )}
                         </div>
-                        {isSelected && (
-                          <CheckIcon className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                        )}
                       </label>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
         );
       })}
-      
+
       {/* Summary */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-blue-900">
-            <span className="font-medium">
-              {selectedPermissions.length} permissions selected
-            </span>
-            <span className="text-blue-700 ml-2">
-              across {Object.values(availablePermissions).filter(permissions => 
-                permissions.some(p => selectedPermissions.includes(p._id))
-              ).length} modules
-            </span>
+      {selectedPermissions.length > 0 && (
+        <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="text-sm text-blue-800">
+            <strong>{selectedPermissions.length}</strong> permission{selectedPermissions.length !== 1 ? 's' : ''} selected
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
