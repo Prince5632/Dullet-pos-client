@@ -223,6 +223,27 @@ class UserService {
       { label: 'Inactive', value: 'false' },
     ];
   }
+
+  // Get user statistics
+  async getUserStats(): Promise<{
+    totalUsers: number;
+    activeUsers: number;
+    todayLogins: number;
+    inactiveUsers: number;
+  }> {
+    const response = await apiService.get<{
+      totalUsers: number;
+      activeUsers: number;
+      todayLogins: number;
+      inactiveUsers: number;
+    }>('/api/users/stats/summary');
+    
+    if (response.success && response.data) {
+      return response.data;
+    }
+    
+    throw new Error(response.message || 'Failed to get user statistics');
+  }
 }
 
 export const userService = new UserService();

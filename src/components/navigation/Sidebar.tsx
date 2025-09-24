@@ -64,7 +64,7 @@ const Sidebar: React.FC<SidebarProps> = ({ navigation, currentPath, mobile = fal
           </li>
 
           {/* Bottom section */}
-          <li className="mt-auto">
+          {/* <li className="mt-auto">
             <div className="bg-gray-50 rounded-lg p-4">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -76,7 +76,7 @@ const Sidebar: React.FC<SidebarProps> = ({ navigation, currentPath, mobile = fal
                 </div>
               </div>
             </div>
-          </li>
+          </li> */}
         </ul>
       </nav>
     </div>
