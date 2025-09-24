@@ -348,7 +348,7 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* System Health */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+        {/* <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
           <div className="px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center">
               <ChartPieIcon className="h-5 w-5 mr-2 text-green-600" />
@@ -373,7 +373,7 @@ const DashboardPage: React.FC = () => {
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );

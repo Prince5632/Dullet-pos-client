@@ -123,18 +123,20 @@ const OrderItemEditor: React.FC<OrderItemEditorProps> = ({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Product <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <input
+                    type="text"
                     value={item.productName}
                     onChange={(e) => updateItem(index, 'productName', e.target.value)}
+                    list={`product-suggestions-${index}`}
                     disabled={disabled}
+                    placeholder="Enter product name"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  >
-                    {orderService.getProductNames().map((product) => (
-                      <option key={product} value={product}>
-                        {product}
-                      </option>
+                  />
+                  <datalist id={`product-suggestions-${index}`}>
+                    {orderService.getProductNames().map((name) => (
+                      <option key={name} value={name} />
                     ))}
-                  </select>
+                  </datalist>
                 </div>
 
                 {/* Grade (for Wheat Flour) */}

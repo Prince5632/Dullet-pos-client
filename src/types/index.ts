@@ -167,13 +167,13 @@ export interface UpdateCustomerForm extends Partial<CreateCustomerForm> {}
 // Order Types
 export interface OrderItem {
   _id?: string;
-  productName: 'Wheat Flour' | 'Wheat Bran' | 'Custom Product';
+  productName: string;
   grade?: string;
   quantity: number;
   unit: 'KG' | 'Quintal' | 'Ton' | 'Bags';
   ratePerUnit: number;
   totalAmount: number;
-  packaging: 'Standard' | 'Custom' | '25kg Bags' | '50kg Bags';
+  packaging: 'Standard' | 'Custom' | '5kg Bags' | '10kg Bags' | '25kg Bags' | '50kg Bags' | 'Loose';
 }
 
 export interface Order {
@@ -236,11 +236,40 @@ export interface CreateOrderForm {
   notes?: string;
 }
 
-export interface UpdateOrderForm extends Partial<CreateOrderForm> {}
+export interface UpdateOrderForm extends Partial<CreateOrderForm> {
+  paidAmount?: number;
+  paymentStatus?: Order['paymentStatus'];
+}
 
 export interface OrderStatusUpdate {
   status: Order['status'];
   notes?: string;
+}
+
+// Quick Order Types
+export interface QuickProduct {
+  key: string;
+  name: string;
+  pricePerKg: number;
+  bagSizeKg?: number;
+  defaultPackaging?: 'Standard' | 'Custom' | '5kg Bags' | '10kg Bags' | '25kg Bags' | '50kg Bags' | 'Loose';
+  category?: string;
+}
+
+export interface QuickOrderItemInput {
+  productKey: string;
+  quantityKg?: number;
+  bags?: number;
+  packaging?: OrderItem['packaging'];
+}
+
+export interface CreateQuickOrderForm {
+  customer: string;
+  items: QuickOrderItemInput[];
+  paymentTerms?: Order['paymentTerms'];
+  priority?: Order['priority'];
+  notes?: string;
+  deliveryInstructions?: string;
 }
 
 // Navigation Types

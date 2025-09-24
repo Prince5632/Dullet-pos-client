@@ -33,6 +33,9 @@ export const API_CONFIG = {
     ORDER_STATUS: (id: string) => `/api/orders/${id}/status`,
     CUSTOMER_ORDER_HISTORY: (customerId: string) => `/api/orders/customer/${customerId}/history`,
     ORDER_STATS: '/api/orders/stats/summary',
+    // Quick-order endpoints
+    QUICK_PRODUCTS: '/api/orders/quick/products',
+    QUICK_ORDER: '/api/orders/quick',
     
     // System endpoints
     HEALTH: '/api/health'

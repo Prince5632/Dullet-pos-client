@@ -25,8 +25,10 @@ const RoleDetailsPage = lazy(() => import('../pages/roles/RoleDetailsPage'));
 
 // Order Management Pages
 const OrdersPage = lazy(() => import('../pages/orders/OrdersPage'));
-const CreateOrderPage = lazy(() => import('../pages/orders/CreateOrderPage'));
+const QuickOrderPage = lazy(() => import('../pages/orders/QuickOrderPage'));
 const OrderApprovalPage = lazy(() => import('../pages/orders/OrderApprovalPage'));
+const OrderDetailsPage = lazy(() => import('../pages/orders/OrderDetailsPage'));
+const EditOrderPage = lazy(() => import('../pages/orders/EditOrderPage'));
 
 // Settings Pages
 const SettingsPage = lazy(() => import('../pages/settings/SettingsPage'));
@@ -179,7 +181,23 @@ export const router = createBrowserRouter([
             path: 'new',
             element: (
               <ProtectedRoute requiredPermission="orders.create">
-                <CreateOrderPage />
+                <QuickOrderPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: ':orderId/edit',
+            element: (
+              <ProtectedRoute requiredPermission="orders.update">
+                <EditOrderPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: ':orderId',
+            element: (
+              <ProtectedRoute requiredPermission="orders.read">
+                <OrderDetailsPage />
               </ProtectedRoute>
             ),
           },

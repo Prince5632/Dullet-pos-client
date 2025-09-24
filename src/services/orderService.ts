@@ -1,6 +1,6 @@
 import { apiService } from './api';
 import { API_CONFIG } from '../config/api';
-import type { Order, CreateOrderForm, UpdateOrderForm, OrderStatusUpdate, Customer, PaginationResponse } from '../types';
+import type { Order, CreateOrderForm, UpdateOrderForm, OrderStatusUpdate, Customer, PaginationResponse, QuickProduct, CreateQuickOrderForm } from '../types';
 
 export interface OrderListParams {
   page?: number;
@@ -58,6 +58,24 @@ class OrderService {
       return response.data.order;
     }
     throw new Error(response.message || 'Failed to create order');
+  }
+
+  // Quick-order: get catalog
+  async getQuickProducts(): Promise<QuickProduct[]> {
+    const response = await apiService.get<{ products: QuickProduct[] }>(API_CONFIG.ENDPOINTS.QUICK_PRODUCTS);
+    if (response.success && response.data) {
+      return response.data.products;
+    }
+    throw new Error(response.message || 'Failed to load quick products');
+  }
+
+  // Quick-order: create order
+  async createQuickOrder(data: CreateQuickOrderForm): Promise<Order> {
+    const response = await apiService.post<{ order: Order }>(API_CONFIG.ENDPOINTS.QUICK_ORDER, data);
+    if (response.success && response.data) {
+      return response.data.order;
+    }
+    throw new Error(response.message || 'Failed to create quick order');
   }
 
   // Update order
@@ -330,7 +348,7 @@ class OrderService {
   }
 
   getPackagingOptions(): string[] {
-    return ['Standard', 'Custom', '25kg Bags', '50kg Bags'];
+    return ['Standard', 'Custom', '5kg Bags', '10kg Bags', '25kg Bags', '50kg Bags', 'Loose'];
   }
 
   getPriorityOptions(): Array<{ label: string; value: string; color: string }> {

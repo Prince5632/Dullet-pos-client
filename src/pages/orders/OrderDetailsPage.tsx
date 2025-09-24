@@ -12,7 +12,6 @@ import {
   EnvelopeIcon,
   MapPinIcon,
   CurrencyRupeeIcon,
-  CalendarIcon,
   DocumentTextIcon,
   TruckIcon,
   CheckCircleIcon,
@@ -24,6 +23,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import OrderStatusDropdown from '../../components/orders/OrderStatusDropdown';
+import OrderTimeline from '../../components/orders/OrderTimeline';
 import type { Order } from '../../types';
 import { toast } from 'react-hot-toast';
 
@@ -49,11 +49,11 @@ const OrderDetailsPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await orderService.getOrderById(orderId!);
-      setOrder(response.data);
+      const data = await orderService.getOrderById(orderId!);
+      setOrder(data);
     } catch (err: any) {
       console.error('Error fetching order:', err);
-      setError(err.response?.data?.message || 'Failed to fetch order details');
+      setError(err?.message || err?.response?.data?.message || 'Failed to fetch order details');
       toast.error('Failed to load order details');
     } finally {
       setLoading(false);
@@ -234,7 +234,13 @@ const OrderDetailsPage: React.FC = () => {
                       {order.customer?.address && (
                         <div className="flex items-start text-sm text-gray-600 sm:col-span-2">
                           <MapPinIcon className="h-4 w-4 mr-2 text-gray-400 mt-0.5 flex-shrink-0" />
-                          <span>{order.customer.address}</span>
+                          <span>
+                            {[
+                              order.customer.address.street,
+                              `${order.customer.address.city}, ${order.customer.address.state}`,
+                              order.customer.address.pincode
+                            ].filter(Boolean).join(' • ')}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -277,9 +283,9 @@ const OrderDetailsPage: React.FC = () => {
                             <div className="text-sm font-medium text-gray-900">
                               {item.productName}
                             </div>
-                            {item.description && (
+                            {item.packaging && (
                               <div className="text-sm text-gray-500">
-                                {item.description}
+                                Packaging: {item.packaging}
                               </div>
                             )}
                           </div>
@@ -288,10 +294,10 @@ const OrderDetailsPage: React.FC = () => {
                           {item.quantity} {item.unit}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {orderService.formatCurrency(item.rate)}
+                          {orderService.formatCurrency(item.ratePerUnit)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {orderService.formatCurrency(item.amount)}
+                          {orderService.formatCurrency(item.totalAmount)}
                         </td>
                       </tr>
                     ))}
@@ -384,113 +390,7 @@ const OrderDetailsPage: React.FC = () => {
             </div>
 
             {/* Timeline */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <ClockIcon className="h-5 w-5 mr-2 text-blue-600" />
-                  Order Timeline
-                </h3>
-              </div>
-              <div className="p-6">
-                <div className="flow-root">
-                  <ul className="-mb-8">
-                    <li>
-                      <div className="relative pb-8">
-                        <div className="relative flex space-x-3">
-                          <div>
-                            <span className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center ring-8 ring-white">
-                              <CalendarIcon className="h-4 w-4 text-white" />
-                            </span>
-                          </div>
-                          <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                            <div>
-                              <p className="text-sm text-gray-900 font-medium">Order Created</p>
-                              <p className="text-sm text-gray-500">
-                                Order {order.orderNumber} was created
-                              </p>
-                            </div>
-                            <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                              {orderService.formatDate(order.orderDate)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </li>
-
-                    {order.approvedDate && (
-                      <li>
-                        <div className="relative pb-8">
-                          <div className="relative flex space-x-3">
-                            <div>
-                              <span className="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center ring-8 ring-white">
-                                <CheckCircleIcon className="h-4 w-4 text-white" />
-                              </span>
-                            </div>
-                            <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                              <div>
-                                <p className="text-sm text-gray-900 font-medium">Order Approved</p>
-                                <p className="text-sm text-gray-500">
-                                  {order.approvedBy ? `Approved by ${order.approvedBy}` : 'Order was approved'}
-                                </p>
-                              </div>
-                              <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                                {orderService.formatDate(order.approvedDate)}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                    )}
-
-                    {order.dispatchDate && (
-                      <li>
-                        <div className="relative pb-8">
-                          <div className="relative flex space-x-3">
-                            <div>
-                              <span className="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center ring-8 ring-white">
-                                <TruckIcon className="h-4 w-4 text-white" />
-                              </span>
-                            </div>
-                            <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                              <div>
-                                <p className="text-sm text-gray-900 font-medium">Order Dispatched</p>
-                                <p className="text-sm text-gray-500">Order is on its way</p>
-                              </div>
-                              <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                                {orderService.formatDate(order.dispatchDate)}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                    )}
-
-                    {order.deliveryDate && (
-                      <li>
-                        <div className="relative">
-                          <div className="relative flex space-x-3">
-                            <div>
-                              <span className="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center ring-8 ring-white">
-                                <CheckCircleIcon className="h-4 w-4 text-white" />
-                              </span>
-                            </div>
-                            <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                              <div>
-                                <p className="text-sm text-gray-900 font-medium">Order Delivered</p>
-                                <p className="text-sm text-gray-500">Order has been delivered</p>
-                              </div>
-                              <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                                {orderService.formatDate(order.deliveryDate)}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                    )}
-                  </ul>
-                </div>
-              </div>
-            </div>
+            <OrderTimeline order={order} />
           </div>
         </div>
       </div>
