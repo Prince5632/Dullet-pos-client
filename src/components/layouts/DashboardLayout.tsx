@@ -8,6 +8,7 @@ import {
   UsersIcon,
   ShieldCheckIcon,
   CogIcon,
+  ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import type { NavItem } from '../../types';
@@ -20,6 +21,12 @@ const navigationItems: NavItem[] = [
     name: 'Dashboard',
     href: '/dashboard',
     icon: HomeIcon,
+  },
+  {
+    name: 'Orders',
+    href: '/orders',
+    icon: ClipboardDocumentListIcon,
+    permission: 'orders.read',
   },
   {
     name: 'User Management',

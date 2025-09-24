@@ -21,6 +21,19 @@ export const API_CONFIG = {
     ACTIVATE_ROLE: (id: string) => `/api/roles/${id}/activate`,
     AVAILABLE_PERMISSIONS: '/api/roles/permissions/available',
     
+    // Customer endpoints
+    CUSTOMERS: '/api/customers',
+    CUSTOMER_BY_ID: (id: string) => `/api/customers/${id}`,
+    ACTIVATE_CUSTOMER: (id: string) => `/api/customers/${id}/activate`,
+    CUSTOMER_STATS: '/api/customers/stats/summary',
+    
+    // Order endpoints
+    ORDERS: '/api/orders',
+    ORDER_BY_ID: (id: string) => `/api/orders/${id}`,
+    ORDER_STATUS: (id: string) => `/api/orders/${id}/status`,
+    CUSTOMER_ORDER_HISTORY: (customerId: string) => `/api/orders/customer/${customerId}/history`,
+    ORDER_STATS: '/api/orders/stats/summary',
+    
     // System endpoints
     HEALTH: '/api/health'
   }
