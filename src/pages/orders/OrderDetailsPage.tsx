@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import {
   ArrowLeftIcon,
   PencilIcon,
@@ -31,6 +31,7 @@ const OrderDetailsPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
+  const location = useLocation();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -126,6 +127,17 @@ const OrderDetailsPage: React.FC = () => {
   };
 
   const currentStatusInfo = statusInfo[order.status as keyof typeof statusInfo];
+
+  // Fallback: show just-created payment (from QuickOrder navigation state) if backend hasn't persisted yet
+  const navState = (location as unknown as { state?: any })?.state;
+  const justCreatedPayment = navState?.justCreatedPayment as { paidAmount?: number; paymentStatus?: Order['paymentStatus'] } | undefined;
+  const paidDisplay = (typeof order.paidAmount === 'number' && order.paidAmount > 0)
+    ? order.paidAmount
+    : (justCreatedPayment?.paidAmount || 0);
+  const paymentStatusDisplay: Order['paymentStatus'] = (typeof order.paidAmount === 'number' && order.paidAmount > 0)
+    ? order.paymentStatus
+    : (justCreatedPayment?.paymentStatus || order.paymentStatus);
+  const remainingDisplay = Math.max(0, (order.totalAmount || 0) - (paidDisplay || 0));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -347,12 +359,14 @@ const OrderDetailsPage: React.FC = () => {
               <div className="p-6 space-y-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-medium">{orderService.formatCurrency(order.totalAmount)}</span>
+                  <span className="font-medium">{orderService.formatCurrency(order.subtotal)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Tax</span>
-                  <span className="font-medium">{orderService.formatCurrency(0)}</span>
-                </div>
+                {order.taxAmount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Tax</span>
+                    <span className="font-medium">{orderService.formatCurrency(order.taxAmount)}</span>
+                  </div>
+                )}
                 <div className="border-t border-gray-200 pt-4">
                   <div className="flex justify-between">
                     <span className="text-base font-medium text-gray-900">Total</span>
@@ -363,15 +377,25 @@ const OrderDetailsPage: React.FC = () => {
                 </div>
                 
                 <div className="mt-6 pt-6 border-t border-gray-200 space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Payment Terms</span>
-                    <span className="font-medium">{order.paymentTerms}</span>
-                  </div>
+                  {order.paymentTerms !== 'Cash' && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Payment Terms</span>
+                      <span className="font-medium">{order.paymentTerms}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Payment Status</span>
-                    <Badge className={orderService.getPaymentStatusColor(order.paymentStatus)}>
-                      {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                    <Badge className={orderService.getPaymentStatusColor(paymentStatusDisplay)}>
+                      {paymentStatusDisplay.charAt(0).toUpperCase() + paymentStatusDisplay.slice(1)}
                     </Badge>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Paid</span>
+                    <span className="font-medium">{orderService.formatCurrency(paidDisplay || 0)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Remaining</span>
+                    <span className="font-medium">{orderService.formatCurrency(remainingDisplay)}</span>
                   </div>
                   {order.priority !== 'normal' && (
                     <div className="flex justify-between text-sm">

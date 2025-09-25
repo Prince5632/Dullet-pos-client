@@ -270,6 +270,8 @@ export interface CreateQuickOrderForm {
   priority?: Order['priority'];
   notes?: string;
   deliveryInstructions?: string;
+  paidAmount?: number;
+  paymentStatus?: Order['paymentStatus'];
 }
 
 // Navigation Types

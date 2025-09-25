@@ -45,6 +45,8 @@ const QuickOrderPage: React.FC = () => {
   const [paymentTerms, setPaymentTerms] = useState<'Cash' | 'Credit' | 'Advance'>('Cash');
   const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
   const [creating, setCreating] = useState(false);
+  // Payment
+  const [paidAmount, setPaidAmount] = useState<number>(0);
 
   useEffect(() => {
     const load = async () => {
@@ -165,6 +167,8 @@ const QuickOrderPage: React.FC = () => {
       }
       setCreating(true);
 
+      const paymentStatus: 'pending' | 'partial' | 'paid' = paidAmount >= totalAmount ? 'paid' : paidAmount > 0 ? 'partial' : 'pending';
+
       const payload: CreateQuickOrderForm = {
         customer: selectedCustomerId,
         items: itemsArray.map(it => ({
@@ -174,11 +178,21 @@ const QuickOrderPage: React.FC = () => {
         })),
         paymentTerms,
         priority,
+        paidAmount,
+        paymentStatus,
       };
 
       const created = await orderService.createQuickOrder(payload);
+      // Fallback: if backend quick route doesn't persist payment yet, ensure it's updated now before navigating
+      try {
+        if (paidAmount > 0) {
+          await orderService.updateOrder(created._id, { paidAmount, paymentStatus });
+        }
+      } catch {
+        // ignore, navigation will still proceed
+      }
       toast.success('Order created');
-      navigate(`/orders/${created._id}`);
+      navigate(`/orders/${created._id}` , { state: { justCreatedPayment: { paidAmount, paymentStatus } } } as any);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to create order');
     } finally {
@@ -296,36 +310,72 @@ const QuickOrderPage: React.FC = () => {
           </div>
         )}
 
-        {/* Payment terms & priority */}
+        {/* Payment (with compact terms/priority) */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-28">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Payment Terms</label>
-              <div className="flex gap-2">
-                {(['Cash','Credit','Advance'] as const).map(term => (
-                  <button
-                    key={term}
-                    type="button"
-                    onClick={() => setPaymentTerms(term)}
-                    className={`px-3 py-2 rounded-lg text-sm border ${paymentTerms === term ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-                  >
-                    {term}
-                  </button>
-                ))}
+          <div className="flex items-start sm:items-center justify-between gap-3 mb-3">
+            <h3 className="text-sm font-medium text-gray-900">Payment</h3>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">Terms:</span>
+                <div className="inline-flex gap-1">
+                  {(['Cash','Credit','Advance'] as const).map(term => (
+                    <button
+                      key={term}
+                      type="button"
+                      onClick={() => setPaymentTerms(term)}
+                      className={`px-2.5 py-1.5 rounded-md text-xs border ${paymentTerms === term ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                    >
+                      {term}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">Priority:</span>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as any)}
+                  className="px-2 py-1.5 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
               </div>
             </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:items-end">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as any)}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Paid Amount</label>
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                value={paidAmount}
+                onChange={(e) => setPaidAmount(Number(e.target.value) || 0)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            <div>
+              <div className="text-sm text-gray-600">Remaining</div>
+              <div className="text-lg font-semibold text-gray-900">{orderService.formatCurrency(Math.max(0, totalAmount - (paidAmount || 0)))}</div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPaidAmount(totalAmount)}
+                className="px-3 py-2 rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 text-sm"
               >
-                <option value="low">Low</option>
-                <option value="normal">Normal</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </select>
+                Mark as Paid
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaidAmount(0)}
+                className="px-3 py-2 rounded-lg border border-gray-300 text-sm hover:bg-gray-50"
+              >
+                Clear
+              </button>
             </div>
           </div>
         </div>
