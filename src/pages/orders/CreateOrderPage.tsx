@@ -129,10 +129,10 @@ const CreateOrderPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       {/* Mobile-optimized Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+        <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 max-w-screen-2xl mx-auto">
           <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={() => navigate('/orders')}
@@ -150,9 +150,9 @@ const CreateOrderPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-screen-2xl mx-auto">
         <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4 sm:space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 w-full">
             {/* Main Form */}
             <div className="lg:col-span-2 space-y-4 sm:space-y-6">
               {/* Customer Selection */}
@@ -393,36 +393,38 @@ const CreateOrderPage: React.FC = () => {
         </form>
 
         {/* Mobile Bottom Action Bar */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-20">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex-1">
-              <div className="text-xs text-gray-500 mb-1">Total Amount</div>
-              <div className="text-lg font-semibold text-emerald-600">
-                {orderService.formatCurrency(calculateTotal())}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20 safe-area-inset-bottom">
+          <div className="px-4 py-4 max-w-screen-2xl mx-auto w-full">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-gray-500 mb-1">Total Amount</div>
+                <div className="text-lg font-semibold text-emerald-600 truncate">
+                  {orderService.formatCurrency(calculateTotal())}
+                </div>
               </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => navigate('/orders')}
-                className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading || orderItems.length === 0}
-                className="px-6 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Creating...
-                  </>
-                ) : (
-                  'Create Order'
-                )}
-              </button>
+              <div className="flex gap-2 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => navigate('/orders')}
+                  className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading || orderItems.length === 0}
+                  className="px-6 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center whitespace-nowrap"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Order'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

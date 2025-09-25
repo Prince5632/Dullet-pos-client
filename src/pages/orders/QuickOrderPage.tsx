@@ -201,26 +201,33 @@ const QuickOrderPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/orders')} className="p-1 text-gray-600 hover:text-gray-900">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+      {/* Mobile-optimized Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 max-w-screen-2xl mx-auto">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <button 
+              onClick={() => navigate('/orders')} 
+              className="inline-flex items-center p-2 rounded-lg text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+            >
               <ArrowLeftIcon className="h-5 w-5" />
             </button>
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">Quick Order</h1>
-              <p className="text-sm text-gray-500">Create orders faster with pre-defined items</p>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">Quick Order</h1>
+              <p className="hidden sm:block mt-1 text-sm text-gray-600">Create orders faster with pre-defined items</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-4 sm:p-6 lg:p-8">
+      <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-screen-2xl mx-auto">
         {/* Customer */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
+            <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
+            Customer
+          </h3>
           <CustomerSelector
             selectedCustomerId={selectedCustomerId}
             onCustomerChange={handleCustomerChange}
@@ -231,30 +238,42 @@ const QuickOrderPage: React.FC = () => {
           />
         </div>
 
-        {/* Products chips */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-gray-900">Products</h3>
-            {loadingProducts && <span className="text-xs text-gray-500">Loading...</span>}
-            {productsError && <span className="text-xs text-red-600">{productsError}</span>}
+        {/* Products */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
+              Products
+            </h3>
+            {loadingProducts && <span className="text-sm text-gray-500">Loading...</span>}
+            {productsError && <span className="text-sm text-red-600">{productsError}</span>}
           </div>
 
-          <div className="overflow-x-auto -mx-2 px-2">
-            <div className="flex gap-2">
+          <div className="overflow-x-auto product-scrollbar -mx-2 px-2">
+            <div className="flex gap-3 pb-2">
               {products.map(p => {
                 const isSelected = !!selectedItems[p.key];
                 return (
                   <button
                     key={p.key}
                     onClick={() => openQtyModal(p)}
-                    className={`shrink-0 px-3 py-2 rounded-full border text-left transition-all ${isSelected ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                    className={`shrink-0 px-4 py-3 rounded-xl border text-left transition-all min-w-[140px] sm:min-w-[160px] ${
+                      isSelected 
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-sm' 
+                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+                    }`}
                   >
-                    <div className="text-xs font-medium leading-tight">
+                    <div className="text-sm font-semibold leading-tight mb-1">
                       {p.name}
                     </div>
-                    <div className="text-[11px] text-gray-500">
-                      ₹{p.pricePerKg}/kg{p.bagSizeKg ? ` • ${p.bagSizeKg}kg bag` : ''}
+                    <div className="text-xs text-gray-600">
+                      ₹{p.pricePerKg}/kg
                     </div>
+                    {p.bagSizeKg && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        {p.bagSizeKg}kg bags available
+                      </div>
+                    )}
                   </button>
                 );
               })}
@@ -264,8 +283,11 @@ const QuickOrderPage: React.FC = () => {
 
         {/* Selected items */}
         {itemsArray.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-24">
-            <h3 className="text-sm font-medium text-gray-900 mb-3">Selected Items</h3>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
+              Selected Items ({itemsArray.length})
+            </h3>
             <div className="space-y-3">
               {itemsArray.map(it => {
                 const kg = computeItemKg(it);
@@ -381,29 +403,42 @@ const QuickOrderPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Sticky footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
-        <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
-          <div>
-            <div className="text-xs text-gray-500">Total</div>
-            <div className="text-lg font-semibold text-gray-900">{orderService.formatCurrency(totalAmount)}</div>
+      {/* Mobile Bottom Action Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20 safe-area-inset-bottom">
+        <div className="px-4 py-4 max-w-screen-2xl mx-auto w-full">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="text-xs text-gray-500 mb-1">Total Amount</div>
+              <div className="text-lg font-semibold text-emerald-600 truncate">
+                {orderService.formatCurrency(totalAmount)}
+              </div>
+            </div>
+            <div className="flex-shrink-0">
+              <button
+                onClick={handleCreate}
+                disabled={!canSubmit}
+                className={`inline-flex items-center justify-center px-6 py-3 rounded-lg text-white text-sm font-medium shadow-sm transition-all duration-200 whitespace-nowrap ${
+                  canSubmit 
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 focus:outline-none focus:ring-2 focus:ring-emerald-500' 
+                    : 'bg-gray-400 cursor-not-allowed'
+                }`}
+              >
+                {creating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Order'
+                )}
+              </button>
+            </div>
           </div>
-          <button
-            onClick={handleCreate}
-            disabled={!canSubmit}
-            className={`flex-1 inline-flex items-center justify-center px-4 py-3 rounded-lg text-white text-sm font-medium shadow ${canSubmit ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700' : 'bg-gray-400 cursor-not-allowed'}`}
-          >
-            {creating ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                Creating...
-              </>
-            ) : (
-              'Create Order'
-            )}
-          </button>
         </div>
       </div>
+
+      {/* Mobile Bottom Padding */}
+      <div className="h-20"></div>
 
       {/* Quantity Modal */}
       {activeProduct && (

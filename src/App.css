@@ -1,1 +1,25 @@
 @import "tailwindcss";
+
+/* globals.css (or an imported CSS module) */
+.product-scrollbar {
+    /* Standards (Firefox + modern Chromium) */
+    scrollbar-width: thin;             /* thin variant, not a px length */ 
+    scrollbar-color: #94a3b8 #f8fafc;  /* thumb color then track color */
+    scrollbar-gutter: stable;          /* avoid layout shift when bar appears */
+  }
+  
+  /* WebKit fallback (Chrome/Safari/Edge legacy behavior) */
+  .product-scrollbar::-webkit-scrollbar {
+    height: 6px;            /* horizontal scrollbar thickness */
+  }
+  .product-scrollbar::-webkit-scrollbar-track {
+    background: #f8fafc;    /* subtle track */
+  }
+  .product-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #94a3b8;  /* slate-400-ish */
+    border-radius: 9999px;      /* pill thumb */
+  }
+  .product-scrollbar:hover::-webkit-scrollbar-thumb {
+    background-color: #64748b;  /* darken on hover for affordance */
+  }
+  
