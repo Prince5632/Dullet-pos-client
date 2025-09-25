@@ -164,6 +164,11 @@ const OrderDetailsPage: React.FC = () => {
                   <span className="text-sm text-gray-500">
                     Created {orderService.formatDate(order.orderDate)}
                   </span>
+                  {order.godown && (
+                    <span className="text-sm text-gray-500">
+                      • {order.godown.name}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

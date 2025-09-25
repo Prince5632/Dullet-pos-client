@@ -13,6 +13,7 @@ export interface OrderListParams {
   dateTo?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  godownId?: string;
 }
 
 export interface CustomerOrderHistoryParams {
@@ -288,7 +289,7 @@ class OrderService {
   }
 
   // Get order statistics
-  async getOrderStats(): Promise<{
+  async getOrderStats(params: { godownId?: string } = {}): Promise<{
     totalOrders: number;
     pendingOrders: number;
     approvedOrders: number;
@@ -297,6 +298,9 @@ class OrderService {
     todayOrders: number;
     monthlyRevenue: number;
   }> {
+    const queryParams = new URLSearchParams();
+    if (params.godownId) queryParams.append('godownId', params.godownId);
+
     const response = await apiService.get<{
       totalOrders: number;
       pendingOrders: number;
@@ -305,7 +309,7 @@ class OrderService {
       rejectedOrders: number;
       todayOrders: number;
       monthlyRevenue: number;
-    }>(API_CONFIG.ENDPOINTS.ORDER_STATS);
+    }>(`${API_CONFIG.ENDPOINTS.ORDER_STATS}?${queryParams.toString()}`);
 
     if (response.success && response.data) {
       return response.data;

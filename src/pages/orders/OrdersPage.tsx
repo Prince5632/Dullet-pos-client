@@ -16,7 +16,9 @@ import { customerService } from '../../services/customerService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useDebounce } from '../../hooks/useDebounce';
 // import { Table, Pagination, Badge, Avatar } from '../../components/ui';
-import type { Order, Customer, TableColumn } from '../../types';
+import type { Order, Customer, TableColumn, Godown } from '../../types';
+import { apiService } from '../../services/api';
+import { API_CONFIG } from '../../config/api';
 // import { toast } from 'react-hot-toast';
 import Table from '../../components/ui/Table';
 import Pagination from '../../components/ui/Pagination';
@@ -33,6 +35,8 @@ const OrdersPage: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [godownFilter, setGodownFilter] = useState('');
   
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,6 +77,7 @@ const OrdersPage: React.FC = () => {
         dateTo: dateToFilter,
         sortBy,
         sortOrder,
+        godownId: godownFilter,
       };
 
       const response = await orderService.getOrders(params);
@@ -121,6 +126,16 @@ const OrdersPage: React.FC = () => {
     loadCustomers();
   }, [loadCustomers]);
 
+  // Load godowns
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await apiService.get<{ godowns: Godown[] }>(API_CONFIG.ENDPOINTS.GODOWNS);
+        if (res.success && res.data) setGodowns(res.data.godowns);
+      } catch {}
+    })();
+  }, []);
+
   // Reset page when filters change
   useEffect(() => {
     if (currentPage !== 1) {
@@ -144,6 +159,7 @@ const OrdersPage: React.FC = () => {
     setStatusFilter('');
     setPaymentStatusFilter('');
     setCustomerFilter('');
+    setGodownFilter('');
     setDateFromFilter('');
     setDateToFilter('');
     setCurrentPage(1);
@@ -214,6 +230,9 @@ const OrdersPage: React.FC = () => {
           <div className="text-xs text-gray-500 mb-1">
             {order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? 's' : ''} • {order.paymentTerms}
           </div>
+          {order.godown?.name && (
+            <div className="text-xs text-gray-400">{order.godown.name}</div>
+          )}
           <div className="text-xs text-gray-400 truncate">
             {order.items?.[0]?.productName}
             {order.items?.length > 1 && ` +${order.items.length - 1} more`}
@@ -428,7 +447,7 @@ const OrdersPage: React.FC = () => {
             {/* Advanced Filters */}
             {showFilters && (
               <div className="mt-6 pt-6 border-t border-gray-200">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Payment Status
@@ -486,6 +505,22 @@ const OrdersPage: React.FC = () => {
                       onChange={(e) => setDateToFilter(e.target.value)}
                       className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Godown
+                    </label>
+                    <select
+                      value={godownFilter}
+                      onChange={(e) => setGodownFilter(e.target.value)}
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    >
+                      <option value="">All Godowns</option>
+                      {godowns.map(g => (
+                        <option key={g._id} value={g._id}>{g.name} ({g.location.city}{g.location.area ? ` - ${g.location.area}` : ''})</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>

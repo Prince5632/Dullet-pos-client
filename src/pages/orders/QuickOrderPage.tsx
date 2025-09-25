@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon, PlusIcon, MinusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { orderService } from '../../services/orderService';
 import CustomerSelector from '../../components/customers/CustomerSelector';
-import type { QuickProduct, CreateQuickOrderForm, Customer } from '../../types';
+import type { QuickProduct, CreateQuickOrderForm, Customer, Godown } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
+import { apiService } from '../../services/api';
+import { API_CONFIG } from '../../config/api';
 import { toast } from 'react-hot-toast';
 
 type ItemMode = 'bags' | 'kg';
@@ -47,6 +50,10 @@ const QuickOrderPage: React.FC = () => {
   const [creating, setCreating] = useState(false);
   // Payment
   const [paidAmount, setPaidAmount] = useState<number>(0);
+  // Godown
+  const { user } = useAuth();
+  const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [selectedGodownId, setSelectedGodownId] = useState<string>('');
 
   useEffect(() => {
     const load = async () => {
@@ -64,6 +71,20 @@ const QuickOrderPage: React.FC = () => {
     };
     load();
   }, []);
+
+  // Load godowns and default from user primary
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await apiService.get<{ godowns: Godown[] }>(API_CONFIG.ENDPOINTS.GODOWNS);
+        if (res.success && res.data) {
+          setGodowns(res.data.godowns);
+          const defaultId = (user as any)?.primaryGodown?._id;
+          if (defaultId) setSelectedGodownId(defaultId);
+        }
+      } catch {}
+    })();
+  }, [user]);
 
   // Derived maps can be added here in future if needed
 
@@ -180,6 +201,7 @@ const QuickOrderPage: React.FC = () => {
         priority,
         paidAmount,
         paymentStatus,
+        godown: selectedGodownId || undefined,
       };
 
       const created = await orderService.createQuickOrder(payload);
@@ -236,6 +258,25 @@ const QuickOrderPage: React.FC = () => {
             required
             showDetails={false}
           />
+        </div>
+
+        {/* Godown */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
+            <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
+            Godown
+          </h3>
+          <select
+            value={selectedGodownId}
+            onChange={(e) => setSelectedGodownId(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="">Select godown</option>
+            {godowns.map(g => (
+              <option key={g._id} value={g._id}>{g.name} ({g.location.city}{g.location.area ? ` - ${g.location.area}` : ''})</option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-2">Defaults from your primary godown when available.</p>
         </div>
 
         {/* Products */}

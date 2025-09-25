@@ -36,6 +36,9 @@ export interface User {
   lastLoginIP?: string;
   createdAt: string;
   updatedAt: string;
+  // Godown assignments
+  primaryGodown?: Godown;
+  accessibleGodowns?: Godown[];
 }
 
 // Role Types
@@ -57,6 +60,16 @@ export interface Permission {
   module: 'users' | 'roles' | 'orders' | 'billing' | 'stock' | 'production' | 'godowns' | 'customers' | 'employees' | 'reports' | 'settings';
   action: 'create' | 'read' | 'update' | 'delete' | 'approve' | 'manage';
   description: string;
+  isActive: boolean;
+}
+
+// Godown Types
+export interface Godown {
+  _id: string;
+  name: string;
+  code?: string;
+  location: { city: string; state: string; area?: string };
+  allowedProducts?: string[];
   isActive: boolean;
 }
 
@@ -88,6 +101,8 @@ export interface CreateUserForm {
   department: User['department'];
   position: string;
   profilePhoto?: File;
+  primaryGodownId?: string;
+  accessibleGodownIds?: string[];
 }
 
 export interface UpdateUserForm extends Partial<CreateUserForm> {
@@ -212,6 +227,7 @@ export interface Order {
   updatedBy?: User;
   createdAt: string;
   updatedAt: string;
+  godown?: Godown;
   // Virtual fields
   remainingAmount?: number;
   orderAge?: number;
@@ -220,6 +236,7 @@ export interface Order {
 export interface CreateOrderForm {
   customer: string;
   items: OrderItem[];
+  godown?: string;
   discountPercentage?: number;
   discount?: number;
   taxAmount?: number;
@@ -273,6 +290,7 @@ export interface CreateQuickOrderForm {
   deliveryInstructions?: string;
   paidAmount?: number;
   paymentStatus?: Order['paymentStatus'];
+  godown?: string;
 }
 
 // Navigation Types

@@ -286,6 +286,13 @@ const UserDetailsPage: React.FC = () => {
                   <BuildingOfficeIcon className="h-4 w-4 mr-3 text-gray-400" />
                   <span>{user.department}</span>
                 </div>
+
+                {user.primaryGodown && (
+                  <div className="flex items-center text-sm text-gray-600">
+                    <BuildingOfficeIcon className="h-4 w-4 mr-3 text-gray-400" />
+                    <span>Primary: {user.primaryGodown.name} ({user.primaryGodown.location.city}{user.primaryGodown.location.area ? ` - ${user.primaryGodown.location.area}` : ''})</span>
+                  </div>
+                )}
                 
                 <div className="flex items-center text-sm text-gray-600">
                   <ShieldCheckIcon className="h-4 w-4 mr-3 text-gray-400" />
@@ -358,6 +365,20 @@ const UserDetailsPage: React.FC = () => {
               <h3 className="text-lg font-medium text-gray-900">Role & Permissions</h3>
             </div>
             <div className="p-6">
+              {/* Accessible Godowns */}
+              {user.accessibleGodowns && user.accessibleGodowns.length > 0 && (
+                <div className="mb-6">
+                  <dt className="text-sm font-medium text-gray-500 mb-2">Accessible Godowns</dt>
+                  <dd className="flex flex-wrap gap-2">
+                    {user.accessibleGodowns.map((g) => (
+                      <Badge key={g._id} variant="default" size="sm">
+                        {g.name}
+                      </Badge>
+                    ))}
+                  </dd>
+                </div>
+              )}
+
               {user.role ? (
                 <div className="space-y-4">
                   <div>
