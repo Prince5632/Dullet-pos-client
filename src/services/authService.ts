@@ -1,5 +1,5 @@
 import { apiService } from './api';
-import { API_CONFIG } from '../config/api';
+import { API_CONFIG, APP_CONFIG } from '../config/api';
 import type { LoginRequest, LoginResponse, User, ChangePasswordForm } from '../types';
 
 class AuthService {
@@ -27,8 +27,16 @@ class AuthService {
       // Set token in API service
       apiService.setToken(response.data.token);
       
-      // Store user data
+      // Store user data and refresh token
       localStorage.setItem('user_data', JSON.stringify(response.data.user));
+      
+      // Store refresh token if provided
+      if (response.data.refreshToken) {
+        localStorage.setItem('refresh_token', response.data.refreshToken);
+      }
+      
+      // Store login timestamp for session management
+      localStorage.setItem('login_timestamp', Date.now().toString());
       
       return response.data;
     }
@@ -77,7 +85,31 @@ class AuthService {
   isAuthenticated(): boolean {
     const token = apiService.getToken();
     const userData = this.getCurrentUser();
-    return !!(token && userData);
+    
+    if (!token || !userData) {
+      return false;
+    }
+
+    // Check if session has expired based on login timestamp
+    return this.isSessionValid();
+  }
+
+  // Check if current session is still valid
+  isSessionValid(): boolean {
+    try {
+      const loginTimestamp = localStorage.getItem('login_timestamp');
+      if (!loginTimestamp) {
+        return false;
+      }
+
+      const loginTime = parseInt(loginTimestamp);
+      const currentTime = Date.now();
+      const sessionTimeout = APP_CONFIG.SESSION_TIMEOUT;
+      
+      return (currentTime - loginTime) < sessionTimeout;
+    } catch {
+      return false;
+    }
   }
 
   // Get current user from localStorage
@@ -118,6 +150,8 @@ class AuthService {
   clearAuthData(): void {
     apiService.clearToken();
     localStorage.removeItem('user_data');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('login_timestamp');
   }
 
   // Get user's permissions list
@@ -138,6 +172,46 @@ class AuthService {
   getUserDepartment(): string | null {
     const user = this.getCurrentUser();
     return user?.department || null;
+  }
+
+  // Refresh session timestamp (call this on user activity)
+  refreshSession(): void {
+    if (this.isAuthenticated()) {
+      localStorage.setItem('login_timestamp', Date.now().toString());
+    }
+  }
+
+  // Attempt to refresh token if session is expired but refresh token exists
+  async attemptTokenRefresh(): Promise<boolean> {
+    try {
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (!refreshToken) {
+        return false;
+      }
+
+      const response = await apiService.post<LoginResponse>(API_CONFIG.ENDPOINTS.REFRESH_TOKEN, {
+        refreshToken
+      });
+
+      if (response.success && response.data) {
+        // Update tokens and session
+        apiService.setToken(response.data.token);
+        localStorage.setItem('user_data', JSON.stringify(response.data.user));
+        localStorage.setItem('login_timestamp', Date.now().toString());
+        
+        if (response.data.refreshToken) {
+          localStorage.setItem('refresh_token', response.data.refreshToken);
+        }
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      this.clearAuthData();
+      return false;
+    }
   }
 
 }

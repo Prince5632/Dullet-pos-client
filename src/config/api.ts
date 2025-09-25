@@ -1,6 +1,6 @@
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_URL || 'https://dullet.onrender.com',
+  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
   ENDPOINTS: {
     // Auth endpoints
     LOGIN: '/api/auth/login',
@@ -70,6 +70,6 @@ export const APP_CONFIG = {
   APP_VERSION: '1.0.0',
   COMPANY_NAME: 'Dullet Industries',
   COMPANY_WEBSITE: 'https://www.dulletindustries.in',
-  SESSION_TIMEOUT: 30 * 60 * 1000, // 30 minutes
+  SESSION_TIMEOUT: 10 * 60 * 60 * 1000, // 10 hours
   AUTO_SAVE_INTERVAL: 5 * 60 * 1000, // 5 minutes
 };

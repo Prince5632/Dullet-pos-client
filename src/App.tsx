@@ -1,10 +1,11 @@
 
-import React, { Suspense } from 'react';
+import { Suspense } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import { router } from './router';
 import LoadingSpinner from './components/common/LoadingSpinner';
+import SessionDebug from './components/debug/SessionDebug';
 import './App.css';
 
 function App() {
@@ -41,6 +42,9 @@ function App() {
             },
           }}
         />
+        
+        {/* Debug component for testing persistent login - Remove in production */}
+        {/* {import.meta.env.DEV && <SessionDebug />} */}
       </div>
     </AuthProvider>
   );

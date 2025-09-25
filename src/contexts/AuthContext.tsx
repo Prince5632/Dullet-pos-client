@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import type { User, LoginRequest } from '../types';
 import { authService } from '../services/authService';
+import { useSessionSync } from '../hooks/useSessionSync';
+import { APP_CONFIG } from '../config/api';
 import toast from 'react-hot-toast';
 
 // Auth State
@@ -88,6 +90,7 @@ interface AuthContextType extends AuthState {
   hasAllPermissions: (permissions: string[]) => boolean;
   hasRole: (role: string) => boolean;
   clearError: () => void;
+  refreshSession: () => void;
 }
 
 // Create context
@@ -101,6 +104,27 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
+  // Handle cross-tab authentication changes
+  const handleAuthChange = useCallback(async (isAuthenticated: boolean) => {
+    if (isAuthenticated) {
+      // User logged in in another tab, refresh our state
+      try {
+        dispatch({ type: 'AUTH_START' });
+        const user = await authService.getProfile();
+        dispatch({ type: 'AUTH_SUCCESS', payload: user });
+      } catch (error) {
+        console.error('Failed to sync login from another tab:', error);
+        dispatch({ type: 'AUTH_FAILURE', payload: 'Failed to sync authentication' });
+      }
+    } else {
+      // User logged out in another tab
+      dispatch({ type: 'LOGOUT' });
+    }
+  }, []);
+
+  // Use session sync hook for cross-tab communication
+  const { refreshSession } = useSessionSync(handleAuthChange);
+
   // Initialize auth state on app load
   useEffect(() => {
     const initializeAuth = async () => {
@@ -108,12 +132,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Only initialize if we're still in loading state
         if (!state.isLoading) return;
 
+        // Check if user has valid session
         if (authService.isAuthenticated()) {
           dispatch({ type: 'AUTH_START' });
-          const user = await authService.getProfile();
-          dispatch({ type: 'AUTH_SUCCESS', payload: user });
+          try {
+            const user = await authService.getProfile();
+            dispatch({ type: 'AUTH_SUCCESS', payload: user });
+          } catch (error) {
+            // If profile fetch fails, try to refresh token
+            console.log('Profile fetch failed, attempting token refresh...');
+            const refreshSuccess = await authService.attemptTokenRefresh();
+            
+            if (refreshSuccess) {
+              const user = await authService.getProfile();
+              dispatch({ type: 'AUTH_SUCCESS', payload: user });
+            } else {
+              throw error;
+            }
+          }
         } else {
-          dispatch({ type: 'AUTH_FAILURE', payload: 'Not authenticated' });
+          // Check if we can restore session using refresh token
+          const refreshSuccess = await authService.attemptTokenRefresh();
+          
+          if (refreshSuccess) {
+            dispatch({ type: 'AUTH_START' });
+            const user = await authService.getProfile();
+            dispatch({ type: 'AUTH_SUCCESS', payload: user });
+          } else {
+            dispatch({ type: 'AUTH_FAILURE', payload: 'Not authenticated' });
+          }
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
@@ -127,6 +174,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       initializeAuth();
     }
   }, []); // Empty dependency array to run only once
+
+  // Set up user activity tracking to refresh session
+  useEffect(() => {
+    if (!state.isAuthenticated) return;
+
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    let activityTimer: number;
+
+    const handleUserActivity = () => {
+      // Debounce activity tracking to avoid excessive calls
+      clearTimeout(activityTimer);
+      activityTimer = setTimeout(() => {
+        if (state.isAuthenticated) {
+          refreshSession();
+        }
+      }, 30000); // Refresh session every 30 seconds of activity
+    };
+
+    // Add event listeners for user activity
+    activityEvents.forEach(event => {
+      document.addEventListener(event, handleUserActivity, true);
+    });
+
+    // Initial activity registration
+    handleUserActivity();
+
+    // Cleanup
+    return () => {
+      clearTimeout(activityTimer);
+      activityEvents.forEach(event => {
+        document.removeEventListener(event, handleUserActivity, true);
+      });
+    };
+  }, [state.isAuthenticated, refreshSession]);
+
 
   // Login function
   const login = async (credentials: LoginRequest): Promise<void> => {
@@ -208,6 +290,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     dispatch({ type: 'CLEAR_ERROR' });
   };
 
+  // Session expiration warning logic
+  useEffect(() => {
+    if (!state.isAuthenticated) return;
+
+    const checkSessionExpiration = () => {
+      const loginTimestamp = localStorage.getItem('login_timestamp');
+      if (!loginTimestamp) return;
+
+      const loginTime = parseInt(loginTimestamp);
+      const currentTime = Date.now();
+      const sessionTimeout = APP_CONFIG.SESSION_TIMEOUT;
+      const warningTime = 5 * 60 * 1000; // 5 minutes before expiration
+      
+      const timeElapsed = currentTime - loginTime;
+      const timeRemaining = sessionTimeout - timeElapsed;
+
+      // If session has expired, logout automatically
+      if (timeRemaining <= 0) {
+        toast.error('Your session has expired. Please login again.');
+        logout();
+        return;
+      }
+
+      // If session is about to expire, show warning
+      if (timeRemaining <= warningTime && timeRemaining > 0) {
+        const minutesRemaining = Math.ceil(timeRemaining / (60 * 1000));
+        toast.error(
+          `Your session will expire in ${minutesRemaining} minute${minutesRemaining !== 1 ? 's' : ''}. Please save your work.`,
+          {
+            duration: 10000, // Show for 10 seconds
+            id: 'session-warning', // Prevent duplicate toasts
+          }
+        );
+      }
+    };
+
+    // Check session expiration every minute
+    const interval = setInterval(checkSessionExpiration, 60 * 1000);
+
+    // Initial check
+    checkSessionExpiration();
+
+    return () => clearInterval(interval);
+  }, [state.isAuthenticated, logout]);
+
   const contextValue: AuthContextType = {
     ...state,
     login,
@@ -219,6 +346,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     hasAllPermissions,
     hasRole,
     clearError,
+    refreshSession,
   };
 
   return (

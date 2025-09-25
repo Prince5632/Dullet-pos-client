@@ -9,7 +9,6 @@ class ApiService {
   private token: string | null = null;
   private refreshPromise: Promise<string> | null = null;
   private isRefreshing: boolean = false;
-  private requestCache: Map<string, Promise<any>> = new Map();
 
   constructor() {
     this.api = axios.create({
@@ -106,6 +105,7 @@ class ApiService {
   private clearTokenFromStorage() {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('refresh_token');
+    localStorage.removeItem('login_timestamp');
   }
 
   private getRefreshTokenFromStorage(): string | null {
@@ -233,16 +233,6 @@ class ApiService {
     return response.data;
   }
 
-  // Refresh token
-  private async refreshToken(): Promise<void> {
-    try {
-      const response = await this.api.post(API_CONFIG.ENDPOINTS.REFRESH_TOKEN);
-      const newToken = response.data.data.token;
-      this.setToken(newToken);
-    } catch (error) {
-      throw error;
-    }
-  }
 
   // Health check
   public async healthCheck(): Promise<boolean> {
