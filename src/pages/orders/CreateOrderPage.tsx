@@ -130,18 +130,19 @@ const CreateOrderPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow">
-        <div className="px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center space-x-4">
+      {/* Mobile-optimized Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={() => navigate('/orders')}
-              className="text-gray-600 hover:text-gray-800 p-1"
+              className="inline-flex items-center p-2 rounded-lg text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors"
             >
               <ArrowLeftIcon className="h-5 w-5" />
             </button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Create New Order</h1>
-              <p className="mt-1 text-sm text-gray-600">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">Create Order</h1>
+              <p className="hidden sm:block mt-1 text-sm text-gray-600">
                 Create a new order for a customer
               </p>
             </div>
@@ -149,14 +150,17 @@ const CreateOrderPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
-        <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Main Form */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
               {/* Customer Selection */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Customer Information</h3>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
+                  <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
+                  Customer
+                </h3>
                 <CustomerSelector
                   selectedCustomerId={watchedValues.customer}
                   onCustomerChange={handleCustomerChange}
@@ -167,28 +171,28 @@ const CreateOrderPage: React.FC = () => {
                 />
 
                 {selectedCustomer && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="mt-4 p-3 sm:p-4 bg-emerald-50 rounded-lg border border-emerald-100">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
                       <div>
-                        <span className="font-medium text-gray-700">Contact:</span>
-                        <p className="text-gray-600">{selectedCustomer.contactPersonName}</p>
-                        <p className="text-gray-600">{selectedCustomer.phone}</p>
+                        <span className="font-medium text-emerald-800">Contact:</span>
+                        <p className="text-emerald-700">{selectedCustomer.contactPersonName}</p>
+                        <p className="text-emerald-700">{selectedCustomer.phone}</p>
                       </div>
                       <div>
-                        <span className="font-medium text-gray-700">Address:</span>
-                        <p className="text-gray-600">
+                        <span className="font-medium text-emerald-800">Address:</span>
+                        <p className="text-emerald-700">
                           {selectedCustomer.address?.city}, {selectedCustomer.address?.state}
                         </p>
                       </div>
                       {selectedCustomer.creditLimit > 0 && (
                         <>
                           <div>
-                            <span className="font-medium text-gray-700">Credit Limit:</span>
-                            <p className="text-gray-600">₹{selectedCustomer.creditLimit.toLocaleString()}</p>
+                            <span className="font-medium text-emerald-800">Credit Limit:</span>
+                            <p className="text-emerald-700">₹{selectedCustomer.creditLimit.toLocaleString()}</p>
                           </div>
                           <div>
-                            <span className="font-medium text-gray-700">Outstanding:</span>
-                            <p className="text-gray-600">₹{selectedCustomer.outstandingAmount.toLocaleString()}</p>
+                            <span className="font-medium text-emerald-800">Outstanding:</span>
+                            <p className="text-emerald-700">₹{selectedCustomer.outstandingAmount.toLocaleString()}</p>
                           </div>
                         </>
                       )}
@@ -198,7 +202,11 @@ const CreateOrderPage: React.FC = () => {
               </div>
 
               {/* Order Items */}
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
+                  <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
+                  Items
+                </h3>
                 <OrderItemEditor
                   items={orderItems}
                   onChange={setOrderItems}
@@ -206,97 +214,106 @@ const CreateOrderPage: React.FC = () => {
               </div>
 
               {/* Order Details */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Order Details</h3>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
+                  <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
+                  Details
+                </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Payment Terms <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      {...register('paymentTerms')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      {orderService.getPaymentTerms().map((term) => (
-                        <option key={term} value={term}>
-                          {term}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.paymentTerms && (
-                      <p className="mt-1 text-sm text-red-600">{errors.paymentTerms.message}</p>
-                    )}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Payment Terms <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        {...register('paymentTerms')}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                      >
+                        {orderService.getPaymentTerms().map((term) => (
+                          <option key={term} value={term}>
+                            {term}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.paymentTerms && (
+                        <p className="mt-1 text-sm text-red-600">{errors.paymentTerms.message}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Priority
+                      </label>
+                      <select
+                        {...register('priority')}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                      >
+                        {orderService.getPriorityOptions().map((priority) => (
+                          <option key={priority.value} value={priority.value}>
+                            {priority.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Required Date
+                      </label>
+                      <input
+                        type="date"
+                        {...register('requiredDate')}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Priority
-                    </label>
-                    <select
-                      {...register('priority')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      {orderService.getPriorityOptions().map((priority) => (
-                        <option key={priority.value} value={priority.value}>
-                          {priority.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Required Date
-                    </label>
-                    <input
-                      type="date"
-                      {...register('requiredDate')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Delivery Instructions
                     </label>
                     <input
                       type="text"
                       {...register('deliveryInstructions')}
                       placeholder="Special delivery instructions"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                     />
                   </div>
-                </div>
 
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes
-                  </label>
-                  <textarea
-                    {...register('notes')}
-                    rows={3}
-                    placeholder="Additional notes about this order"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Notes
+                    </label>
+                    <textarea
+                      {...register('notes')}
+                      rows={3}
+                      placeholder="Additional notes about this order"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors resize-none"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Order Summary Sidebar */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-lg shadow p-6 sticky top-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Order Summary</h3>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 sticky top-20">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
+                  Summary
+                </h3>
                 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Subtotal:</span>
+                    <span className="text-gray-600">Subtotal</span>
                     <span className="font-medium">{orderService.formatCurrency(calculateSubtotal())}</span>
                   </div>
 
                   {/* Discount */}
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
+                  <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="text-sm font-medium text-gray-700">Discount</div>
+                    <div className="flex items-center gap-2">
                       <input
                         type="number"
                         {...register('discountPercentage')}
@@ -304,57 +321,58 @@ const CreateOrderPage: React.FC = () => {
                         min="0"
                         max="100"
                         step="0.01"
-                        className="w-16 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-16 px-2 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                       />
-                      <span className="text-sm text-gray-600">% discount</span>
+                      <span className="text-sm text-gray-600">%</span>
                     </div>
                     <div className="text-xs text-gray-500">
-                      Or fixed amount: ₹
+                      Or fixed: ₹
                       <input
                         type="number"
                         {...register('discount')}
                         placeholder="0"
                         min="0"
                         step="0.01"
-                        className="w-20 px-2 py-1 border border-gray-300 rounded text-xs ml-1 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-20 px-2 py-1 border border-gray-300 rounded-md text-xs ml-1 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                       />
                     </div>
                   </div>
 
                   {/* Tax */}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Tax Amount:</span>
-                    <div className="flex items-center space-x-1">
-                      <span>₹</span>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">Tax</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-gray-500">₹</span>
                       <input
                         type="number"
                         {...register('taxAmount')}
                         placeholder="0"
                         min="0"
                         step="0.01"
-                        className="w-20 px-2 py-1 border border-gray-300 rounded text-sm text-right focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-20 px-2 py-1.5 border border-gray-300 rounded-md text-sm text-right focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                       />
                     </div>
                   </div>
 
-                  <hr className="border-gray-200" />
-
-                  <div className="flex justify-between text-lg font-semibold">
-                    <span>Total Amount:</span>
-                    <span className="text-blue-600">{orderService.formatCurrency(calculateTotal())}</span>
+                  <div className="border-t border-gray-200 pt-4">
+                    <div className="flex justify-between text-lg font-semibold">
+                      <span className="text-gray-900">Total</span>
+                      <span className="text-emerald-600">{orderService.formatCurrency(calculateTotal())}</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="mt-6 space-y-3">
+                {/* Desktop Action Buttons */}
+                <div className="hidden lg:block mt-6 space-y-3">
                   <button
                     type="submit"
                     disabled={loading || orderItems.length === 0}
-                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   >
                     {loading ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Creating Order...
+                        Creating...
                       </>
                     ) : (
                       'Create Order'
@@ -364,7 +382,7 @@ const CreateOrderPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => navigate('/orders')}
-                    className="w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                    className="w-full py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200"
                   >
                     Cancel
                   </button>
@@ -373,6 +391,44 @@ const CreateOrderPage: React.FC = () => {
             </div>
           </div>
         </form>
+
+        {/* Mobile Bottom Action Bar */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-20">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1">
+              <div className="text-xs text-gray-500 mb-1">Total Amount</div>
+              <div className="text-lg font-semibold text-emerald-600">
+                {orderService.formatCurrency(calculateTotal())}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/orders')}
+                className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading || orderItems.length === 0}
+                className="px-6 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  'Create Order'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Bottom Padding */}
+        <div className="lg:hidden h-20"></div>
       </div>
     </div>
   );
