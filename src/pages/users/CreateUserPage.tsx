@@ -12,7 +12,9 @@ import {
   PhotoIcon,
 } from '@heroicons/react/24/outline';
 import { userService } from '../../services/userService';
-import type { CreateUserForm } from '../../types';
+import type { CreateUserForm, Godown } from '../../types';
+import { apiService } from '../../services/api';
+import { API_CONFIG } from '../../config/api';
 import { cn, isValidEmail, isValidPhone } from '../../utils';
 import RoleAssignment from '../../components/permissions/RoleAssignment';
 import toast from 'react-hot-toast';
@@ -72,6 +74,9 @@ const CreateUserPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [profilePhotoPreview, setProfilePhotoPreview] = useState<string>('');
+  const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [selectedPrimaryGodownId, setSelectedPrimaryGodownId] = useState<string>('');
+  const [selectedAccessibleGodownIds, setSelectedAccessibleGodownIds] = useState<string[]>([]);
 
   // Form
   const {
@@ -86,6 +91,16 @@ const CreateUserPage: React.FC = () => {
   });
 
   // No need to load roles separately as RoleAssignment component handles it
+
+  // Load godowns
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await apiService.get<{ godowns: Godown[] }>(API_CONFIG.ENDPOINTS.GODOWNS);
+        if (res.success && res.data) setGodowns(res.data.godowns);
+      } catch {}
+    })();
+  }, []);
 
   // Departments
   const departments = userService.getDepartments();
@@ -140,6 +155,8 @@ const CreateUserPage: React.FC = () => {
         department: data.department,
         position: data.position,
         profilePhoto: profilePhoto || undefined,
+        primaryGodownId: selectedPrimaryGodownId || undefined,
+        accessibleGodownIds: selectedAccessibleGodownIds,
       };
 
       await userService.createUser(userData);
@@ -454,6 +471,35 @@ const CreateUserPage: React.FC = () => {
                   error={errors.roleId?.message}
                   showPermissions={true}
                 />
+              </div>
+
+              {/* Godown Assignment */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Primary Godown</label>
+                <select
+                  value={selectedPrimaryGodownId}
+                  onChange={(e) => setSelectedPrimaryGodownId(e.target.value)}
+                  className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm border-gray-300 focus:border-blue-500"
+                >
+                  <option value="">Select primary godown</option>
+                  {godowns.map(g => (
+                    <option key={g._id} value={g._id}>{g.name} ({g.location.city}{g.location.area ? ` - ${g.location.area}` : ''})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Accessible Godowns</label>
+                <select
+                  multiple
+                  value={selectedAccessibleGodownIds}
+                  onChange={(e) => setSelectedAccessibleGodownIds(Array.from(e.target.selectedOptions).map(o => o.value))}
+                  className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm border-gray-300 focus:border-blue-500 h-28"
+                >
+                  {godowns.map(g => (
+                    <option key={g._id} value={g._id}>{g.name} ({g.location.city}{g.location.area ? ` - ${g.location.area}` : ''})</option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>

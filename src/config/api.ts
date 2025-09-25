@@ -37,6 +37,10 @@ export const API_CONFIG = {
     QUICK_PRODUCTS: '/api/orders/quick/products',
     QUICK_ORDER: '/api/orders/quick',
     
+    // Godown endpoints
+    GODOWNS: '/api/godowns',
+    GODOWN_BY_ID: (id: string) => `/api/godowns/${id}`,
+    
     // System endpoints
     HEALTH: '/api/health'
   }

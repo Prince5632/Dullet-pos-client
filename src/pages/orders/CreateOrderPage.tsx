@@ -7,7 +7,10 @@ import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { orderService } from '../../services/orderService';
 import CustomerSelector from '../../components/customers/CustomerSelector';
 import OrderItemEditor from '../../components/orders/OrderItemEditor';
-import type { CreateOrderForm, OrderItem, Customer } from '../../types';
+import type { CreateOrderForm, OrderItem, Customer, Godown } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
+import { apiService } from '../../services/api';
+import { API_CONFIG } from '../../config/api';
 import { toast } from 'react-hot-toast';
 
 const schema = yup.object({
@@ -37,6 +40,23 @@ const CreateOrderPage: React.FC = () => {
       packaging: 'Standard',
     },
   ]);
+  const { user } = useAuth();
+  const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [selectedGodownId, setSelectedGodownId] = useState<string>('');
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await apiService.get<{ godowns: Godown[] }>(API_CONFIG.ENDPOINTS.GODOWNS);
+        if (res.success && res.data) {
+          setGodowns(res.data.godowns);
+          // Default to user's primary godown if available
+          const defaultId = (user as any)?.primaryGodown?._id;
+          if (defaultId) setSelectedGodownId(defaultId);
+        }
+      } catch {}
+    })();
+  }, []);
 
   const {
     register,
@@ -76,10 +96,17 @@ const CreateOrderPage: React.FC = () => {
         return;
       }
 
+      // Validate godown selection
+      if (!selectedGodownId) {
+        toast.error('Please select a godown');
+        return;
+      }
+
       // Prepare order data
       const orderData: CreateOrderForm = {
         ...data,
         items: orderItems,
+        godown: selectedGodownId || undefined,
       };
 
       // Create order
@@ -199,6 +226,25 @@ const CreateOrderPage: React.FC = () => {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Godown Selection */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
+                  <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
+                  Godown
+                </h3>
+                <select
+                  value={selectedGodownId}
+                  onChange={(e) => setSelectedGodownId(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                >
+                  <option value="">Select godown</option>
+                  {godowns.map(g => (
+                    <option key={g._id} value={g._id}>{g.name} ({g.location.city}{g.location.area ? ` - ${g.location.area}` : ''})</option>
+                  ))}
+                </select>
+                <p className="mt-2 text-xs text-gray-500">Defaulted from your assigned godown when available.</p>
               </div>
 
               {/* Order Items */}

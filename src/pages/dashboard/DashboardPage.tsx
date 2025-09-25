@@ -27,7 +27,9 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { orderService } from '../../services/orderService';
 // import { userService } from '../../services/userService';
-import type { Order } from '../../types';
+import type { Order, Godown } from '../../types';
+import { apiService } from '../../services/api';
+import { API_CONFIG } from '../../config/api';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
@@ -60,8 +62,16 @@ const DashboardPage: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [selectedGodownId, setSelectedGodownId] = useState<string>('');
 
   useEffect(() => {
+    (async () => {
+      try {
+        const res = await apiService.get<{ godowns: Godown[] }>(API_CONFIG.ENDPOINTS.GODOWNS);
+        if (res.success && res.data) setGodowns(res.data.godowns);
+      } catch {}
+    })();
     fetchDashboardData();
   }, []);
 
@@ -73,8 +83,8 @@ const DashboardPage: React.FC = () => {
       const promises = [];
       
       if (hasPermission('orders.read')) {
-        promises.push(orderService.getOrderStats());
-        promises.push(orderService.getOrders({ limit: 5, sortBy: 'orderDate', sortOrder: 'desc' }));
+        promises.push(orderService.getOrderStats({ godownId: selectedGodownId }));
+        promises.push(orderService.getOrders({ limit: 5, sortBy: 'orderDate', sortOrder: 'desc', godownId: selectedGodownId }));
       }
       
       if (hasPermission('users.read')) {
@@ -810,6 +820,25 @@ const DashboardPage: React.FC = () => {
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 -mt-4 -mr-4 h-32 w-32 rounded-full bg-white opacity-5"></div>
         <div className="absolute bottom-0 left-0 -mb-6 -ml-6 h-24 w-24 rounded-full bg-white opacity-5"></div>
+      </div>
+
+      {/* Godown selector */}
+      <div className="flex items-center gap-3">
+        {godowns.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-lg p-3">
+            <label className="text-sm text-gray-600 mr-2">Godown:</label>
+            <select
+              value={selectedGodownId}
+              onChange={(e) => { setSelectedGodownId(e.target.value); fetchDashboardData(); }}
+              className="px-2 py-1 border border-gray-300 rounded-md text-sm"
+            >
+              <option value="">All</option>
+              {godowns.map(g => (
+                <option key={g._id} value={g._id}>{g.name} ({g.location.city}{g.location.area ? ` - ${g.location.area}` : ''})</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Role-based dashboard content */}

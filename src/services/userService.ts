@@ -54,6 +54,14 @@ class UserService {
       formData.append('profilePhoto', userData.profilePhoto);
     }
 
+    // Add godown assignments
+    if (userData.primaryGodownId) {
+      formData.append('primaryGodown', userData.primaryGodownId);
+    }
+    if (Array.isArray(userData.accessibleGodownIds)) {
+      userData.accessibleGodownIds.forEach((id) => formData.append('accessibleGodowns', id));
+    }
+
     const response = await apiService.post<{ user: User }>(
       API_CONFIG.ENDPOINTS.USERS,
       formData,
@@ -84,6 +92,14 @@ class UserService {
     // Add profile photo if provided
     if (userData.profilePhoto) {
       formData.append('profilePhoto', userData.profilePhoto);
+    }
+
+    // Add godown assignments if provided
+    if (userData.primaryGodownId) {
+      formData.append('primaryGodown', userData.primaryGodownId);
+    }
+    if (Array.isArray(userData.accessibleGodownIds)) {
+      userData.accessibleGodownIds.forEach((id) => formData.append('accessibleGodowns', id));
     }
 
     const response = await apiService.put<{ user: User }>(
