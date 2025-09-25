@@ -249,36 +249,130 @@ const QuickOrderPage: React.FC = () => {
             {productsError && <span className="text-sm text-red-600">{productsError}</span>}
           </div>
 
-          <div className="overflow-x-auto product-scrollbar -mx-2 px-2">
-            <div className="flex gap-3 pb-2">
-              {products.map(p => {
-                const isSelected = !!selectedItems[p.key];
-                return (
-                  <button
-                    key={p.key}
-                    onClick={() => openQtyModal(p)}
-                    className={`shrink-0 px-4 py-3 rounded-xl border text-left transition-all min-w-[140px] sm:min-w-[160px] ${
-                      isSelected 
-                        ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-sm' 
-                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
-                    }`}
-                  >
-                    <div className="text-sm font-semibold leading-tight mb-1">
-                      {p.name}
-                    </div>
-                    <div className="text-xs text-gray-600">
-                      ₹{p.pricePerKg}/kg
-                    </div>
-                    {p.bagSizeKg && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        {p.bagSizeKg}kg bags available
+          {/* Compact grouped products */}
+          {(() => {
+            // Group products by their base name (removing size info)
+            const baseProductGroups = products.reduce((groups, product) => {
+              let baseName = product.name
+                .replace(/\d+\s*kg\s*/gi, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+              
+              if (!groups[baseName]) {
+                groups[baseName] = [];
+              }
+              groups[baseName].push(product);
+              return groups;
+            }, {} as Record<string, typeof products>);
+
+            // Categorize the base products
+            const categorizedProducts = Object.entries(baseProductGroups).reduce((categories, [baseName, variants]) => {
+              let category = 'Other';
+              
+              if (baseName.toLowerCase().includes('chakki') && baseName.toLowerCase().includes('atta')) {
+                category = 'Chakki Fresh Atta';
+              } else if (baseName.toLowerCase().includes('wheat') && !baseName.toLowerCase().includes('chakki')) {
+                category = 'Wheat Products';
+              } else if (baseName.toLowerCase().includes('flour')) {
+                category = 'Flour Products';
+              }
+              
+              if (!categories[category]) {
+                categories[category] = [];
+              }
+              categories[category].push({ baseName, variants });
+              return categories;
+            }, {} as Record<string, Array<{ baseName: string; variants: typeof products }>>);
+
+            return Object.entries(categorizedProducts).map(([category, baseProducts]) => (
+              <div key={category} className="mb-4 last:mb-0">
+                {/* Compact category header */}
+                <div className="flex items-center mb-3">
+                  <span className="text-sm font-medium text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                    {category}
+                  </span>
+                  <div className="h-px bg-gray-200 flex-1 ml-3"></div>
+                </div>
+                
+                {/* Compact product list */}
+                <div className="space-y-2">
+                  {baseProducts.map(({ baseName, variants }) => {
+                    const hasSelectedVariant = variants.some(v => !!selectedItems[v.key]);
+                    const selectedCount = variants.filter(v => !!selectedItems[v.key]).length;
+                    
+                    return (
+                      <div
+                        key={baseName}
+                        className={`p-3 rounded-lg border transition-all duration-200 ${
+                          hasSelectedVariant 
+                            ? 'bg-emerald-50 border-emerald-300' 
+                            : 'bg-white border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-semibold text-gray-900 truncate">
+                                {baseName}
+                              </h4>
+                              <span className="text-xs text-gray-500 flex-shrink-0">
+                                ₹{variants[0].pricePerKg}/kg
+                              </span>
+                              {hasSelectedVariant && (
+                                <span className="text-xs bg-emerald-600 text-white px-2 py-0.5 rounded-full flex-shrink-0">
+                                  {selectedCount} selected
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Package size buttons */}
+                          <div className="flex gap-1 ml-3">
+                            {variants.map(variant => {
+                              const isSelected = !!selectedItems[variant.key];
+                              return (
+                                <button
+                                  key={variant.key}
+                                  onClick={() => openQtyModal(variant)}
+                                  className={`px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
+                                    isSelected
+                                      ? 'bg-emerald-600 text-white'
+                                      : 'bg-gray-100 text-gray-700 hover:bg-emerald-100 hover:text-emerald-700'
+                                  }`}
+                                >
+                                  {variant.bagSizeKg ? `${variant.bagSizeKg}kg` : 'Loose'}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        
+                        {/* Show selected quantities inline */}
+                        {hasSelectedVariant && (
+                          <div className="mt-2 pt-2 border-t border-emerald-200">
+                            <div className="flex flex-wrap gap-1">
+                              {variants.filter(v => !!selectedItems[v.key]).map(variant => {
+                                const item = selectedItems[variant.key];
+                                const kg = item.mode === 'bags' && variant.bagSizeKg 
+                                  ? (item.bags || 0) * variant.bagSizeKg 
+                                  : (item.quantityKg || 0);
+                                
+                                return (
+                                  <span key={variant.key} className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">
+                                    {variant.bagSizeKg ? `${variant.bagSizeKg}kg` : 'Loose'}: {kg}kg
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ));
+          })()}
         </div>
 
         {/* Selected items */}
