@@ -348,11 +348,11 @@ class OrderService {
   }
 
   getUnits(): string[] {
-    return ['KG', 'Quintal', 'Ton', 'Bags'];
+    return ['KG'];
   }
 
   getPackagingOptions(): string[] {
-    return ['Standard', 'Custom', '5kg Bags', '10kg Bags', '25kg Bags', '50kg Bags', 'Loose'];
+    return ['Loose'];
   }
 
   getPriorityOptions(): Array<{ label: string; value: string; color: string }> {

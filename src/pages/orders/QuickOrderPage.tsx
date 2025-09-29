@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeftIcon, PlusIcon, MinusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { orderService } from '../../services/orderService';
 import CustomerSelector from '../../components/customers/CustomerSelector';
 import type { QuickProduct, CreateQuickOrderForm, Customer, Godown } from '../../types';
@@ -9,7 +9,7 @@ import { apiService } from '../../services/api';
 import { API_CONFIG } from '../../config/api';
 import { toast } from 'react-hot-toast';
 
-type ItemMode = 'bags' | 'kg';
+type ItemMode = 'kg';
 
 type SelectedItem = {
   product: QuickProduct;
@@ -19,9 +19,7 @@ type SelectedItem = {
   packaging?: 'Standard' | 'Custom' | '5kg Bags' | '10kg Bags' | '25kg Bags' | '50kg Bags' | 'Loose';
 };
 
-const PACKAGING_OPTIONS: SelectedItem['packaging'][] = [
-  '5kg Bags', '10kg Bags', '25kg Bags', '50kg Bags', 'Loose', 'Standard', 'Custom'
-];
+// Packaging fixed to Loose; no options needed
 
 const QuickOrderPage: React.FC = () => {
   const navigate = useNavigate();
@@ -39,10 +37,9 @@ const QuickOrderPage: React.FC = () => {
 
   // Modal state for quantity entry
   const [activeProduct, setActiveProduct] = useState<QuickProduct | null>(null);
-  const [qtyMode, setQtyMode] = useState<ItemMode>('bags');
-  const [bags, setBags] = useState<number>(1);
+  // mode fixed to kg (no setter)
   const [kg, setKg] = useState<number>(0);
-  const [packaging, setPackaging] = useState<SelectedItem['packaging']>('Standard');
+  // packaging fixed to Loose
 
   // Other minimal fields
   const [paymentTerms, setPaymentTerms] = useState<'Cash' | 'Credit' | 'Advance'>('Cash');
@@ -96,16 +93,9 @@ const QuickOrderPage: React.FC = () => {
     setActiveProduct(product);
     const existing = selectedItems[product.key];
     if (existing) {
-      setQtyMode(existing.mode);
-      setBags(existing.bags || 1);
       setKg(existing.quantityKg || 0);
-      setPackaging(existing.packaging || product.defaultPackaging || 'Standard');
     } else {
-      const defaultMode: ItemMode = product.bagSizeKg ? 'bags' : 'kg';
-      setQtyMode(defaultMode);
-      setBags(1);
       setKg(0);
-      setPackaging(product.defaultPackaging || (product.bagSizeKg ? (product.bagSizeKg === 10 ? '10kg Bags' : product.bagSizeKg === 5 ? '5kg Bags' : 'Standard') : 'Loose'));
     }
   };
 
@@ -115,28 +105,16 @@ const QuickOrderPage: React.FC = () => {
 
   const confirmQty = () => {
     if (!activeProduct) return;
-    if (qtyMode === 'bags') {
-      if (!activeProduct.bagSizeKg) {
-        toast.error('Bags option not available for this product');
-        return;
-      }
-      if (!bags || bags <= 0) {
-        toast.error('Enter valid number of bags');
-        return;
-      }
-    } else {
-      if (!kg || kg <= 0) {
-        toast.error('Enter valid kilograms');
-        return;
-      }
+    if (!kg || kg <= 0) {
+      toast.error('Enter valid kilograms');
+      return;
     }
 
     const item: SelectedItem = {
       product: activeProduct,
-      mode: qtyMode,
-      bags: qtyMode === 'bags' ? bags : undefined,
-      quantityKg: qtyMode === 'kg' ? kg : undefined,
-      packaging: packaging || activeProduct.defaultPackaging || 'Standard',
+      mode: 'kg',
+      quantityKg: kg,
+      packaging: 'Loose',
     };
     setSelectedItems(prev => ({ ...prev, [activeProduct.key]: item }));
     setActiveProduct(null);
@@ -150,24 +128,9 @@ const QuickOrderPage: React.FC = () => {
     });
   };
 
-  const adjustBags = (key: string, delta: number) => {
-    setSelectedItems(prev => {
-      const it = prev[key];
-      if (!it || it.mode !== 'bags' || !it.product.bagSizeKg) return prev;
-      const next = Math.max(0, (it.bags || 0) + delta);
-      if (next === 0) {
-        const clone = { ...prev };
-        delete clone[key];
-        return clone;
-      }
-      return { ...prev, [key]: { ...it, bags: next } };
-    });
-  };
+  // no bags support
 
-  const computeItemKg = (it: SelectedItem) => {
-    if (it.mode === 'bags' && it.product.bagSizeKg) return (it.bags || 0) * it.product.bagSizeKg;
-    return it.quantityKg || 0;
-  };
+  const computeItemKg = (it: SelectedItem) => it.quantityKg || 0;
 
   const itemsArray = useMemo(() => Object.values(selectedItems), [selectedItems]);
   const totalAmount = useMemo(() => {
@@ -188,14 +151,14 @@ const QuickOrderPage: React.FC = () => {
       }
       setCreating(true);
 
-      const paymentStatus: 'pending' | 'partial' | 'paid' = paidAmount >= totalAmount ? 'paid' : paidAmount > 0 ? 'partial' : 'pending';
+      const paymentStatus: 'pending' | 'partial' | 'paid' = paidAmount >= totalAmount ? 'paid' : (paidAmount > 0 ? 'partial' : 'pending');
 
       const payload: CreateQuickOrderForm = {
         customer: selectedCustomerId,
         items: itemsArray.map(it => ({
           productKey: it.product.key,
           packaging: it.packaging,
-          ...(it.mode === 'bags' && it.product.bagSizeKg ? { bags: it.bags } : { quantityKg: it.quantityKg })
+          quantityKg: it.quantityKg
         })),
         paymentTerms,
         priority,
@@ -337,7 +300,7 @@ const QuickOrderPage: React.FC = () => {
                 
                 {/* Compact product list */}
                 <div className="space-y-2">
-                  {baseProducts.map(({ baseName, variants }) => {
+              {baseProducts.map(({ baseName, variants }) => {
                     const hasSelectedVariant = variants.some(v => !!selectedItems[v.key]);
                     const selectedCount = variants.filter(v => !!selectedItems[v.key]).length;
                     
@@ -394,13 +357,11 @@ const QuickOrderPage: React.FC = () => {
                             <div className="flex flex-wrap gap-1">
                               {variants.filter(v => !!selectedItems[v.key]).map(variant => {
                                 const item = selectedItems[variant.key];
-                                const kg = item.mode === 'bags' && variant.bagSizeKg 
-                                  ? (item.bags || 0) * variant.bagSizeKg 
-                                  : (item.quantityKg || 0);
+                                const kg = item.quantityKg || 0;
                                 
                                 return (
                                   <span key={variant.key} className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">
-                                    {variant.bagSizeKg ? `${variant.bagSizeKg}kg` : 'Loose'}: {kg}kg
+                                    Loose: {kg}kg
                                   </span>
                                 );
                               })}
@@ -431,26 +392,14 @@ const QuickOrderPage: React.FC = () => {
                   <div key={it.product.key} className="flex items-center justify-between">
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-gray-900 truncate">{it.product.name}</div>
-                      <div className="text-xs text-gray-500">
-                        {kg} kg • ₹{it.product.pricePerKg}/kg {it.mode === 'bags' && it.product.bagSizeKg ? `• ${it.bags} bag${(it.bags||0)>1?'s':''}` : ''}
-                      </div>
+              <div className="text-xs text-gray-500">
+                {kg} kg • ₹{it.product.pricePerKg}/kg
+              </div>
                       {it.packaging && <div className="text-[11px] text-gray-400">Packaging: {it.packaging}</div>}
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {it.mode === 'bags' && it.product.bagSizeKg ? (
-                        <div className="flex items-center">
-                          <button onClick={() => adjustBags(it.product.key, -1)} className="p-1.5 rounded-md border hover:bg-gray-50">
-                            <MinusIcon className="h-4 w-4" />
-                          </button>
-                          <span className="mx-2 text-sm font-medium w-6 text-center">{it.bags || 0}</span>
-                          <button onClick={() => adjustBags(it.product.key, 1)} className="p-1.5 rounded-md border hover:bg-gray-50">
-                            <PlusIcon className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <button onClick={() => openQtyModal(it.product)} className="text-xs text-blue-600 underline">Edit</button>
-                      )}
+                      <button onClick={() => openQtyModal(it.product)} className="text-xs text-blue-600 underline">Edit</button>
 
                       <div className="text-sm font-semibold text-gray-900 w-20 text-right">
                         {orderService.formatCurrency(lineTotal)}
@@ -587,71 +536,65 @@ const QuickOrderPage: React.FC = () => {
             </div>
             <div className="text-xs text-gray-500 mb-4">₹{activeProduct.pricePerKg}/kg{activeProduct.bagSizeKg ? ` • ${activeProduct.bagSizeKg}kg bag` : ''}</div>
 
-            {/* Mode toggle */}
-            <div className="mb-3">
-              <div className="inline-flex rounded-md border border-gray-300 overflow-hidden">
-                <button
-                  onClick={() => setQtyMode('bags')}
-                  disabled={!activeProduct.bagSizeKg}
-                  className={`px-3 py-2 text-sm ${qtyMode==='bags' ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-gray-700'} ${!activeProduct.bagSizeKg ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  Bags
-                </button>
-                <button
-                  onClick={() => setQtyMode('kg')}
-                  className={`px-3 py-2 text-sm ${qtyMode==='kg' ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-gray-700'}`}
-                >
-                  KG
-                </button>
-              </div>
-            </div>
+            {/* Mode toggle removed (always KG) */}
 
             {/* Inputs */}
-            {qtyMode === 'bags' && activeProduct.bagSizeKg ? (
-              <div className="flex items-center gap-3 mb-4">
-                <button onClick={() => setBags(Math.max(1, bags - 1))} className="p-2 rounded-md border hover:bg-gray-50">
-                  <MinusIcon className="h-4 w-4" />
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Kilograms</label>
+              <div className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setKg(Math.max(0, kg - 1))}
+                  disabled={kg <= 0}
+                  className="px-4 py-2 border border-gray-300 rounded-l-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500 text-lg font-medium"
+                >
+                  -
                 </button>
                 <input
                   type="number"
-                  value={bags}
-                  min={1}
-                  onChange={(e) => setBags(Math.max(1, Number(e.target.value)))}
-                  className="w-20 text-center px-3 py-2 border rounded-lg"
-                />
-                <button onClick={() => setBags(bags + 1)} className="p-2 rounded-md border hover:bg-gray-50">
-                  <PlusIcon className="h-4 w-4" />
-                </button>
-                <div className="text-sm text-gray-600">× {activeProduct.bagSizeKg}kg</div>
-              </div>
-            ) : (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Kilograms</label>
-                <input
-                  type="number"
-                  value={kg}
+                  value={kg === 0 ? '' : kg}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '') {
+                      setKg(0);
+                    } else {
+                      const num = Math.max(0, Number(value));
+                      setKg(num);
+                    }
+                  }}
+                  onFocus={(e) => {
+                    if (e.target.value === '0') {
+                      e.target.select();
+                    }
+                  }}
                   min={0}
                   step={0.5}
-                  onChange={(e) => setKg(Math.max(0, Number(e.target.value)))}
                   placeholder="0"
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="flex-1 px-3 py-2 border-t border-b border-gray-300 text-center text-lg font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                 />
+                <button
+                  type="button"
+                  onClick={() => setKg(kg + 1)}
+                  className="px-4 py-2 border border-gray-300 rounded-r-lg bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-lg font-medium"
+                >
+                  +
+                </button>
               </div>
-            )}
-
-            {/* Packaging */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Packaging</label>
-              <select
-                value={packaging}
-                onChange={(e) => setPackaging(e.target.value as SelectedItem['packaging'])}
-                className="w-full px-3 py-2 border rounded-lg"
-              >
-                {PACKAGING_OPTIONS.map(opt => (
-                  <option key={opt} value={opt}>{opt}</option>
+              <div className="mt-2 flex gap-2">
+                {[5, 10, 25, 50].map(preset => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setKg(preset)}
+                    className="px-3 py-1 text-xs border border-gray-200 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-600"
+                  >
+                    {preset} kg
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
+
+            {/* Packaging removed (always Loose) */}
 
             <div className="flex items-center justify-end gap-2">
               <button onClick={closeQtyModal} className="px-4 py-2 rounded-lg border">Cancel</button>

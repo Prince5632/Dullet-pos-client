@@ -43,7 +43,7 @@ const OrderItemEditor: React.FC<OrderItemEditorProps> = ({
       unit: 'KG',
       ratePerUnit: 0,
       totalAmount: 0,
-      packaging: 'Standard',
+      packaging: 'Loose',
     };
 
     const updatedItems = [...localItems, newItem];
@@ -159,35 +159,62 @@ const OrderItemEditor: React.FC<OrderItemEditorProps> = ({
                 {/* Quantity */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Quantity <span className="text-red-500">*</span>
+                    Quantity (KG) <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="number"
-                    value={item.quantity}
-                    onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))}
-                    disabled={disabled}
-                    min="0"
-                    step="0.01"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  />
+                  <div className="flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => updateItem(index, 'quantity', Math.max(0, item.quantity - 1))}
+                      disabled={disabled || item.quantity <= 0}
+                      className="px-3 py-2 border border-gray-300 rounded-l-md bg-gray-50 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      value={item.quantity === 0 ? '' : item.quantity}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateItem(index, 'quantity', 0);
+                        } else {
+                          const num = Math.max(0, Number(value));
+                          updateItem(index, 'quantity', num);
+                        }
+                      }}
+                      onFocus={(e) => {
+                        if (e.target.value === '0') {
+                          e.target.select();
+                        }
+                      }}
+                      disabled={disabled}
+                      min="0"
+                      step="0.5"
+                      placeholder="0"
+                      className="flex-1 px-3 py-2 border-t border-b border-gray-300 text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => updateItem(index, 'quantity', item.quantity + 1)}
+                      disabled={disabled}
+                      className="px-3 py-2 border border-gray-300 rounded-r-md bg-gray-50 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
 
-                {/* Unit */}
+                {/* Unit (fixed to KG) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Unit <span className="text-red-500">*</span>
+                    Unit
                   </label>
                   <select
-                    value={item.unit}
-                    onChange={(e) => updateItem(index, 'unit', e.target.value)}
-                    disabled={disabled}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    value={'KG'}
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed"
                   >
-                    {orderService.getUnits().map((unit) => (
-                      <option key={unit} value={unit}>
-                        {unit}
-                      </option>
-                    ))}
+                    <option value="KG">KG</option>
                   </select>
                 </div>
 
@@ -207,24 +234,7 @@ const OrderItemEditor: React.FC<OrderItemEditorProps> = ({
                   />
                 </div>
 
-                {/* Packaging */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Packaging
-                  </label>
-                  <select
-                    value={item.packaging}
-                    onChange={(e) => updateItem(index, 'packaging', e.target.value)}
-                    disabled={disabled}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  >
-                    {orderService.getPackagingOptions().map((packaging) => (
-                      <option key={packaging} value={packaging}>
-                        {packaging}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* Packaging removed (always Loose) */}
               </div>
 
               {/* Total Amount Display */}
