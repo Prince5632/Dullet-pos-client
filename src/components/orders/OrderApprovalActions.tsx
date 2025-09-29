@@ -1,56 +1,53 @@
 import React, { useState } from 'react';
-import { 
-  CheckIcon, 
-  XMarkIcon, 
-  PlayIcon,
-  ClockIcon,
-  TruckIcon,
-  CheckCircleIcon,
-  BanknotesIcon,
-  XCircleIcon
-} from '@heroicons/react/24/outline';
+import { CheckIcon, XMarkIcon, TruckIcon } from '@heroicons/react/24/outline';
 import { orderService } from '../../services/orderService';
 import { useAuth } from '../../contexts/AuthContext';
 import Modal from '../ui/Modal';
+import DriverAssignmentModal from './DriverAssignmentModal';
 import type { Order } from '../../types';
 import { toast } from 'react-hot-toast';
 
 interface OrderApprovalActionsProps {
   order: Order;
   onOrderUpdate: (updatedOrder: Order) => void;
+  onAssignDriver?: () => void;
   className?: string;
 }
 
+type ApprovalAction = 'approve' | 'reject' | '';
+
 interface ActionModalState {
   isOpen: boolean;
-  action: string;
+  action: ApprovalAction;
   title: string;
   description: string;
   icon: React.ComponentType<any>;
-  variant: 'success' | 'danger' | 'primary';
+  variant: 'success' | 'danger';
 }
 
 const OrderApprovalActions: React.FC<OrderApprovalActionsProps> = ({
   order,
   onOrderUpdate,
+  onAssignDriver,
   className = ''
 }) => {
-  const { hasPermission } = useAuth();
+  const { hasPermission, hasOrderManageAccess } = useAuth();
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState('');
+  const [driverModalOpen, setDriverModalOpen] = useState(false);
   const [modalState, setModalState] = useState<ActionModalState>({
     isOpen: false,
     action: '',
     title: '',
     description: '',
     icon: CheckIcon,
-    variant: 'primary'
+    variant: 'success'
   });
 
   const canApprove = hasPermission('orders.approve');
-  const canUpdate = hasPermission('orders.update');
+  const canAssignDriver = hasOrderManageAccess();
 
-  const openModal = (action: string, config: Omit<ActionModalState, 'isOpen' | 'action'>) => {
+  const openModal = (action: ApprovalAction, config: Omit<ActionModalState, 'isOpen' | 'action'>) => {
     setModalState({
       isOpen: true,
       action,
@@ -69,44 +66,12 @@ const OrderApprovalActions: React.FC<OrderApprovalActionsProps> = ({
 
     setLoading(true);
     try {
-      let updatedOrder: Order;
+      const updatedOrder =
+        modalState.action === 'approve'
+          ? await orderService.approveOrder(order._id, notes)
+          : await orderService.rejectOrder(order._id, notes);
 
-      switch (modalState.action) {
-        case 'approve':
-          updatedOrder = await orderService.approveOrder(order._id, notes);
-          toast.success('Order approved successfully');
-          break;
-        case 'reject':
-          updatedOrder = await orderService.rejectOrder(order._id, notes);
-          toast.success('Order rejected');
-          break;
-        case 'production':
-          updatedOrder = await orderService.moveToProduction(order._id, notes);
-          toast.success('Order moved to production');
-          break;
-        case 'ready':
-          updatedOrder = await orderService.markAsReady(order._id, notes);
-          toast.success('Order marked as ready');
-          break;
-        case 'dispatch':
-          updatedOrder = await orderService.dispatchOrder(order._id, notes);
-          toast.success('Order dispatched');
-          break;
-        case 'delivered':
-          updatedOrder = await orderService.markAsDelivered(order._id, notes);
-          toast.success('Order marked as delivered');
-          break;
-        case 'complete':
-          updatedOrder = await orderService.completeOrder(order._id, notes);
-          toast.success('Order completed');
-          break;
-        case 'cancel':
-          updatedOrder = await orderService.cancelOrder(order._id, notes);
-          toast.success('Order cancelled');
-          break;
-        default:
-          throw new Error('Unknown action');
-      }
+      toast.success(`Order ${modalState.action === 'approve' ? 'approved' : 'rejected'} successfully`);
 
       onOrderUpdate(updatedOrder);
       closeModal();
@@ -119,147 +84,61 @@ const OrderApprovalActions: React.FC<OrderApprovalActionsProps> = ({
   };
 
   const getAvailableActions = () => {
-    const actions = [];
+    const actions: Array<{
+      key: string;
+      label: string;
+      icon: React.ComponentType<any>;
+      className: string;
+      onClick: () => void;
+    }> = [];
 
-    switch (order.status) {
-      case 'pending':
-        if (canApprove) {
-          actions.push(
-            {
-              key: 'approve',
-              label: 'Approve',
+    if (order.status === 'pending' && canApprove) {
+      actions.push(
+        {
+          key: 'approve',
+          label: 'Approve',
+          icon: CheckIcon,
+          className: 'bg-green-600 hover:bg-green-700 text-white',
+          onClick: () =>
+            openModal('approve', {
+              title: 'Approve Order',
+              description: 'Approve this order so it can move forward with driver assignment.',
               icon: CheckIcon,
-              variant: 'success' as const,
-              className: 'bg-green-600 hover:bg-green-700 text-white',
-              onClick: () => openModal('approve', {
-                title: 'Approve Order',
-                description: 'Are you sure you want to approve this order? This will allow it to proceed to production.',
-                icon: CheckIcon,
-                variant: 'success'
-              })
-            },
-            {
-              key: 'reject',
-              label: 'Reject',
+              variant: 'success'
+            })
+        },
+        {
+          key: 'reject',
+          label: 'Reject',
+          icon: XMarkIcon,
+          className: 'bg-red-600 hover:bg-red-700 text-white',
+          onClick: () =>
+            openModal('reject', {
+              title: 'Reject Order',
+              description: 'Reject this order and include a brief reason.',
               icon: XMarkIcon,
-              variant: 'danger' as const,
-              className: 'bg-red-600 hover:bg-red-700 text-white',
-              onClick: () => openModal('reject', {
-                title: 'Reject Order',
-                description: 'Are you sure you want to reject this order? Please provide a reason for rejection.',
-                icon: XMarkIcon,
-                variant: 'danger'
-              })
-            }
-          );
-        }
-        break;
-
-      case 'approved':
-        if (canUpdate) {
-          actions.push({
-            key: 'production',
-            label: 'Start Production',
-            icon: PlayIcon,
-            variant: 'primary' as const,
-            className: 'bg-blue-600 hover:bg-blue-700 text-white',
-            onClick: () => openModal('production', {
-              title: 'Move to Production',
-              description: 'Move this order to production phase. Production team will be notified.',
-              icon: PlayIcon,
-              variant: 'primary'
+              variant: 'danger'
             })
-          });
         }
-        break;
-
-      case 'processing':
-        if (canUpdate) {
-          actions.push({
-            key: 'ready',
-            label: 'Mark Ready',
-            icon: ClockIcon,
-            variant: 'primary' as const,
-            className: 'bg-purple-600 hover:bg-purple-700 text-white',
-            onClick: () => openModal('ready', {
-              title: 'Mark as Ready',
-              description: 'Mark this order as ready for dispatch after quality checks.',
-              icon: ClockIcon,
-              variant: 'primary'
-            })
-          });
-        }
-        break;
-
-      case 'ready':
-        if (canUpdate) {
-          actions.push({
-            key: 'dispatch',
-            label: 'Dispatch',
-            icon: TruckIcon,
-            variant: 'primary' as const,
-            className: 'bg-indigo-600 hover:bg-indigo-700 text-white',
-            onClick: () => openModal('dispatch', {
-              title: 'Dispatch Order',
-              description: 'Dispatch this order to the customer. Delivery tracking will begin.',
-              icon: TruckIcon,
-              variant: 'primary'
-            })
-          });
-        }
-        break;
-
-      case 'dispatched':
-        if (canUpdate) {
-          actions.push({
-            key: 'delivered',
-            label: 'Mark Delivered',
-            icon: CheckCircleIcon,
-            variant: 'success' as const,
-            className: 'bg-teal-600 hover:bg-teal-700 text-white',
-            onClick: () => openModal('delivered', {
-              title: 'Mark as Delivered',
-              description: 'Confirm that this order has been delivered to the customer.',
-              icon: CheckCircleIcon,
-              variant: 'success'
-            })
-          });
-        }
-        break;
-
-      case 'delivered':
-        if (canUpdate) {
-          actions.push({
-            key: 'complete',
-            label: 'Complete',
-            icon: BanknotesIcon,
-            variant: 'success' as const,
-            className: 'bg-green-600 hover:bg-green-700 text-white',
-            onClick: () => openModal('complete', {
-              title: 'Complete Order',
-              description: 'Mark this order as completed. This is the final step in the order lifecycle.',
-              icon: BanknotesIcon,
-              variant: 'success'
-            })
-          });
-        }
-        break;
+      );
     }
 
-    // Add cancel option for cancelable statuses
-    if (['pending', 'approved', 'processing'].includes(order.status) && canUpdate) {
+    if (order.status === 'approved' && canAssignDriver) {
+      const driverAssigned = !!order.driverAssignment?.driver;
       actions.push({
-        key: 'cancel',
-        label: 'Cancel',
-        icon: XCircleIcon,
-        variant: 'danger' as const,
-        className: 'bg-red-600 hover:bg-red-700 text-white border-l border-gray-300 ml-2',
-        onClick: () => openModal('cancel', {
-          title: 'Cancel Order',
-          description: 'Are you sure you want to cancel this order? This action cannot be undone.',
-          icon: XCircleIcon,
-          variant: 'danger'
-        })
+        key: 'assignDriver',
+        label: driverAssigned ? 'Driver Assigned' : 'Assign Driver',
+        icon: TruckIcon,
+        className: 'bg-blue-600 hover:bg-blue-700 text-white',
+        onClick: () => {
+          if (driverAssigned) {
+            toast.error('Driver already assigned. Manage assignments in order details.');
+          } else if (onAssignDriver) {
+            onAssignDriver();
+          } else {
+            setDriverModalOpen(true);
+          }
+        }
       });
     }
 
@@ -347,6 +226,13 @@ const OrderApprovalActions: React.FC<OrderApprovalActionsProps> = ({
           </div>
         </div>
       </Modal>
+
+      <DriverAssignmentModal
+        isOpen={driverModalOpen}
+        onClose={() => setDriverModalOpen(false)}
+        order={order}
+        onOrderUpdate={onOrderUpdate}
+      />
     </>
   );
 };

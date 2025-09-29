@@ -146,6 +146,11 @@ class AuthService {
     return user?.role?.name === roleName;
   }
 
+  getCurrentUserId(): string | null {
+    const user = this.getCurrentUser();
+    return user?._id || null;
+  }
+
   // Clear authentication data
   clearAuthData(): void {
     apiService.clearToken();

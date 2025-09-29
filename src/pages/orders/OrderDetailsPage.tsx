@@ -117,14 +117,16 @@ const OrderDetailsPage: React.FC = () => {
   const statusInfo = {
     pending: { color: 'bg-yellow-100 text-yellow-800', icon: ClockIcon },
     approved: { color: 'bg-green-100 text-green-800', icon: CheckCircleIcon },
+    driver_assigned: { color: 'bg-blue-100 text-blue-800', icon: TruckIcon },
+    out_for_delivery: { color: 'bg-purple-100 text-purple-800', icon: TruckIcon },
+    delivered: { color: 'bg-green-100 text-green-800', icon: CheckCircleIcon },
+    completed: { color: 'bg-gray-100 text-gray-800', icon: CheckCircleIcon },
+    cancelled: { color: 'bg-red-100 text-red-800', icon: ExclamationTriangleIcon },
     rejected: { color: 'bg-red-100 text-red-800', icon: ExclamationTriangleIcon },
     processing: { color: 'bg-blue-100 text-blue-800', icon: BuildingOfficeIcon },
     ready: { color: 'bg-purple-100 text-purple-800', icon: CheckCircleIcon },
     dispatched: { color: 'bg-indigo-100 text-indigo-800', icon: TruckIcon },
-    delivered: { color: 'bg-green-100 text-green-800', icon: CheckCircleIcon },
-    completed: { color: 'bg-gray-100 text-gray-800', icon: CheckCircleIcon },
-    cancelled: { color: 'bg-red-100 text-red-800', icon: ExclamationTriangleIcon },
-  };
+  } as const;
 
   const currentStatusInfo = statusInfo[order.status as keyof typeof statusInfo];
 

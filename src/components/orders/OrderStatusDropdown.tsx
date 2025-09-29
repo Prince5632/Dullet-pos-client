@@ -11,49 +11,66 @@ import {
   ChevronDownIcon,
   CheckIcon,
   XMarkIcon,
-  PlayIcon,
-  ClockIcon,
   TruckIcon,
   CheckCircleIcon,
-  BanknotesIcon,
-  XCircleIcon
+  MapPinIcon
 } from '@heroicons/react/24/outline';
+import { toast } from 'react-hot-toast';
 import { orderService } from '../../services/orderService';
 import { useAuth } from '../../contexts/AuthContext';
 import Modal from '../ui/Modal';
 import Badge from '../ui/Badge';
+import DriverAssignmentModal from './DriverAssignmentModal';
+import DeliveryRecordingModal from './DeliveryRecordingModal';
 import type { Order } from '../../types';
-import { toast } from 'react-hot-toast';
 import { cn } from '../../utils';
 
 interface OrderStatusDropdownProps {
   order: Order;
   onOrderUpdate: (updatedOrder: Order) => void;
   compact?: boolean;
+  onAssignDriver?: () => void;
+  onRecordDelivery?: () => void;
 }
 
 interface StatusAction {
-  key: string;
+  key: 'approve' | 'reject' | 'assignDriver' | 'unassignDriver' | 'markOutForDelivery' | 'recordDelivery';
   label: string;
   icon: React.ComponentType<any>;
   description: string;
   variant: 'success' | 'danger' | 'primary';
   requiresNotes?: boolean;
+  requiresModal?: boolean;
 }
 
 const OrderStatusDropdown: React.FC<OrderStatusDropdownProps> = ({
   order,
   onOrderUpdate,
-  compact = false
+  compact = false,
+  onAssignDriver,
+  onRecordDelivery
 }) => {
-  const { hasPermission } = useAuth();
+  const { hasPermission, hasRole, getUserId } = useAuth();
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [driverModalOpen, setDriverModalOpen] = useState(false);
+  const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
   const [selectedAction, setSelectedAction] = useState<StatusAction | null>(null);
   const [notes, setNotes] = useState('');
 
-  const canApprove = hasPermission('orders.approve');
-  const canUpdate = hasPermission('orders.update');
+  const canApprove = hasPermission('orders.approve') || hasRole('Manager');
+  const canManage = hasPermission('orders.manage') || hasRole('Manager') || hasRole('Driver');
+
+  const isDriver = hasRole('Driver');
+  const driverAssigned = !!order.driverAssignment?.driver;
+  const currentUserId = getUserId();
+  const assignedDriverId = (() => {
+    const drv = order.driverAssignment?.driver as any;
+    if (!drv) return null;
+    // Support populated user object or raw ObjectId string
+    return typeof drv === 'string' ? drv : drv._id;
+  })();
+  const isAssignedToCurrentDriver = driverAssigned && assignedDriverId === currentUserId;
 
   const getAvailableActions = (): StatusAction[] => {
     const actions: StatusAction[] = [];
@@ -66,7 +83,7 @@ const OrderStatusDropdown: React.FC<OrderStatusDropdownProps> = ({
               key: 'approve',
               label: 'Approve',
               icon: CheckIcon,
-              description: 'Approve this order for production',
+              description: 'Approve this order for delivery',
               variant: 'success'
             },
             {
@@ -82,73 +99,62 @@ const OrderStatusDropdown: React.FC<OrderStatusDropdownProps> = ({
         break;
 
       case 'approved':
-        if (canUpdate) {
+        if (canManage) {
           actions.push({
-            key: 'production',
-            label: 'Start Production',
-            icon: PlayIcon,
-            description: 'Move to production phase',
-            variant: 'primary'
-          });
-        }
-        break;
-
-      case 'processing':
-        if (canUpdate) {
-          actions.push({
-            key: 'ready',
-            label: 'Mark Ready',
-            icon: ClockIcon,
-            description: 'Mark as ready for dispatch',
-            variant: 'primary'
-          });
-        }
-        break;
-
-      case 'ready':
-        if (canUpdate) {
-          actions.push({
-            key: 'dispatch',
-            label: 'Dispatch',
+            key: 'assignDriver',
+            label: driverAssigned ? 'Reassign Driver' : 'Assign Driver',
             icon: TruckIcon,
-            description: 'Dispatch to customer',
+            description: driverAssigned ? 'Change the assigned driver for this order' : 'Assign a driver to deliver this order',
+            variant: 'primary'
+          });
+          if (driverAssigned) {
+            actions.push({
+              key: 'unassignDriver',
+              label: 'Unassign Driver',
+              icon: XMarkIcon,
+              description: 'Remove the assigned driver',
+              variant: 'danger'
+            });
+          }
+        }
+        break;
+
+      case 'driver_assigned':
+        if ((canManage && !isDriver) || isAssignedToCurrentDriver) {
+          actions.push({
+            key: 'markOutForDelivery',
+            label: 'Mark Out for Delivery',
+            icon: MapPinIcon,
+            description: 'Confirm pickup and start delivery',
             variant: 'primary'
           });
         }
         break;
 
-      case 'dispatched':
-        if (canUpdate) {
+      case 'out_for_delivery':
+        if ((canManage && !isDriver) || isAssignedToCurrentDriver) {
           actions.push({
-            key: 'delivered',
-            label: 'Mark Delivered',
+            key: 'recordDelivery',
+            label: 'Record Delivery',
             icon: CheckCircleIcon,
-            description: 'Confirm delivery',
+            description: 'Capture signatures and settlement to mark delivered',
             variant: 'success'
           });
         }
         break;
 
-      case 'delivered':
-        if (canUpdate) {
-          actions.push({
-            key: 'complete',
-            label: 'Complete',
-            icon: BanknotesIcon,
-            description: 'Mark as completed',
-            variant: 'success'
-          });
-        }
+      default:
         break;
     }
 
-    if (['pending', 'approved', 'processing'].includes(order.status) && canUpdate) {
+    if (order.status === 'pending' && canManage) {
       actions.push({
-        key: 'cancel',
-        label: 'Cancel',
-        icon: XCircleIcon,
+        key: 'reject',
+        label: 'Cancel Order',
+        icon: XMarkIcon,
         description: 'Cancel this order',
-        variant: 'danger'
+        variant: 'danger',
+        requiresNotes: true
       });
     }
 
@@ -158,6 +164,25 @@ const OrderStatusDropdown: React.FC<OrderStatusDropdownProps> = ({
   const handleActionSelect = (action: StatusAction) => {
     setSelectedAction(action);
     setNotes('');
+
+    if (['assignDriver', 'recordDelivery'].includes(action.key)) {
+      if (action.key === 'assignDriver') {
+        if (onAssignDriver) {
+          onAssignDriver();
+        } else {
+          setDriverModalOpen(true);
+        }
+      }
+      if (action.key === 'recordDelivery') {
+        if (onRecordDelivery) {
+          onRecordDelivery();
+        } else {
+          setDeliveryModalOpen(true);
+        }
+      }
+      return;
+    }
+
     setModalOpen(true);
   };
 
@@ -171,7 +196,7 @@ const OrderStatusDropdown: React.FC<OrderStatusDropdownProps> = ({
 
     setLoading(true);
     try {
-      let updatedOrder: Order;
+      let updatedOrder: Order | null = null;
 
       switch (selectedAction.key) {
         case 'approve':
@@ -182,35 +207,24 @@ const OrderStatusDropdown: React.FC<OrderStatusDropdownProps> = ({
           updatedOrder = await orderService.rejectOrder(order._id, notes);
           toast.success('Order rejected');
           break;
-        case 'production':
-          updatedOrder = await orderService.moveToProduction(order._id, notes);
-          toast.success('Order moved to production');
+        case 'unassignDriver':
+          updatedOrder = await orderService.unassignDriver(order._id, notes);
+          toast.success('Driver unassigned');
           break;
-        case 'ready':
-          updatedOrder = await orderService.markAsReady(order._id, notes);
-          toast.success('Order marked as ready');
-          break;
-        case 'dispatch':
-          updatedOrder = await orderService.dispatchOrder(order._id, notes);
-          toast.success('Order dispatched');
-          break;
-        case 'delivered':
-          updatedOrder = await orderService.markAsDelivered(order._id, notes);
-          toast.success('Order marked as delivered');
-          break;
-        case 'complete':
-          updatedOrder = await orderService.completeOrder(order._id, notes);
-          toast.success('Order completed');
-          break;
-        case 'cancel':
-          updatedOrder = await orderService.cancelOrder(order._id, notes);
-          toast.success('Order cancelled');
+        case 'markOutForDelivery':
+          updatedOrder = await orderService.markOutForDelivery(order._id, {
+            notes,
+            location: undefined,
+          });
+          toast.success('Order marked out for delivery');
           break;
         default:
-          throw new Error('Unknown action');
+          break;
       }
 
-      onOrderUpdate(updatedOrder);
+      if (updatedOrder) {
+        onOrderUpdate(updatedOrder);
+      }
       setModalOpen(false);
       setSelectedAction(null);
     } catch (error) {
@@ -273,11 +287,10 @@ const OrderStatusDropdown: React.FC<OrderStatusDropdownProps> = ({
             leaveFrom="transform opacity-100 scale-100"
             leaveTo="transform opacity-0 scale-95"
           >
-            {/* Teleport the dropdown to body to escape table/overflow stacking contexts */}
             <Portal>
               <MenuItems
                 anchor="bottom end"
-                className="z-50 mt-2 w-56 origin-top-right rounded-lg bg-white shadow-2xl ring-1 ring-black/10 border border-gray-200 max-h-64 overflow-y-auto focus:outline-none"
+                className="z-50 mt-2 w-64 origin-top-right rounded-lg bg-white shadow-2xl ring-1 ring-black/10 border border-gray-200 max-h-64 overflow-y-auto focus:outline-none"
               >
                 <div className="py-1">
                   {availableActions.map((action) => (
@@ -317,7 +330,6 @@ const OrderStatusDropdown: React.FC<OrderStatusDropdownProps> = ({
         </Menu>
       </div>
 
-      {/* Action Confirmation Modal */}
       <Modal
         isOpen={modalOpen}
         onClose={() => {
@@ -399,6 +411,20 @@ const OrderStatusDropdown: React.FC<OrderStatusDropdownProps> = ({
           </div>
         )}
       </Modal>
+
+      <DriverAssignmentModal
+        isOpen={driverModalOpen}
+        onClose={() => setDriverModalOpen(false)}
+        order={order}
+        onOrderUpdate={onOrderUpdate}
+      />
+
+      <DeliveryRecordingModal
+        isOpen={deliveryModalOpen}
+        onClose={() => setDeliveryModalOpen(false)}
+        order={order}
+        onOrderUpdate={onOrderUpdate}
+      />
     </>
   );
 };

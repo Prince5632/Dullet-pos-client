@@ -279,13 +279,43 @@ export interface Order {
   discountPercentage: number;
   taxAmount: number;
   totalAmount: number;
-  status: 'pending' | 'approved' | 'rejected' | 'processing' | 'ready' | 'dispatched' | 'delivered' | 'completed' | 'cancelled';
+  status: 'pending' | 'approved' | 'driver_assigned' | 'out_for_delivery' | 'delivered' | 'completed' | 'cancelled' | 'rejected';
   priority: 'low' | 'normal' | 'high' | 'urgent';
   orderDate: string;
   requiredDate?: string;
-  approvedDate?: string;
-  dispatchDate?: string;
-  deliveryDate?: string;
+  managerApproval?: {
+    approvedBy?: User;
+    approvedAt?: string;
+    notes?: string;
+  };
+  driverAssignment?: {
+    driver?: User;
+    assignedAt?: string;
+    pickupAt?: string;
+    deliveryAt?: string;
+    pickupLocation?: {
+      latitude?: number;
+      longitude?: number;
+      address?: string;
+    };
+    deliveryLocation?: {
+      latitude?: number;
+      longitude?: number;
+      address?: string;
+    };
+    driverNotes?: string;
+  };
+  signatures?: {
+    pickupProof?: string;
+    driver?: string;
+    receiver?: string;
+  };
+  settlements?: Array<{
+    amountCollected?: number;
+    notes?: string;
+    recordedBy?: User;
+    recordedAt?: string;
+  }>;
   paymentTerms: 'Cash' | 'Credit' | 'Advance';
   paymentStatus: 'pending' | 'partial' | 'paid' | 'overdue';
   paidAmount: number;
@@ -305,7 +335,6 @@ export interface Order {
   createdAt: string;
   updatedAt: string;
   godown?: Godown;
-  // Virtual fields
   remainingAmount?: number;
   orderAge?: number;
 }

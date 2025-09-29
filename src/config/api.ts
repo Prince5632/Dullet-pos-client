@@ -1,6 +1,6 @@
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_URL || 'https://dullet.onrender.com',
+  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
   ENDPOINTS: {
     // Auth endpoints
     LOGIN: '/api/auth/login',
@@ -30,7 +30,12 @@ export const API_CONFIG = {
     // Order endpoints
     ORDERS: '/api/orders',
     ORDER_BY_ID: (id: string) => `/api/orders/${id}`,
-    ORDER_STATUS: (id: string) => `/api/orders/${id}/status`,
+    ORDER_APPROVE: (id: string) => `/api/orders/${id}/approve`,
+    ORDER_REJECT: (id: string) => `/api/orders/${id}/reject`,
+    ORDER_ASSIGN_DRIVER: (id: string) => `/api/orders/${id}/assign-driver`,
+    ORDER_UNASSIGN_DRIVER: (id: string) => `/api/orders/${id}/unassign-driver`,
+    ORDER_OUT_FOR_DELIVERY: (id: string) => `/api/orders/${id}/out-for-delivery`,
+    ORDER_RECORD_DELIVERY: (id: string) => `/api/orders/${id}/record-delivery`,
     CUSTOMER_ORDER_HISTORY: (customerId: string) => `/api/orders/customer/${customerId}/history`,
     ORDER_STATS: '/api/orders/stats/summary',
     // Quick-order endpoints

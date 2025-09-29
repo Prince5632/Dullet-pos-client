@@ -1,5 +1,6 @@
 import { apiService } from './api';
 import { API_CONFIG } from '../config/api';
+import { authService } from './authService';
 import type {
   Order,
   CreateOrderForm,
@@ -102,23 +103,10 @@ class OrderService {
     throw new Error(response.message || 'Failed to update order');
   }
 
-  // Update order status
-  async updateOrderStatus(id: string, statusUpdate: OrderStatusUpdate): Promise<Order> {
-    const response = await apiService.put<{ order: Order }>(
-      API_CONFIG.ENDPOINTS.ORDER_STATUS(id),
-      statusUpdate
-    );
-
-    if (response.success && response.data) {
-      return response.data.order;
-    }
-    throw new Error(response.message || 'Failed to update order status');
-  }
-
-  // Approve order
+  // Approve/reject order
   async approveOrder(id: string, notes?: string): Promise<Order> {
-    const response = await apiService.put<{ order: Order }>(
-      `${API_CONFIG.ENDPOINTS.ORDERS}/${id}/approve`,
+    const response = await apiService.patch<{ order: Order }>(
+      API_CONFIG.ENDPOINTS.ORDER_APPROVE(id),
       { notes }
     );
 
@@ -128,10 +116,9 @@ class OrderService {
     throw new Error(response.message || 'Failed to approve order');
   }
 
-  // Reject order
   async rejectOrder(id: string, notes?: string): Promise<Order> {
-    const response = await apiService.put<{ order: Order }>(
-      `${API_CONFIG.ENDPOINTS.ORDERS}/${id}/reject`,
+    const response = await apiService.patch<{ order: Order }>(
+      API_CONFIG.ENDPOINTS.ORDER_REJECT(id),
       { notes }
     );
 
@@ -139,6 +126,66 @@ class OrderService {
       return response.data.order;
     }
     throw new Error(response.message || 'Failed to reject order');
+  }
+
+  async assignDriver(id: string, driverId: string, notes?: string): Promise<Order> {
+    const response = await apiService.patch<{ order: Order }>(
+      API_CONFIG.ENDPOINTS.ORDER_ASSIGN_DRIVER(id),
+      { driverId, notes }
+    );
+
+    if (response.success && response.data) {
+      return response.data.order;
+    }
+    throw new Error(response.message || 'Failed to assign driver');
+  }
+
+  async unassignDriver(id: string, notes?: string): Promise<Order> {
+    const response = await apiService.patch<{ order: Order }>(
+      API_CONFIG.ENDPOINTS.ORDER_UNASSIGN_DRIVER(id),
+      { notes }
+    );
+
+    if (response.success && response.data) {
+      return response.data.order;
+    }
+    throw new Error(response.message || 'Failed to unassign driver');
+  }
+
+  async markOutForDelivery(id: string, payload: {
+    notes?: string;
+    location?: { latitude: number; longitude: number; address?: string };
+  }): Promise<Order> {
+    const response = await apiService.patch<{ order: Order }>(
+      API_CONFIG.ENDPOINTS.ORDER_OUT_FOR_DELIVERY(id),
+      payload
+    );
+
+    if (response.success && response.data) {
+      return response.data.order;
+    }
+    throw new Error(response.message || 'Failed to mark out for delivery');
+  }
+
+  async recordDelivery(id: string, payload: {
+    notes?: string;
+    location?: { latitude: number; longitude: number; address?: string };
+    signatures: { driver: string; receiver: string };
+    settlement: { amountCollected: number; notes?: string };
+  }): Promise<Order> {
+    const response = await apiService.patch<{ order: Order }>(
+      API_CONFIG.ENDPOINTS.ORDER_RECORD_DELIVERY(id),
+      payload
+    );
+
+    if (response.success && response.data) {
+      return response.data.order;
+    }
+    throw new Error(response.message || 'Failed to record delivery');
+  }
+
+  getCurrentUserId(): string | null {
+    return authService.getCurrentUserId();
   }
 
   // Get pending orders for approval
@@ -153,84 +200,6 @@ class OrderService {
 
     const url = `${API_CONFIG.ENDPOINTS.ORDERS}/pending/approval?${queryParams.toString()}`;
     return await apiService.get<{ orders: Order[] }>(url) as PaginationResponse<{ orders: Order[] }>;
-  }
-
-  // Move order to production
-  async moveToProduction(id: string, notes?: string): Promise<Order> {
-    const response = await apiService.put<{ order: Order }>(
-      `${API_CONFIG.ENDPOINTS.ORDERS}/${id}/production`,
-      { notes }
-    );
-
-    if (response.success && response.data) {
-      return response.data.order;
-    }
-    throw new Error(response.message || 'Failed to move order to production');
-  }
-
-  // Mark order as ready for dispatch
-  async markAsReady(id: string, notes?: string): Promise<Order> {
-    const response = await apiService.put<{ order: Order }>(
-      `${API_CONFIG.ENDPOINTS.ORDERS}/${id}/ready`,
-      { notes }
-    );
-
-    if (response.success && response.data) {
-      return response.data.order;
-    }
-    throw new Error(response.message || 'Failed to mark order as ready');
-  }
-
-  // Dispatch order
-  async dispatchOrder(id: string, notes?: string): Promise<Order> {
-    const response = await apiService.put<{ order: Order }>(
-      `${API_CONFIG.ENDPOINTS.ORDERS}/${id}/dispatch`,
-      { notes }
-    );
-
-    if (response.success && response.data) {
-      return response.data.order;
-    }
-    throw new Error(response.message || 'Failed to dispatch order');
-  }
-
-  // Mark order as delivered
-  async markAsDelivered(id: string, notes?: string): Promise<Order> {
-    const response = await apiService.put<{ order: Order }>(
-      `${API_CONFIG.ENDPOINTS.ORDERS}/${id}/delivered`,
-      { notes }
-    );
-
-    if (response.success && response.data) {
-      return response.data.order;
-    }
-    throw new Error(response.message || 'Failed to mark order as delivered');
-  }
-
-  // Complete order
-  async completeOrder(id: string, notes?: string): Promise<Order> {
-    const response = await apiService.put<{ order: Order }>(
-      `${API_CONFIG.ENDPOINTS.ORDERS}/${id}/complete`,
-      { notes }
-    );
-
-    if (response.success && response.data) {
-      return response.data.order;
-    }
-    throw new Error(response.message || 'Failed to complete order');
-  }
-
-  // Cancel order
-  async cancelOrder(id: string, notes?: string): Promise<Order> {
-    const response = await apiService.put<{ order: Order }>(
-      `${API_CONFIG.ENDPOINTS.ORDERS}/${id}/cancel`,
-      { notes }
-    );
-
-    if (response.success && response.data) {
-      return response.data.order;
-    }
-    throw new Error(response.message || 'Failed to cancel order');
   }
 
   // Get orders by status
@@ -383,13 +352,12 @@ class OrderService {
     const statusColors: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-800',
       approved: 'bg-green-100 text-green-800',
-      rejected: 'bg-red-100 text-red-800',
-      processing: 'bg-blue-100 text-blue-800',
-      ready: 'bg-purple-100 text-purple-800',
-      dispatched: 'bg-indigo-100 text-indigo-800',
+      driver_assigned: 'bg-blue-100 text-blue-800',
+      out_for_delivery: 'bg-purple-100 text-purple-800',
       delivered: 'bg-teal-100 text-teal-800',
       completed: 'bg-green-100 text-green-800',
       cancelled: 'bg-red-100 text-red-800',
+      rejected: 'bg-red-100 text-red-800',
     };
     return statusColors[status] || 'bg-gray-100 text-gray-800';
   }

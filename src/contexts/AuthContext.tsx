@@ -89,6 +89,9 @@ interface AuthContextType extends AuthState {
   hasAnyPermission: (permissions: string[]) => boolean;
   hasAllPermissions: (permissions: string[]) => boolean;
   hasRole: (role: string) => boolean;
+  hasAnyRole: (roles: string[]) => boolean;
+  hasOrderManageAccess: () => boolean;
+  getUserId: () => string | null;
   clearError: () => void;
   refreshSession: () => void;
 }
@@ -285,6 +288,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return authService.hasRole(role);
   };
 
+  const hasAnyRole = (roles: string[]): boolean => {
+    const roleName = state.user?.role?.name;
+    if (!roleName) return false;
+    return roles.includes(roleName);
+  };
+
+  const hasOrderManageAccess = (): boolean => {
+    if (!state.user) return false;
+    return (
+      hasPermission('orders.manage') ||
+      hasRole('Manager') ||
+      hasRole('Admin') ||
+      hasRole('Super Admin')
+    );
+  };
+
+  const getUserId = (): string | null => {
+    return authService.getCurrentUserId();
+  };
+
   // Clear error
   const clearError = (): void => {
     dispatch({ type: 'CLEAR_ERROR' });
@@ -345,6 +368,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     hasAnyPermission,
     hasAllPermissions,
     hasRole,
+    hasAnyRole,
+    hasOrderManageAccess,
+    getUserId,
     clearError,
     refreshSession,
   };
