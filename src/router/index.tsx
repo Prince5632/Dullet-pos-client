@@ -30,6 +30,10 @@ const OrderApprovalPage = lazy(() => import('../pages/orders/OrderApprovalPage')
 const OrderDetailsPage = lazy(() => import('../pages/orders/OrderDetailsPage'));
 const EditOrderPage = lazy(() => import('../pages/orders/EditOrderPage'));
 
+// Attendance Management Pages
+const AttendancePage = lazy(() => import('../pages/attendance/AttendancePage'));
+const AttendanceDetailsPage = lazy(() => import('../pages/attendance/AttendanceDetailsPage'));
+
 // Settings Pages
 const SettingsPage = lazy(() => import('../pages/settings/SettingsPage'));
 
@@ -198,6 +202,29 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute requiredPermission="orders.read">
                 <OrderDetailsPage />
+              </ProtectedRoute>
+            ),
+          },
+        ],
+      },
+
+      // Attendance Management
+      {
+        path: 'attendance',
+        children: [
+          {
+            index: true,
+            element: (
+              <ProtectedRoute requiredPermission="attendance.read">
+                <AttendancePage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: ':id',
+            element: (
+              <ProtectedRoute requiredPermission="attendance.read">
+                <AttendanceDetailsPage />
               </ProtectedRoute>
             ),
           },

@@ -37,9 +37,19 @@ export const API_CONFIG = {
     QUICK_PRODUCTS: '/api/orders/quick/products',
     QUICK_ORDER: '/api/orders/quick',
     
-    // Godown endpoints
-    GODOWNS: '/api/godowns',
-    GODOWN_BY_ID: (id: string) => `/api/godowns/${id}`,
+  // Godown endpoints
+  GODOWNS: '/api/godowns',
+  GODOWN_BY_ID: (id: string) => `/api/godowns/${id}`,
+
+  // Attendance endpoints
+  ATTENDANCE: '/api/attendance',
+  ATTENDANCE_BY_ID: (id: string) => `/api/attendance/${id}`,
+  ATTENDANCE_STATS: '/api/attendance/stats',
+  ATTENDANCE_TODAY: '/api/attendance/today',
+  ATTENDANCE_TODAY_BY_USER: (userId: string) => `/api/attendance/today/${userId}`,
+  ATTENDANCE_CHECK_IN: '/api/attendance/check-in',
+  ATTENDANCE_CHECK_OUT: '/api/attendance/check-out',
+  ATTENDANCE_CHECK_OUT_BY_ID: (id: string) => `/api/attendance/${id}/check-out`,
     
     // System endpoints
     HEALTH: '/api/health'

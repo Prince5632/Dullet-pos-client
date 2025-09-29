@@ -2,13 +2,13 @@ import React, { useState, Fragment } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Dialog, Transition } from '@headlessui/react';
 import {
-  Bars3Icon,
   XMarkIcon,
   HomeIcon,
   UsersIcon,
   ShieldCheckIcon,
   CogIcon,
   ClipboardDocumentListIcon,
+  CalendarDaysIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import type { NavItem } from '../../types';
@@ -27,6 +27,12 @@ const navigationItems: NavItem[] = [
     href: '/orders',
     icon: ClipboardDocumentListIcon,
     permission: 'orders.read',
+  },
+  {
+    name: 'Attendance',
+    href: '/attendance',
+    icon: CalendarDaysIcon,
+    permission: 'attendance.read',
   },
   {
     name: 'User Management',

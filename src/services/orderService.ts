@@ -1,6 +1,16 @@
 import { apiService } from './api';
 import { API_CONFIG } from '../config/api';
-import type { Order, CreateOrderForm, UpdateOrderForm, OrderStatusUpdate, Customer, PaginationResponse, QuickProduct, CreateQuickOrderForm } from '../types';
+import type {
+  Order,
+  CreateOrderForm,
+  UpdateOrderForm,
+  OrderStatusUpdate,
+  Customer,
+  QuickProduct,
+  CreateQuickOrderForm,
+  ApiResponse,
+  PaginationResponse
+} from '../types';
 
 export interface OrderListParams {
   page?: number;
@@ -26,7 +36,7 @@ export interface CustomerOrderHistoryParams {
 
 class OrderService {
   // Get all orders with pagination and filtering
-  async getOrders(params: OrderListParams = {}): Promise<PaginationResponse<{ orders: Order[] }>> {
+  async getOrders(params: OrderListParams = {}): Promise<ApiResponse<{ orders: Order[] }>> {
     const queryParams = new URLSearchParams();
     
     Object.entries(params).forEach(([key, value]) => {
@@ -36,7 +46,7 @@ class OrderService {
     });
 
     const url = `${API_CONFIG.ENDPOINTS.ORDERS}?${queryParams.toString()}`;
-    return await apiService.get<{ orders: Order[] }>(url) as PaginationResponse<{ orders: Order[] }>;
+    return await apiService.get<{ orders: Order[] }>(url);
   }
 
   // Get order by ID

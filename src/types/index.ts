@@ -10,6 +10,7 @@ export interface PaginationResponse<T> extends ApiResponse<T> {
   pagination: {
     currentPage: number;
     totalPages: number;
+    totalRecords?: number;
     totalUsers?: number;
     totalRoles?: number;
     hasNext: boolean;
@@ -73,6 +74,81 @@ export interface Godown {
   isActive: boolean;
 }
 
+// Attendance Types
+export interface Attendance {
+  _id: string;
+  user: User;
+  date: string;
+  checkInTime: string;
+  checkOutTime?: string;
+  checkInImage: string;
+  checkOutImage?: string;
+  checkInLocation?: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+  };
+  checkOutLocation?: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+  };
+  godown?: Godown;
+  status: 'present' | 'late' | 'half_day' | 'absent';
+  workingHours: number;
+  notes?: string;
+  isAutoMarked: boolean;
+  markedBy: User;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AttendanceStats {
+  totalAttendance: number;
+  presentCount: number;
+  lateCount: number;
+  halfDayCount: number;
+  absentCount: number;
+  averageWorkingHours: number;
+  attendanceRate: number;
+}
+
+export interface AttendanceListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  userId?: string;
+  godownId?: string;
+  status?: 'present' | 'late' | 'half_day' | 'absent';
+  startDate?: string;
+  endDate?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface MarkAttendanceForm {
+  userId?: string;
+  checkInImage?: File | string;
+  location?: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+  };
+  notes?: string;
+  isAutoMarked?: boolean;
+}
+
+export interface CheckOutForm {
+  checkOutImage?: File | string;
+  location?: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+  };
+}
+
 // Auth Types
 export interface LoginRequest {
   email: string;
@@ -88,6 +164,7 @@ export interface LoginResponse {
     id: string;
     loginTime: string;
   };
+  attendanceMarked?: boolean;
 }
 
 // Form Types
