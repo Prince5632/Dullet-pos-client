@@ -61,8 +61,8 @@ const AttendancePage: React.FC = () => {
           godownService.getGodowns()
         ]);
         
-        setUsers(usersData.data.users);
-        setGodowns(godownsData.data.godowns);
+        setUsers(usersData.data?.users || []);
+        setGodowns(godownsData.data?.godowns || []);
       } catch (error) {
         console.error('Failed to load initial data:', error);
       }
@@ -161,7 +161,14 @@ const AttendancePage: React.FC = () => {
   const statusOptions: Attendance['status'][] = ['present', 'late', 'half_day', 'absent'];
 
   // Handle mark attendance
-  const handleMarkAttendance = async (_imageData: string, imageFile: File) => {
+  const handleMarkAttendance = async (_imageData: string | null, imageFile: File | null) => {
+    setShowCamera(false);
+    
+    if (!imageFile) {
+      toast.error(`Photo is required for ${cameraAction === 'checkin' ? 'check-in' : 'check-out'}`);
+      return;
+    }
+    
     try {
       let location;
       try {
@@ -189,7 +196,7 @@ const AttendancePage: React.FC = () => {
       loadTodaysAttendance();
     } catch (error: any) {
       console.error('Failed to mark attendance:', error);
-      toast.error(error.message || 'Failed to mark attendance');
+      toast.error(error.message || `Failed to mark ${cameraAction === 'checkin' ? 'check-in' : 'check-out'}`);
     }
   };
 
