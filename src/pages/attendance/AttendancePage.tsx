@@ -16,6 +16,7 @@ import { userService } from '../../services/userService';
 import { godownService } from '../../services/godownService';
 import CameraCapture from '../../components/common/CameraCapture';
 import type { Attendance, User, Godown, AttendanceListParams } from '../../types';
+import { resolveImageSrc } from '../../utils/image';
 const AttendancePage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -464,7 +465,7 @@ const AttendancePage: React.FC = () => {
                           {record.user.profilePhoto ? (
                             <img
                               className="h-10 w-10 rounded-full object-cover"
-                              src={record.user.profilePhoto}
+                              src={resolveImageSrc(record.user.profilePhoto)}
                               alt=""
                             />
                           ) : (

@@ -23,6 +23,7 @@ import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
+import { resolveImageSrc } from '../../utils/image';
 
 const UserDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -245,7 +246,7 @@ const UserDetailsPage: React.FC = () => {
           <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-6">
             <div className="flex flex-col items-center">
               <Avatar
-                src={user.profilePhoto}
+                src={resolveImageSrc(user.profilePhoto)}
                 name={`${user.firstName} ${user.lastName}`}
                 size="xl"
                 className="mb-4"

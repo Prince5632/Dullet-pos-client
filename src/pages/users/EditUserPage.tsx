@@ -18,6 +18,7 @@ import { cn, isValidEmail, isValidPhone } from '../../utils';
 import Avatar from '../../components/ui/Avatar';
 import RoleAssignment from '../../components/permissions/RoleAssignment';
 import toast from 'react-hot-toast';
+import { resolveImageSrc } from '../../utils/image';
 
 // Validation schema (password is optional for updates)
 const editUserSchema = yup.object({
@@ -256,7 +257,7 @@ const EditUserPage: React.FC = () => {
                 {profilePhotoPreview ? (
                   <div className="relative">
                     <img
-                      src={profilePhotoPreview}
+                      src={resolveImageSrc(profilePhotoPreview) || profilePhotoPreview}
                       alt="Profile preview"
                       className="h-24 w-24 rounded-full object-cover border-2 border-gray-200"
                     />

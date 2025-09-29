@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn, getInitials, getAvatarColor } from '../../utils';
+import { resolveImageSrc } from '../../utils/image';
 
 interface AvatarProps {
   src?: string;
@@ -24,10 +25,12 @@ const Avatar: React.FC<AvatarProps> = ({
 
   const baseClasses = 'inline-flex items-center justify-center rounded-full font-medium';
 
-  if (src) {
+  const resolvedSrc = resolveImageSrc(src);
+
+  if (resolvedSrc) {
     return (
       <img
-        src={src}
+        src={resolvedSrc}
         alt={name}
         className={cn(
           baseClasses,

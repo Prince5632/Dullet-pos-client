@@ -23,6 +23,7 @@ import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
+import { resolveImageSrc } from '../../utils/image';
 
 // Validation schemas
 const profileSchema = yup.object({
@@ -214,7 +215,7 @@ const ProfilePage: React.FC = () => {
                 {profilePhotoPreview ? (
                   <div className="relative">
                     <img
-                      src={profilePhotoPreview}
+                      src={resolveImageSrc(profilePhotoPreview) || profilePhotoPreview}
                       alt="Profile preview"
                       className="h-24 w-24 rounded-full object-cover border-2 border-gray-200"
                     />
