@@ -37,6 +37,7 @@ const OrdersPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [godowns, setGodowns] = useState<Godown[]>([]);
   const [godownFilter, setGodownFilter] = useState('');
+  const [viewType, setViewType] = useState<'orders' | 'widgets'>('orders');
   
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -80,7 +81,9 @@ const OrdersPage: React.FC = () => {
         godownId: godownFilter,
       };
 
-      const response = await orderService.getOrders(params);
+      const response = viewType === 'orders' 
+        ? await orderService.getOrders(params)
+        : await orderService.getWidgets(params);
       
       if (response.success && response.data) {
         setOrders(response.data.orders || []);
@@ -107,6 +110,7 @@ const OrdersPage: React.FC = () => {
     dateToFilter,
     sortBy,
     sortOrder,
+    viewType,
   ]);
 
   const loadCustomers = useCallback(async () => {
@@ -172,7 +176,122 @@ const OrdersPage: React.FC = () => {
   };
 
   // Table columns
-  const columns: TableColumn<Order>[] = [
+  const getColumns = (): TableColumn<Order>[] => {
+    if (viewType === 'widgets') {
+      return [
+        {
+          key: 'orderNumber',
+          label: 'Widget Details',
+          sortable: true,
+          render: (_value, widget) => (
+            <div className="min-w-0 py-1">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="font-semibold text-gray-900 text-sm">
+                  {widget.orderNumber}
+                </div>
+              </div>
+              <div className="text-xs text-gray-500">
+                Created: {orderService.formatDate(widget.orderDate)}
+              </div>
+              <div className="text-xs text-gray-400">
+                {Math.ceil((new Date().getTime() - new Date(widget.orderDate).getTime()) / (1000 * 60 * 60 * 24))} days ago
+              </div>
+            </div>
+          ),
+        },
+        {
+          key: 'customer',
+          label: 'Customer',
+          render: (customer) => (
+            <div className="flex items-center space-x-3 min-w-0 py-1">
+              <Avatar name={customer?.businessName || 'Customer'} size="sm" />
+              <div className="min-w-0 flex-1">
+                <div className="font-medium text-gray-900 truncate text-sm">
+                  {customer?.businessName || '—'}
+                </div>
+                <div className="text-xs text-gray-500 truncate">
+                  {customer?.contactPersonName || customer?.customerId}
+                </div>
+              </div>
+            </div>
+          ),
+        },
+        {
+          key: 'scheduleDate',
+          label: 'Schedule',
+          sortable: true,
+          render: (_value, widget) => (
+            <div className="min-w-0 py-1">
+              <div className="font-semibold text-gray-900 text-sm mb-1">
+                {widget.scheduleDate ? orderService.formatDate(widget.scheduleDate) : '—'}
+              </div>
+              {widget.scheduleDate && (
+                <div className={`text-xs ${
+                  new Date(widget.scheduleDate) < new Date() 
+                    ? 'text-red-600' 
+                    : new Date(widget.scheduleDate).toDateString() === new Date().toDateString()
+                    ? 'text-blue-600'
+                    : 'text-green-600'
+                }`}>
+                  {new Date(widget.scheduleDate) < new Date() 
+                    ? 'Overdue' 
+                    : new Date(widget.scheduleDate).toDateString() === new Date().toDateString()
+                    ? 'Today'
+                    : 'Upcoming'
+                  }
+                </div>
+              )}
+            </div>
+          ),
+        },
+        {
+          key: 'notes',
+          label: 'Notes & Location',
+          render: (_value, widget) => (
+            <div className="min-w-0 py-1">
+              <div className="text-sm text-gray-900 mb-1 truncate">
+                {widget.notes || 'No notes'}
+              </div>
+              {widget.captureLocation && (
+                <div className="text-xs text-gray-500 truncate">
+                  📍 {widget.captureLocation.address || `${widget.captureLocation.latitude}, ${widget.captureLocation.longitude}`}
+                </div>
+              )}
+            </div>
+          ),
+        },
+        {
+          key: 'actions',
+          label: 'Actions',
+          render: (_value, widget) => (
+            <div className="flex items-center justify-end space-x-1 py-1">
+              <Link
+                to={`/orders/${widget._id}`}
+                className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                title="View Details"
+              >
+                <EyeIcon className="h-4 w-4" />
+              </Link>
+              {widget.capturedImage && (
+                <button
+                  onClick={() => {
+                    // TODO: Open image modal
+                    console.log('View image:', widget.capturedImage);
+                  }}
+                  className="inline-flex items-center justify-center w-8 h-8 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-all duration-200"
+                  title="View Image"
+                >
+                  📷
+                </button>
+              )}
+            </div>
+          ),
+        },
+      ];
+    }
+
+    // Default order columns
+    return [
     {
       key: 'orderNumber',
       label: 'Order Details',
@@ -290,6 +409,7 @@ const OrdersPage: React.FC = () => {
       ),
     },
   ];
+  };
 
   if (error) {
     return (
@@ -323,9 +443,39 @@ const OrdersPage: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
+                  <div className="flex items-center gap-4">
+                    <h1 className="text-2xl font-bold text-gray-900">
+                      {viewType === 'orders' ? 'Orders' : 'Widgets'}
+                    </h1>
+                    {/* View Type Switch */}
+                    <div className="flex bg-gray-100 rounded-lg p-1">
+                      <button
+                        onClick={() => setViewType('orders')}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
+                          viewType === 'orders'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        Orders
+                      </button>
+                      <button
+                        onClick={() => setViewType('widgets')}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
+                          viewType === 'widgets'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        Widgets
+                      </button>
+                    </div>
+                  </div>
                   <p className="mt-1 text-sm text-gray-500">
-                    Manage customer orders and track their progress
+                    {viewType === 'orders' 
+                      ? 'Manage customer orders and track their progress'
+                      : 'Manage widgets with scheduled tasks and location tracking'
+                    }
                   </p>
                 </div>
               </div>
@@ -347,11 +497,13 @@ const OrdersPage: React.FC = () => {
                 </Link>
               )}
               <Link
-                to="/orders/new"
+                to={viewType === 'orders' ? "/orders/new" : "/orders/widgets/new"}
                 className="inline-flex items-center justify-center px-4 sm:px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 hover:shadow-md touch-manipulation"
               >
                 <PlusIcon className="h-4 w-4 mr-2 flex-shrink-0" />
-                <span className="hidden sm:inline">Create Order</span>
+                <span className="hidden sm:inline">
+                  {viewType === 'orders' ? 'Create Order' : 'Create Widget'}
+                </span>
                 <span className="sm:hidden">New</span>
               </Link>
             </div>
@@ -374,7 +526,10 @@ const OrdersPage: React.FC = () => {
                   </div>
                   <input
                     type="text"
-                    placeholder="Search by order number, customer name..."
+                    placeholder={viewType === 'orders' 
+                      ? "Search by order number, customer name..." 
+                      : "Search by widget number, customer name..."
+                    }
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg text-sm bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
@@ -392,28 +547,42 @@ const OrdersPage: React.FC = () => {
               
               {/* Quick Filters */}
               <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-2 lg:pb-0">
-                {[
+                {(viewType === 'orders' ? [
                   { value: 'pending', label: 'Pending', color: 'amber', count: orders.filter(o => o.status === 'pending').length },
                   { value: 'approved', label: 'Approved', color: 'emerald', count: orders.filter(o => o.status === 'approved').length },
                   { value: 'processing', label: 'Production', color: 'blue', count: orders.filter(o => o.status === 'processing').length },
                   { value: 'completed', label: 'Completed', color: 'green', count: orders.filter(o => o.status === 'completed').length }
-                ].map((status) => (
+                ] : [
+                  { value: 'today', label: 'Today', color: 'blue', count: orders.filter(o => {
+                    const today = new Date().toDateString();
+                    return o.scheduleDate && new Date(o.scheduleDate).toDateString() === today;
+                  }).length },
+                  { value: 'upcoming', label: 'Upcoming', color: 'green', count: orders.filter(o => {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    return o.scheduleDate && new Date(o.scheduleDate) >= tomorrow;
+                  }).length },
+                  { value: 'overdue', label: 'Overdue', color: 'red', count: orders.filter(o => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return o.scheduleDate && new Date(o.scheduleDate) < today;
+                  }).length }
+                ]).map((filter) => (
                   <button
-                    key={status.value}
-                    onClick={() => setStatusFilter(statusFilter === status.value ? '' : status.value)}
+                    key={filter.value}
+                    onClick={() => setStatusFilter(statusFilter === filter.value ? '' : filter.value)}
                     className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap touch-manipulation ${
-                      statusFilter === status.value
+                      statusFilter === filter.value
                         ? 'bg-blue-100 text-blue-800 ring-2 ring-blue-200 shadow-sm'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900 active:bg-gray-300'
                     }`}
                   >
-                    <span>{status.label}</span>
-                    {status.count > 0 && (
+                    <span>{filter.label}</span>
+                    {filter.count > 0 && (
                       <span className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-xs font-semibold ${
-                        statusFilter === status.value ? 'bg-blue-200 text-blue-800' : 'bg-gray-200 text-gray-600'
+                        statusFilter === filter.value ? 'bg-blue-200 text-blue-800' : 'bg-gray-200 text-gray-600'
                       }`}>
-                        {status.count}
-                      </span>
+                        {filter.count}</span>
                     )}
                   </button>
                 ))}
@@ -696,7 +865,7 @@ const OrdersPage: React.FC = () => {
               {/* Desktop Table View */}
               <div className="hidden lg:block overflow-x-auto">
                 <Table
-                  columns={columns}
+                  columns={getColumns()}
                   data={orders}
                   loading={false}
                   sortBy={sortBy}

@@ -50,6 +50,20 @@ class OrderService {
     return await apiService.get<{ orders: Order[] }>(url);
   }
 
+  // Get all widgets with pagination and filtering
+  async getWidgets(params: OrderListParams = {}): Promise<ApiResponse<{ orders: Order[] }>> {
+    const queryParams = new URLSearchParams();
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const url = `${API_CONFIG.ENDPOINTS.ORDERS}/widgets?${queryParams.toString()}`;
+    return await apiService.get<{ orders: Order[] }>(url);
+  }
+
   // Get order by ID
   async getOrderById(id: string): Promise<Order> {
     const response = await apiService.get<{ order: Order }>(API_CONFIG.ENDPOINTS.ORDER_BY_ID(id));

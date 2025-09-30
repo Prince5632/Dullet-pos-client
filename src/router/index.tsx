@@ -29,6 +29,7 @@ const QuickOrderPage = lazy(() => import('../pages/orders/QuickOrderPage'));
 const OrderApprovalPage = lazy(() => import('../pages/orders/OrderApprovalPage'));
 const OrderDetailsPage = lazy(() => import('../pages/orders/OrderDetailsPage'));
 const EditOrderPage = lazy(() => import('../pages/orders/EditOrderPage'));
+const CreateWidgetPage = lazy(() => import('../pages/orders/CreateWidgetPage'));
 
 // Attendance Management Pages
 const AttendancePage = lazy(() => import('../pages/attendance/AttendancePage'));
@@ -186,6 +187,14 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute requiredPermission="orders.create">
                 <QuickOrderPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'widgets/new',
+            element: (
+              <ProtectedRoute requiredPermission="orders.create">
+                <CreateWidgetPage />
               </ProtectedRoute>
             ),
           },
