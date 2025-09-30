@@ -1,73 +1,93 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { 
-  PlusIcon, 
-  FunnelIcon, 
-  EyeIcon, 
+import React, { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
+import {
+  PlusIcon,
+  FunnelIcon,
+  EyeIcon,
   PencilIcon,
   CalendarIcon,
   CurrencyRupeeIcon,
   ClockIcon,
   XMarkIcon,
   ClipboardDocumentListIcon,
-  MagnifyingGlassIcon
-} from '@heroicons/react/24/outline';
-import { orderService } from '../../services/orderService';
-import { customerService } from '../../services/customerService';
-import { useAuth } from '../../contexts/AuthContext';
-import { useDebounce } from '../../hooks/useDebounce';
-import type { Order, Customer, TableColumn, Godown } from '../../types';
-import { apiService } from '../../services/api';
-import { API_CONFIG } from '../../config/api';
-import Table from '../../components/ui/Table';
-import Pagination from '../../components/ui/Pagination';
-import Avatar from '../../components/ui/Avatar';
-import OrderStatusDropdown from '../../components/orders/OrderStatusDropdown';
+  MagnifyingGlassIcon,
+} from "@heroicons/react/24/outline";
+import { orderService } from "../../services/orderService";
+import { customerService } from "../../services/customerService";
+import { useAuth } from "../../contexts/AuthContext";
+import { useDebounce } from "../../hooks/useDebounce";
+import type { Order, Customer, TableColumn, Godown } from "../../types";
+import { apiService } from "../../services/api";
+import { API_CONFIG } from "../../config/api";
+import Table from "../../components/ui/Table";
+import Pagination from "../../components/ui/Pagination";
+import Avatar from "../../components/ui/Avatar";
+import Modal from "../../components/ui/Modal";
+import OrderStatusDropdown from "../../components/orders/OrderStatusDropdown";
 
 const OrdersPage: React.FC = () => {
   const { hasPermission } = useAuth();
-  
+
   // State
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [godowns, setGodowns] = useState<Godown[]>([]);
-  const [godownFilter, setGodownFilter] = useState('');
-  const [viewType, setViewType] = useState<'orders' | 'visits'>('orders');
-  
+  const [godownFilter, setGodownFilter] = useState("");
+  const [viewType, setViewType] = useState<"orders" | "visits">("orders");
+
   // Common Filters
-  const [searchTerm, setSearchTerm] = useState('');
-  const [customerFilter, setCustomerFilter] = useState('');
-  const [dateFromFilter, setDateFromFilter] = useState('');
-  const [dateToFilter, setDateToFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [customerFilter, setCustomerFilter] = useState("");
+  const [dateFromFilter, setDateFromFilter] = useState("");
+  const [dateToFilter, setDateToFilter] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
   // Order-specific Filters
-  const [statusFilter, setStatusFilter] = useState('');
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState('');
-  const [minAmountFilter, setMinAmountFilter] = useState('');
-  const [maxAmountFilter, setMaxAmountFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState("");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
+  const [minAmountFilter, setMinAmountFilter] = useState("");
+  const [maxAmountFilter, setMaxAmountFilter] = useState("");
 
   // Visit-specific Filters
-  const [scheduleStatusFilter, setScheduleStatusFilter] = useState('');
-  const [visitStatusFilter, setVisitStatusFilter] = useState('');
-  const [hasImageFilter, setHasImageFilter] = useState('');
-  const [addressFilter, setAddressFilter] = useState('');
-  
+  const [scheduleStatusFilter, setScheduleStatusFilter] = useState("");
+  const [visitStatusFilter, setVisitStatusFilter] = useState("");
+  const [hasImageFilter, setHasImageFilter] = useState("");
+  const [addressFilter, setAddressFilter] = useState("");
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
   const [limit] = useState(10);
-  
+
   // Sorting
-  const [sortBy, setSortBy] = useState('orderDate');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortBy, setSortBy] = useState("orderDate");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // Debounced search
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // Image modal state
+  const [selectedImage, setSelectedImage] = useState<{
+    src: string;
+    title: string;
+  }>({ src: "", title: "" });
+  const [showImageModal, setShowImageModal] = useState(false);
+
+  const formatImageSrc = (imageData: string) => {
+    return imageData.startsWith("data:")
+      ? imageData
+      : `data:image/jpeg;base64,${imageData}`;
+  };
+
+  const handleViewImage = (imageData: string, title: string) => {
+    const formattedSrc = formatImageSrc(imageData);
+    setSelectedImage({ src: formattedSrc, title });
+    setShowImageModal(true);
+  };
 
   // Load data functions
   const loadOrders = useCallback(async () => {
@@ -87,28 +107,30 @@ const OrdersPage: React.FC = () => {
         sortOrder,
       };
 
-      const params = viewType === 'orders' 
-        ? {
-            ...commonParams,
-            status: statusFilter,
-            paymentStatus: paymentStatusFilter,
-            priority: priorityFilter,
-            minAmount: minAmountFilter,
-            maxAmount: maxAmountFilter,
-            godownId: godownFilter,
-          }
-        : {
-            ...commonParams,
-            scheduleStatus: scheduleStatusFilter,
-            visitStatus: visitStatusFilter,
-            hasImage: hasImageFilter,
-            address: addressFilter,
-          };
+      const params =
+        viewType === "orders"
+          ? {
+              ...commonParams,
+              status: statusFilter,
+              paymentStatus: paymentStatusFilter,
+              priority: priorityFilter,
+              minAmount: minAmountFilter,
+              maxAmount: maxAmountFilter,
+              godownId: godownFilter,
+            }
+          : {
+              ...commonParams,
+              scheduleStatus: scheduleStatusFilter,
+              visitStatus: visitStatusFilter,
+              hasImage: hasImageFilter,
+              address: addressFilter,
+            };
 
-      const response = viewType === 'orders'
-        ? await orderService.getOrders(params)
-        : await orderService.getVisits(params);
-      
+      const response =
+        viewType === "orders"
+          ? await orderService.getOrders(params)
+          : await orderService.getVisits(params);
+
       if (response.success && response.data) {
         setOrders(response.data.orders || []);
         if (response?.data?.pagination) {
@@ -118,8 +140,8 @@ const OrdersPage: React.FC = () => {
         }
       }
     } catch (err) {
-      console.error('Failed to load:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load.');
+      console.error("Failed to load:", err);
+      setError(err instanceof Error ? err.message : "Failed to load.");
     } finally {
       setLoading(false);
     }
@@ -152,7 +174,7 @@ const OrdersPage: React.FC = () => {
       const customerList = await customerService.getAllCustomers();
       setCustomers(customerList);
     } catch (err) {
-      console.error('Failed to load customers:', err);
+      console.error("Failed to load customers:", err);
     }
   }, []);
 
@@ -168,7 +190,9 @@ const OrdersPage: React.FC = () => {
   useEffect(() => {
     (async () => {
       try {
-        const res = await apiService.get<{ godowns: Godown[] }>(API_CONFIG.ENDPOINTS.GODOWNS);
+        const res = await apiService.get<{ godowns: Godown[] }>(
+          API_CONFIG.ENDPOINTS.GODOWNS
+        );
         if (res.success && res.data) setGodowns(res.data.godowns);
       } catch {}
     })();
@@ -199,53 +223,81 @@ const OrdersPage: React.FC = () => {
     currentPage,
   ]);
 
+  // Reset filters when view type changes
+  useEffect(() => {
+    // Clear common filters
+    setSearchTerm("");
+    setCustomerFilter("");
+    setDateFromFilter("");
+    setDateToFilter("");
+
+    // Clear order-specific filters
+    setStatusFilter("");
+    setPaymentStatusFilter("");
+    setPriorityFilter("");
+    setMinAmountFilter("");
+    setMaxAmountFilter("");
+    setGodownFilter("");
+
+    // Clear visit-specific filters
+    setScheduleStatusFilter("");
+    setVisitStatusFilter("");
+    setHasImageFilter("");
+    setAddressFilter("");
+
+    // Reset pagination
+    setCurrentPage(1);
+  }, [viewType]);
+
   // Handlers
   const handleSort = (field: string) => {
     if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
       setSortBy(field);
-      setSortOrder('desc');
+      setSortOrder("desc");
     }
   };
 
   const clearFilters = () => {
     // Clear common filters
-    setSearchTerm('');
-    setCustomerFilter('');
-    setDateFromFilter('');
-    setDateToFilter('');
-    
+    setSearchTerm("");
+    setCustomerFilter("");
+    setDateFromFilter("");
+    setDateToFilter("");
+
     // Clear order-specific filters
-    setStatusFilter('');
-    setPaymentStatusFilter('');
-    setPriorityFilter('');
-    setMinAmountFilter('');
-    setMaxAmountFilter('');
-    setGodownFilter('');
-    
+    setStatusFilter("");
+    setPaymentStatusFilter("");
+    setPriorityFilter("");
+    setMinAmountFilter("");
+    setMaxAmountFilter("");
+    setGodownFilter("");
+
     // Clear visit-specific filters
-    setScheduleStatusFilter('');
-    setVisitStatusFilter('');
-    setHasImageFilter('');
-    setAddressFilter('');
-    
+    setScheduleStatusFilter("");
+    setVisitStatusFilter("");
+    setHasImageFilter("");
+    setAddressFilter("");
+
     setCurrentPage(1);
   };
 
   const handleOrderUpdate = (updatedOrder: Order) => {
-    setOrders(prev => prev.map(order => 
-      order._id === updatedOrder._id ? updatedOrder : order
-    ));
+    setOrders((prev) =>
+      prev.map((order) =>
+        order._id === updatedOrder._id ? updatedOrder : order
+      )
+    );
   };
 
   // Table columns
   const getColumns = (): TableColumn<Order>[] => {
-    if (viewType === 'visits') {
+    if (viewType === "visits") {
       return [
         {
-          key: 'orderNumber',
-          label: 'Visit Details',
+          key: "orderNumber",
+          label: "Visit Details",
           sortable: true,
           render: (_value, visit) => (
             <div className="min-w-0 py-1">
@@ -261,21 +313,21 @@ const OrdersPage: React.FC = () => {
                 {Math.ceil(
                   (new Date().getTime() - new Date(visit.orderDate).getTime()) /
                     (1000 * 60 * 60 * 24)
-                )}{' '}
+                )}{" "}
                 days ago
               </div>
             </div>
           ),
         },
         {
-          key: 'customer',
-          label: 'Customer',
+          key: "customer",
+          label: "Customer",
           render: (customer) => (
             <div className="flex items-center space-x-3 min-w-0 py-1">
-              <Avatar name={customer?.businessName || 'Customer'} size="sm" />
+              <Avatar name={customer?.businessName || "Customer"} size="sm" />
               <div className="min-w-0 flex-1">
                 <div className="font-medium text-gray-900 truncate text-sm">
-                  {customer?.businessName || '—'}
+                  {customer?.businessName || "—"}
                 </div>
                 <div className="text-xs text-gray-500 truncate">
                   {customer?.contactPersonName || customer?.customerId}
@@ -285,49 +337,49 @@ const OrdersPage: React.FC = () => {
           ),
         },
         {
-          key: 'scheduleDate',
-          label: 'Schedule',
+          key: "scheduleDate",
+          label: "Schedule",
           sortable: true,
           render: (_value, visit) => (
             <div className="min-w-0 py-1">
               <div className="font-semibold text-gray-900 text-sm mb-1">
                 {visit.scheduleDate
                   ? orderService.formatDate(visit.scheduleDate)
-                  : '—'}
+                  : "—"}
               </div>
               {visit.scheduleDate && (
                 <div
                   className={`text-xs ${
                     new Date(visit.scheduleDate) < new Date()
-                      ? 'text-red-600'
+                      ? "text-red-600"
                       : new Date(visit.scheduleDate).toDateString() ===
                         new Date().toDateString()
-                      ? 'text-blue-600'
-                      : 'text-green-600'
+                      ? "text-blue-600"
+                      : "text-green-600"
                   }`}
                 >
                   {new Date(visit.scheduleDate) < new Date()
-                    ? 'Overdue'
+                    ? "Overdue"
                     : new Date(visit.scheduleDate).toDateString() ===
                       new Date().toDateString()
-                    ? 'Today'
-                    : 'Upcoming'}
+                    ? "Today"
+                    : "Upcoming"}
                 </div>
               )}
             </div>
           ),
         },
         {
-          key: 'notes',
-          label: 'Notes & Location',
+          key: "notes",
+          label: "Notes & Location",
           render: (_value, visit) => (
-            <div className="min-w-0 py-1">
+            <div className="min-w-[100px] py-1">
               <div className="text-sm text-gray-900 mb-1 truncate">
-                {visit.notes || 'No notes'}
+                {visit.notes || "No notes"}
               </div>
               {visit.captureLocation && (
-                <div className="text-xs text-gray-500 truncate">
-                  📍{' '}
+                <div className="text-xs text-gray-500 whitespace-normal break-words">
+                  📍{" "}
                   {visit.captureLocation.address ||
                     `${visit.captureLocation.latitude}, ${visit.captureLocation.longitude}`}
                 </div>
@@ -335,9 +387,10 @@ const OrdersPage: React.FC = () => {
             </div>
           ),
         },
+
         {
-          key: 'actions',
-          label: 'Actions',
+          key: "actions",
+          label: "Actions",
           render: (_value, visit) => (
             <div className="flex items-center justify-end space-x-1 py-1">
               <Link
@@ -356,14 +409,22 @@ const OrdersPage: React.FC = () => {
               </Link>
               {visit.capturedImage && (
                 <button
-                  onClick={() => {
-                    // TODO: Open image modal
-                    console.log('View image:', visit.capturedImage);
-                  }}
+                  onClick={() =>
+                    handleViewImage(
+                      visit.capturedImage,
+                      `Visit Image - ${
+                        visit.customer?.businessName || "Unknown Customer"
+                      }`
+                    )
+                  }
                   className="inline-flex items-center justify-center w-8 h-8 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-all duration-200"
                   title="View Image"
                 >
-                  📷
+                  <img
+                    src={formatImageSrc(visit.capturedImage)}
+                    alt="Check In"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                  />
                 </button>
               )}
             </div>
@@ -375,8 +436,8 @@ const OrdersPage: React.FC = () => {
     // Default order columns
     return [
       {
-        key: 'orderNumber',
-        label: 'Order',
+        key: "orderNumber",
+        label: "Order",
         sortable: true,
         render: (_value, order) => (
           <div className="py-0.5">
@@ -384,13 +445,21 @@ const OrdersPage: React.FC = () => {
               <div className="font-medium text-gray-900 text-xs">
                 {order.orderNumber}
               </div>
-              {order.priority !== 'normal' && (
-                <span className={`inline-flex items-center px-1 py-0.5 rounded text-xs font-medium ${
-                  order.priority === 'urgent' ? 'bg-red-100 text-red-700' :
-                  order.priority === 'high' ? 'bg-orange-100 text-orange-700' :
-                  'bg-gray-100 text-gray-700'
-                }`}>
-                  {order.priority === 'urgent' ? 'U' : order.priority === 'high' ? 'H' : 'N'}
+              {order.priority !== "normal" && (
+                <span
+                  className={`inline-flex items-center px-1 py-0.5 rounded text-xs font-medium ${
+                    order.priority === "urgent"
+                      ? "bg-red-100 text-red-700"
+                      : order.priority === "high"
+                      ? "bg-orange-100 text-orange-700"
+                      : "bg-gray-100 text-gray-700"
+                  }`}
+                >
+                  {order.priority === "urgent"
+                    ? "U"
+                    : order.priority === "high"
+                    ? "H"
+                    : "N"}
                 </span>
               )}
             </div>
@@ -401,14 +470,14 @@ const OrdersPage: React.FC = () => {
         ),
       },
       {
-        key: 'customer',
-        label: 'Customer',
+        key: "customer",
+        label: "Customer",
         render: (customer) => (
           <div className="flex items-center space-x-2 py-0.5">
-            <Avatar name={customer?.businessName || 'Customer'} size="sm" />
+            <Avatar name={customer?.businessName || "Customer"} size="sm" />
             <div className="min-w-0 flex-1">
               <div className="font-medium text-gray-900 truncate text-xs">
-                {customer?.businessName || '—'}
+                {customer?.businessName || "—"}
               </div>
               <div className="text-xs text-gray-500 truncate">
                 {customer?.contactPersonName}
@@ -418,25 +487,28 @@ const OrdersPage: React.FC = () => {
         ),
       },
       {
-        key: 'items',
-        label: 'Summary',
+        key: "items",
+        label: "Summary",
         render: (_value, order) => (
           <div className="py-0.5">
             <div className="font-medium text-gray-900 text-xs mb-0.5">
               {orderService.formatCurrency(order.totalAmount)}
             </div>
             <div className="text-xs text-gray-500">
-              {order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? 's' : ''}
+              {order.items?.length || 0} item
+              {(order.items?.length || 0) !== 1 ? "s" : ""}
             </div>
             {order.godown?.name && (
-              <div className="text-xs text-gray-400 truncate">{order.godown.name}</div>
+              <div className="text-xs text-gray-400 truncate">
+                {order.godown.name}
+              </div>
             )}
           </div>
         ),
       },
       {
-        key: 'status',
-        label: 'Status',
+        key: "status",
+        label: "Status",
         render: (_value, order) => (
           <div className="py-0.5">
             <OrderStatusDropdown
@@ -448,8 +520,8 @@ const OrdersPage: React.FC = () => {
         ),
       },
       {
-        key: 'actions',
-        label: '',
+        key: "actions",
+        label: "",
         render: (_value, order) => (
           <div className="flex items-center justify-end space-x-1 py-0.5">
             <Link
@@ -477,7 +549,9 @@ const OrdersPage: React.FC = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="text-center">
           <div className="text-red-600 text-lg mb-2">⚠️</div>
-          <h3 className="text-base font-medium text-gray-900 mb-1">Error Loading Orders</h3>
+          <h3 className="text-base font-medium text-gray-900 mb-1">
+            Error Loading Orders
+          </h3>
           <p className="text-sm text-gray-600 mb-4">{error}</p>
           <button
             onClick={loadOrders}
@@ -503,32 +577,32 @@ const OrdersPage: React.FC = () => {
               <div className="flex items-center gap-4">
                 <div>
                   <h1 className="text-lg font-semibold text-gray-900">
-                    {viewType === 'orders' ? 'Orders' : 'Visits'}
+                    {viewType === "orders" ? "Orders" : "Visits"}
                   </h1>
                   <p className="text-xs text-gray-500 hidden sm:block">
-                    {viewType === 'orders' 
-                      ? 'Manage customer orders' 
-                      : 'Manage visits with scheduled tasks'}
+                    {viewType === "orders"
+                      ? "Manage customer orders"
+                      : "Manage visits with scheduled tasks"}
                   </p>
                 </div>
                 {/* View Type Switch */}
                 <div className="flex bg-gray-100 rounded-lg p-1">
                   <button
-                    onClick={() => setViewType('orders')}
+                    onClick={() => setViewType("orders")}
                     className={`px-2 py-1 text-xs font-medium rounded-md transition-all duration-200 ${
-                      viewType === 'orders'
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                      viewType === "orders"
+                        ? "bg-white text-blue-600 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
                     Orders
                   </button>
                   <button
-                    onClick={() => setViewType('visits')}
+                    onClick={() => setViewType("visits")}
                     className={`px-2 py-1 text-xs font-medium rounded-md transition-all duration-200 ${
-                      viewType === 'visits'
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                      viewType === "visits"
+                        ? "bg-white text-blue-600 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
                     Visits
@@ -536,9 +610,9 @@ const OrdersPage: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2">
-              {hasPermission('orders.approve') && (
+              {hasPermission("orders.approve") && viewType === "orders" && (
                 <Link
                   to="/orders/approval"
                   className="relative inline-flex items-center justify-center px-2 py-1.5 border border-amber-200 text-xs font-medium rounded-lg text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
@@ -546,20 +620,22 @@ const OrdersPage: React.FC = () => {
                   <ClockIcon className="h-3 w-3 mr-1" />
                   <span className="hidden sm:inline">Pending Approval</span>
                   <span className="sm:hidden">Pending</span>
-                  {orders.filter(o => o.status === 'pending').length > 0 && (
+                  {orders.filter((o) => o.status === "pending").length > 0 && (
                     <span className="ml-1 inline-flex items-center px-1 py-0.5 rounded-full text-xs font-semibold bg-amber-200 text-amber-800">
-                      {orders.filter(o => o.status === 'pending').length}
+                      {orders.filter((o) => o.status === "pending").length}
                     </span>
                   )}
                 </Link>
               )}
               <Link
-                to={viewType === 'orders' ? '/orders/new' : '/orders/visits/new'}
+                to={
+                  viewType === "orders" ? "/orders/new" : "/orders/visits/new"
+                }
                 className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
               >
                 <PlusIcon className="h-4 w-4 mr-1" />
                 <span className="hidden sm:inline">
-                  {viewType === 'orders' ? 'New Order' : 'New Visit'}
+                  {viewType === "orders" ? "New Order" : "New Visit"}
                 </span>
                 <span className="sm:hidden">New</span>
               </Link>
@@ -577,61 +653,95 @@ const OrdersPage: React.FC = () => {
               <MagnifyingGlassIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder={viewType === 'orders' ? 'Search orders...' : 'Search visits...'}
+                placeholder={
+                  viewType === "orders"
+                    ? "Search orders..."
+                    : "Search visits..."
+                }
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="block w-full pl-8 pr-8 py-2 text-sm border border-gray-300 rounded-md bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               {searchTerm && (
                 <button
-                  onClick={() => setSearchTerm('')}
+                  onClick={() => setSearchTerm("")}
                   className="absolute right-2.5 top-2.5"
                 >
                   <XMarkIcon className="h-4 w-4 text-gray-400" />
                 </button>
               )}
             </div>
-            
+
             {/* Status Pills - Mobile First */}
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {[
-                { value: 'pending', label: 'Pending', count: orders.filter(o => o.status === 'pending').length },
-                { value: 'approved', label: 'Approved', count: orders.filter(o => o.status === 'approved').length },
-                { value: 'processing', label: 'Production', count: orders.filter(o => o.status === 'processing').length },
-                { value: 'completed', label: 'Done', count: orders.filter(o => o.status === 'completed').length }
-              ].map((status) => (
-                <button
-                  key={status.value}
-                  onClick={() => setStatusFilter(statusFilter === status.value ? '' : status.value)}
-                  className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
-                    statusFilter === status.value
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  <span>{status.label}</span>
-                  {status.count > 0 && (
-                    <span className="text-xs bg-white rounded px-1">
-                      {status.count}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
+            {viewType === "orders" && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {[
+                  {
+                    value: "pending",
+                    label: "Pending",
+                    count: orders.filter((o) => o.status === "pending").length,
+                  },
+                  {
+                    value: "approved",
+                    label: "Approved",
+                    count: orders.filter((o) => o.status === "approved").length,
+                  },
+                  {
+                    value: "processing",
+                    label: "Production",
+                    count: orders.filter((o) => o.status === "processing")
+                      .length,
+                  },
+                  {
+                    value: "completed",
+                    label: "Done",
+                    count: orders.filter((o) => o.status === "completed")
+                      .length,
+                  },
+                ].map((status) => (
+                  <button
+                    key={status.value}
+                    onClick={() =>
+                      setStatusFilter(
+                        statusFilter === status.value ? "" : status.value
+                      )
+                    }
+                    className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
+                      statusFilter === status.value
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    <span>{status.label}</span>
+                    {status.count > 0 && (
+                      <span className="text-xs bg-white rounded px-1">
+                        {status.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Filter Toggle */}
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
-                  showFilters ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-700'
+                  showFilters
+                    ? "bg-blue-50 text-blue-700"
+                    : "bg-gray-100 text-gray-700"
                 }`}
               >
                 <FunnelIcon className="h-3.5 w-3.5" />
                 More Filters
               </button>
-              
-              {(statusFilter || paymentStatusFilter || customerFilter || dateFromFilter || dateToFilter) && (
+
+              {(statusFilter ||
+                paymentStatusFilter ||
+                customerFilter ||
+                dateFromFilter ||
+                dateToFilter) && (
                 <button
                   onClick={clearFilters}
                   className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded-md transition-colors"
@@ -677,7 +787,7 @@ const OrdersPage: React.FC = () => {
                   />
 
                   {/* Order-specific Filters */}
-                  {viewType === 'orders' && (
+                  {viewType === "orders" && (
                     <>
                       <select
                         value={paymentStatusFilter}
@@ -709,8 +819,10 @@ const OrdersPage: React.FC = () => {
                         className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
                         <option value="">All Godowns</option>
-                        {godowns.map(g => (
-                          <option key={g._id} value={g._id}>{g.name}</option>
+                        {godowns.map((g) => (
+                          <option key={g._id} value={g._id}>
+                            {g.name}
+                          </option>
                         ))}
                       </select>
 
@@ -733,11 +845,13 @@ const OrdersPage: React.FC = () => {
                   )}
 
                   {/* Visit-specific Filters */}
-                  {viewType === 'visits' && (
+                  {viewType === "visits" && (
                     <>
                       <select
                         value={scheduleStatusFilter}
-                        onChange={(e) => setScheduleStatusFilter(e.target.value)}
+                        onChange={(e) =>
+                          setScheduleStatusFilter(e.target.value)
+                        }
                         className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
                         <option value="">Schedule Status</option>
@@ -793,13 +907,15 @@ const OrdersPage: React.FC = () => {
             <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
               <div className="text-xs text-gray-500">Pending</div>
               <div className="font-semibold text-sm text-amber-600">
-                {orders.filter(o => o.status === 'pending').length}
+                {orders.filter((o) => o.status === "pending").length}
               </div>
             </div>
             <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
               <div className="text-xs text-gray-500">Value</div>
               <div className="font-semibold text-xs">
-                {orderService.formatCurrency(orders.reduce((sum, o) => sum + o.totalAmount, 0))}
+                {orderService.formatCurrency(
+                  orders.reduce((sum, o) => sum + o.totalAmount, 0)
+                )}
               </div>
             </div>
           </div>
@@ -817,9 +933,13 @@ const OrdersPage: React.FC = () => {
           ) : orders.length === 0 ? (
             <div className="text-center py-8">
               <ClipboardDocumentListIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <h3 className="text-sm font-medium text-gray-900 mb-1">No orders found</h3>
+              <h3 className="text-sm font-medium text-gray-900 mb-1">
+                No {viewType === "orders" ? "orders" : "visits"} found
+              </h3>
               <p className="text-xs text-gray-500 mb-4">
-                {statusFilter || searchTerm ? 'Try adjusting filters' : 'Create your first order'}
+                {statusFilter || searchTerm
+                  ? "Try adjusting filters"
+                  : "Create your first order"}
               </p>
               {!statusFilter && !searchTerm ? (
                 <Link
@@ -843,19 +963,30 @@ const OrdersPage: React.FC = () => {
               {/* Mobile Cards */}
               <div className="block lg:hidden divide-y divide-gray-200">
                 {orders.map((order) => (
-                  <div key={order._id} className="p-3 hover:bg-gray-50 transition-colors">
+                  <div
+                    key={order._id}
+                    className="p-3 hover:bg-gray-50 transition-colors"
+                  >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <h3 className="font-medium text-sm text-gray-900">
                           {order.orderNumber}
                         </h3>
-                        {order.priority !== 'normal' && (
-                          <span className={`inline-flex items-center px-1 py-0.5 rounded text-xs font-medium ${
-                            order.priority === 'urgent' ? 'bg-red-100 text-red-700' :
-                            order.priority === 'high' ? 'bg-orange-100 text-orange-700' :
-                            'bg-gray-100 text-gray-700'
-                          }`}>
-                            {order.priority === 'urgent' ? 'U' : order.priority === 'high' ? 'H' : 'N'}
+                        {order.priority !== "normal" && (
+                          <span
+                            className={`inline-flex items-center px-1 py-0.5 rounded text-xs font-medium ${
+                              order.priority === "urgent"
+                                ? "bg-red-100 text-red-700"
+                                : order.priority === "high"
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-gray-100 text-gray-700"
+                            }`}
+                          >
+                            {order.priority === "urgent"
+                              ? "U"
+                              : order.priority === "high"
+                              ? "H"
+                              : "N"}
                           </span>
                         )}
                       </div>
@@ -874,12 +1005,15 @@ const OrdersPage: React.FC = () => {
                         </Link>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-2 mb-2">
-                      <Avatar name={order.customer?.businessName || 'Customer'} size="sm" />
+                      <Avatar
+                        name={order.customer?.businessName || "Customer"}
+                        size="sm"
+                      />
                       <div className="min-w-0 flex-1">
                         <div className="font-medium text-sm text-gray-900 truncate">
-                          {order.customer?.businessName || '—'}
+                          {order.customer?.businessName || "—"}
                         </div>
                         <div className="text-xs text-gray-500">
                           {orderService.formatDate(order.orderDate)}
@@ -887,21 +1021,23 @@ const OrdersPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-sm text-gray-900">
-                          {orderService.formatCurrency(order.totalAmount)}
+                    {viewType !== "visits" && (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-sm text-gray-900">
+                            {orderService.formatCurrency(order.totalAmount)}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {order.items?.length || 0} items
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500">
-                          {order.items?.length || 0} items
-                        </div>
+                        <OrderStatusDropdown
+                          order={order}
+                          onOrderUpdate={handleOrderUpdate}
+                          compact
+                        />
                       </div>
-                      <OrderStatusDropdown
-                        order={order}
-                        onOrderUpdate={handleOrderUpdate}
-                        compact
-                      />
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -934,6 +1070,21 @@ const OrdersPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Image Modal */}
+      <Modal
+        isOpen={showImageModal}
+        onClose={() => setShowImageModal(false)}
+        title={selectedImage.title}
+      >
+        <div className="flex justify-center">
+          <img
+            src={selectedImage.src}
+            alt={selectedImage.title}
+            className="max-w-full max-h-96 object-contain rounded-lg"
+          />
+        </div>
+      </Modal>
     </div>
   );
 };
