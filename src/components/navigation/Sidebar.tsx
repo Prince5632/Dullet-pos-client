@@ -116,7 +116,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </li>
 
           {/* Bottom section - Only show on desktop or larger mobile screens */}
-          <li className={cn(
+          {/* <li className={cn(
             "mt-auto",
             mobile ? "hidden sm:block" : "block"
           )}>
@@ -152,7 +152,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               </div>
             </div>
-          </li>
+          </li> */}
         </ul>
       </nav>
     </div>
