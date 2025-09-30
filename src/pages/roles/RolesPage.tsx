@@ -318,14 +318,14 @@ const RolesPage: React.FC = () => {
               </div>
             </div>
             
-            <Link
+            {/* <Link
               to="/roles/create"
               className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
             >
               <PlusIcon className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Add Role</span>
               <span className="sm:hidden">Add</span>
-            </Link>
+            </Link> */}
           </div>
         </div>
       </div>
