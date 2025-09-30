@@ -223,6 +223,32 @@ const OrdersPage: React.FC = () => {
     currentPage,
   ]);
 
+  // Reset filters when view type changes
+  useEffect(() => {
+    // Clear common filters
+    setSearchTerm("");
+    setCustomerFilter("");
+    setDateFromFilter("");
+    setDateToFilter("");
+
+    // Clear order-specific filters
+    setStatusFilter("");
+    setPaymentStatusFilter("");
+    setPriorityFilter("");
+    setMinAmountFilter("");
+    setMaxAmountFilter("");
+    setGodownFilter("");
+
+    // Clear visit-specific filters
+    setScheduleStatusFilter("");
+    setVisitStatusFilter("");
+    setHasImageFilter("");
+    setAddressFilter("");
+
+    // Reset pagination
+    setCurrentPage(1);
+  }, [viewType]);
+
   // Handlers
   const handleSort = (field: string) => {
     if (sortBy === field) {
@@ -347,12 +373,12 @@ const OrdersPage: React.FC = () => {
           key: "notes",
           label: "Notes & Location",
           render: (_value, visit) => (
-            <div className="min-w-0 py-1">
+            <div className="min-w-[100px] py-1">
               <div className="text-sm text-gray-900 mb-1 truncate">
                 {visit.notes || "No notes"}
               </div>
               {visit.captureLocation && (
-                <div className="text-xs text-gray-500 truncate">
+                <div className="text-xs text-gray-500 whitespace-normal break-words">
                   📍{" "}
                   {visit.captureLocation.address ||
                     `${visit.captureLocation.latitude}, ${visit.captureLocation.longitude}`}
@@ -361,6 +387,7 @@ const OrdersPage: React.FC = () => {
             </div>
           ),
         },
+
         {
           key: "actions",
           label: "Actions",
@@ -646,51 +673,55 @@ const OrdersPage: React.FC = () => {
             </div>
 
             {/* Status Pills - Mobile First */}
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {[
-                {
-                  value: "pending",
-                  label: "Pending",
-                  count: orders.filter((o) => o.status === "pending").length,
-                },
-                {
-                  value: "approved",
-                  label: "Approved",
-                  count: orders.filter((o) => o.status === "approved").length,
-                },
-                {
-                  value: "processing",
-                  label: "Production",
-                  count: orders.filter((o) => o.status === "processing").length,
-                },
-                {
-                  value: "completed",
-                  label: "Done",
-                  count: orders.filter((o) => o.status === "completed").length,
-                },
-              ].map((status) => (
-                <button
-                  key={status.value}
-                  onClick={() =>
-                    setStatusFilter(
-                      statusFilter === status.value ? "" : status.value
-                    )
-                  }
-                  className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
-                    statusFilter === status.value
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  <span>{status.label}</span>
-                  {status.count > 0 && (
-                    <span className="text-xs bg-white rounded px-1">
-                      {status.count}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
+            {viewType === "orders" && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {[
+                  {
+                    value: "pending",
+                    label: "Pending",
+                    count: orders.filter((o) => o.status === "pending").length,
+                  },
+                  {
+                    value: "approved",
+                    label: "Approved",
+                    count: orders.filter((o) => o.status === "approved").length,
+                  },
+                  {
+                    value: "processing",
+                    label: "Production",
+                    count: orders.filter((o) => o.status === "processing")
+                      .length,
+                  },
+                  {
+                    value: "completed",
+                    label: "Done",
+                    count: orders.filter((o) => o.status === "completed")
+                      .length,
+                  },
+                ].map((status) => (
+                  <button
+                    key={status.value}
+                    onClick={() =>
+                      setStatusFilter(
+                        statusFilter === status.value ? "" : status.value
+                      )
+                    }
+                    className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
+                      statusFilter === status.value
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    <span>{status.label}</span>
+                    {status.count > 0 && (
+                      <span className="text-xs bg-white rounded px-1">
+                        {status.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Filter Toggle */}
             <div className="flex items-center justify-between">
