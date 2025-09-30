@@ -19,6 +19,7 @@ import { attendanceService } from '../../services/attendanceService';
 import { userService } from '../../services/userService';
 import { godownService } from '../../services/godownService';
 import CameraCapture from '../../components/common/CameraCapture';
+import Modal from '../../components/ui/Modal';
 import type { Attendance, User, Godown, AttendanceListParams } from '../../types';
 import { resolveImageSrc } from '../../utils/image';
 
@@ -33,7 +34,7 @@ const AttendancePage: React.FC = () => {
   const [godowns, setGodowns] = useState<Godown[]>([]);
   const [showCamera, setShowCamera] = useState(false);
   const [cameraAction, setCameraAction] = useState<'checkin' | 'checkout'>('checkin');
-  const [selectedImage, setSelectedImage] = useState<string>('');
+  const [selectedImage, setSelectedImage] = useState<{ src: string; title: string }>({ src: '', title: '' });
   const [showImageModal, setShowImageModal] = useState(false);
   const [todaysAttendance, setTodaysAttendance] = useState<Attendance | null>(null);
   const [summary, setSummary] = useState<{ totalAttendance: number; presentDays: number } | undefined>();
@@ -57,6 +58,11 @@ const AttendancePage: React.FC = () => {
     hasNext: false,
     hasPrev: false
   });
+
+  // Helper function to format image src
+  const formatImageSrc = (imageData: string) => {
+    return imageData.startsWith('data:') ? imageData : `data:image/jpeg;base64,${imageData}`;
+  };
 
   // Load initial data
   useEffect(() => {
@@ -207,8 +213,8 @@ const AttendancePage: React.FC = () => {
   };
 
   // Handle image view
-  const handleViewImage = (imageData: string) => {
-    setSelectedImage(imageData);
+  const handleViewImage = (imageData: string, title: string) => {
+    setSelectedImage({ src: imageData, title });
     setShowImageModal(true);
   };
 
@@ -297,15 +303,27 @@ const AttendancePage: React.FC = () => {
             <div className="grid grid-cols-2 gap-3">
               <div className="flex items-center gap-2">
                 <CheckCircleIcon className="h-4 w-4 text-green-500 flex-shrink-0" />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-xs text-gray-500">Check In</p>
                   <p className="text-sm font-medium truncate">{attendanceService.formatTime(todaysAttendance.checkInTime)}</p>
                 </div>
+                {todaysAttendance.checkInImage && (
+                  <button
+                    onClick={() => handleViewImage(todaysAttendance.checkInImage, 'Today\'s Check In Photo')}
+                    className="w-6 h-6 rounded-full overflow-hidden hover:ring-2 hover:ring-green-500 hover:ring-offset-1 transition-all group flex-shrink-0"
+                  >
+                    <img
+                      src={formatImageSrc(todaysAttendance.checkInImage)}
+                      alt="Check In"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                    />
+                  </button>
+                )}
               </div>
               
               <div className="flex items-center gap-2">
                 <ExclamationCircleIcon className="h-4 w-4 text-orange-500 flex-shrink-0" />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-xs text-gray-500">Check Out</p>
                   <p className="text-sm font-medium truncate">
                     {todaysAttendance.checkOutTime 
@@ -314,6 +332,18 @@ const AttendancePage: React.FC = () => {
                     }
                   </p>
                 </div>
+                {todaysAttendance.checkOutImage && (
+                  <button
+                    onClick={() => handleViewImage(todaysAttendance.checkOutImage!, 'Today\'s Check Out Photo')}
+                    className="w-6 h-6 rounded-full overflow-hidden hover:ring-2 hover:ring-orange-500 hover:ring-offset-1 transition-all group flex-shrink-0"
+                  >
+                    <img
+                      src={formatImageSrc(todaysAttendance.checkOutImage)}
+                      alt="Check Out"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                    />
+                  </button>
+                )}
               </div>
               
               <div className="flex items-center gap-2">
@@ -517,21 +547,27 @@ const AttendancePage: React.FC = () => {
                     <div className="grid grid-cols-2 gap-2 mb-2">
                       <div className="flex items-center gap-1.5">
                         <ClockIcon className="h-3.5 w-3.5 text-green-500" />
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <div className="text-xs text-gray-500">Check In</div>
                           <div className="text-xs font-medium">{attendanceService.formatTime(record.checkInTime)}</div>
                         </div>
-                        <button
-                          onClick={() => handleViewImage(record.checkInImage)}
-                          className="ml-auto p-1 text-blue-600 hover:bg-blue-50 rounded"
-                        >
-                          <PhotoIcon className="h-3.5 w-3.5" />
-                        </button>
+                        {record.checkInImage && (
+                          <button
+                            onClick={() => handleViewImage(record.checkInImage, 'Check In Photo')}
+                            className="w-5 h-5 rounded-full overflow-hidden hover:ring-2 hover:ring-blue-500 hover:ring-offset-1 transition-all group flex-shrink-0"
+                          >
+                            <img
+                              src={formatImageSrc(record.checkInImage)}
+                              alt="Check In"
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                            />
+                          </button>
+                        )}
                       </div>
                       
                       <div className="flex items-center gap-1.5">
                         <ClockIcon className="h-3.5 w-3.5 text-orange-500" />
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <div className="text-xs text-gray-500">Check Out</div>
                           <div className="text-xs font-medium">
                             {record.checkOutTime 
@@ -542,10 +578,14 @@ const AttendancePage: React.FC = () => {
                         </div>
                         {record.checkOutImage && (
                           <button
-                            onClick={() => handleViewImage(record.checkOutImage!)}
-                            className="ml-auto p-1 text-blue-600 hover:bg-blue-50 rounded"
+                            onClick={() => handleViewImage(record.checkOutImage!, 'Check Out Photo')}
+                            className="w-5 h-5 rounded-full overflow-hidden hover:ring-2 hover:ring-blue-500 hover:ring-offset-1 transition-all group flex-shrink-0"
                           >
-                            <PhotoIcon className="h-3.5 w-3.5" />
+                            <img
+                              src={formatImageSrc(record.checkOutImage)}
+                              alt="Check Out"
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                            />
                           </button>
                         )}
                       </div>
@@ -638,20 +678,36 @@ const AttendancePage: React.FC = () => {
                           {attendanceService.formatDate(record.date)}
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap">
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2">
                             <div className="text-xs text-gray-900">{attendanceService.formatTime(record.checkInTime)}</div>
-                            <button onClick={() => handleViewImage(record.checkInImage)} className="text-blue-600 hover:text-blue-800">
-                              <PhotoIcon className="h-3.5 w-3.5" />
-                            </button>
+                            {record.checkInImage && (
+                              <button
+                                onClick={() => handleViewImage(record.checkInImage, 'Check In Photo')}
+                                className="w-6 h-6 rounded-full overflow-hidden hover:ring-2 hover:ring-blue-500 hover:ring-offset-1 transition-all group"
+                              >
+                                <img
+                                  src={formatImageSrc(record.checkInImage)}
+                                  alt="Check In"
+                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                                />
+                              </button>
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap">
                           {record.checkOutTime ? (
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-2">
                               <div className="text-xs text-gray-900">{attendanceService.formatTime(record.checkOutTime)}</div>
                               {record.checkOutImage && (
-                                <button onClick={() => handleViewImage(record.checkOutImage!)} className="text-blue-600 hover:text-blue-800">
-                                  <PhotoIcon className="h-3.5 w-3.5" />
+                                <button
+                                  onClick={() => handleViewImage(record.checkOutImage!, 'Check Out Photo')}
+                                  className="w-6 h-6 rounded-full overflow-hidden hover:ring-2 hover:ring-blue-500 hover:ring-offset-1 transition-all group"
+                                >
+                                  <img
+                                    src={formatImageSrc(record.checkOutImage)}
+                                    alt="Check Out"
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                                  />
                                 </button>
                               )}
                             </div>
@@ -757,29 +813,21 @@ const AttendancePage: React.FC = () => {
         instructions={`Take a clear photo for ${cameraAction === 'checkin' ? 'check-in' : 'check-out'} verification`}
       />
 
-      {/* Image View Modal */}
-      {showImageModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
-          <div className="bg-white rounded-lg overflow-hidden max-w-full max-h-full">
-            <div className="flex items-center justify-between p-3 border-b">
-              <h3 className="text-sm font-medium">Attendance Photo</h3>
-              <button
-                onClick={() => setShowImageModal(false)}
-                className="text-gray-400 hover:text-gray-600 p-1"
-              >
-                <XMarkIcon className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-3">
-              <img
-                src={selectedImage.startsWith('data:') ? selectedImage : `data:image/jpeg;base64,${selectedImage}`}
-                alt="Attendance"
-                className="max-w-full max-h-96 mx-auto rounded"
-              />
-            </div>
-          </div>
+      {/* Image View Modal - Using improved Modal component */}
+      <Modal
+        isOpen={showImageModal}
+        onClose={() => setShowImageModal(false)}
+        title={selectedImage.title}
+        size="lg"
+      >
+        <div className="flex justify-center">
+          <img
+            src={formatImageSrc(selectedImage.src)}
+            alt={selectedImage.title}
+            className="max-w-full max-h-96 rounded-lg shadow-lg"
+          />
         </div>
-      )}
+      </Modal>
     </div>
   );
 };

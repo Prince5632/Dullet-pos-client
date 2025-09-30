@@ -17,6 +17,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { attendanceService } from '../../services/attendanceService';
 import type { Attendance } from '../../types';
+import Modal from '../../components/ui/Modal';
 
 const AttendanceDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,7 +28,7 @@ const AttendanceDetailsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string>('');
+  const [selectedImage, setSelectedImage] = useState<{ src: string; title: string }>({ src: '', title: '' });
   const [showImageModal, setShowImageModal] = useState(false);
   const [editForm, setEditForm] = useState({
     status: '',
@@ -94,9 +95,13 @@ const AttendanceDetailsPage: React.FC = () => {
     }
   };
 
-  const handleViewImage = (imageData: string) => {
-    setSelectedImage(imageData);
+  const handleViewImage = (imageData: string, title: string) => {
+    setSelectedImage({ src: imageData, title });
     setShowImageModal(true);
+  };
+
+  const formatImageSrc = (imageData: string) => {
+    return imageData.startsWith('data:') ? imageData : `data:image/jpeg;base64,${imageData}`;
   };
 
   // Check permissions
@@ -239,7 +244,21 @@ const AttendanceDetailsPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
             {/* Check In */}
             <div className="p-2 bg-gray-50 rounded-lg">
-              <div className="text-xs font-medium text-gray-700 mb-1">Check In</div>
+              <div className="flex items-center justify-between mb-1">
+                <div className="text-xs font-medium text-gray-700">Check In</div>
+                {attendance.checkInImage && (
+                  <button
+                    onClick={() => handleViewImage(attendance.checkInImage, 'Check In Photo')}
+                    className="w-6 h-6 rounded-full overflow-hidden hover:ring-2 hover:ring-blue-500 hover:ring-offset-1 transition-all group"
+                  >
+                    <img
+                      src={formatImageSrc(attendance.checkInImage)}
+                      alt="Check In"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                    />
+                  </button>
+                )}
+              </div>
               {editing ? (
                 <input
                   type="datetime-local"
@@ -256,7 +275,21 @@ const AttendanceDetailsPage: React.FC = () => {
 
             {/* Check Out */}
             <div className="p-2 bg-gray-50 rounded-lg">
-              <div className="text-xs font-medium text-gray-700 mb-1">Check Out</div>
+              <div className="flex items-center justify-between mb-1">
+                <div className="text-xs font-medium text-gray-700">Check Out</div>
+                {attendance.checkOutImage && (
+                  <button
+                    onClick={() => handleViewImage(attendance.checkOutImage!, 'Check Out Photo')}
+                    className="w-6 h-6 rounded-full overflow-hidden hover:ring-2 hover:ring-blue-500 hover:ring-offset-1 transition-all group"
+                  >
+                    <img
+                      src={formatImageSrc(attendance.checkOutImage)}
+                      alt="Check Out"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                    />
+                  </button>
+                )}
+              </div>
               {editing ? (
                 <input
                   type="datetime-local"
@@ -343,46 +376,44 @@ const AttendanceDetailsPage: React.FC = () => {
           
           <div className="grid grid-cols-2 gap-3">
             {/* Check In Photo */}
-            <div>
+            <div className="text-center">
               <div className="text-xs font-medium text-gray-700 mb-2">Check In</div>
-              <button
-                onClick={() => handleViewImage(attendance.checkInImage)}
-                className="w-full aspect-square bg-gray-100 rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
-              >
-                <img
-                  src={attendance.checkInImage.startsWith('data:') 
-                    ? attendance.checkInImage 
-                    : `data:image/jpeg;base64,${attendance.checkInImage}`
-                  }
-                  alt="Check In"
-                  className="w-full h-full object-cover"
-                />
-              </button>
-            </div>
-
-            {/* Check Out Photo */}
-            <div>
-              <div className="text-xs font-medium text-gray-700 mb-2">Check Out</div>
-              {attendance.checkOutImage ? (
+              {attendance.checkInImage ? (
                 <button
-                  onClick={() => handleViewImage(attendance.checkOutImage!)}
-                  className="w-full aspect-square bg-gray-100 rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
+                  onClick={() => handleViewImage(attendance.checkInImage, 'Check In Photo')}
+                  className="mx-auto w-16 h-16 rounded-full overflow-hidden hover:ring-4 hover:ring-blue-500 hover:ring-offset-2 transition-all group shadow-md"
                 >
                   <img
-                    src={attendance.checkOutImage.startsWith('data:') 
-                      ? attendance.checkOutImage 
-                      : `data:image/jpeg;base64,${attendance.checkOutImage}`
-                    }
-                    alt="Check Out"
-                    className="w-full h-full object-cover"
+                    src={formatImageSrc(attendance.checkInImage)}
+                    alt="Check In"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                   />
                 </button>
               ) : (
-                <div className="w-full aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
-                  <div className="text-center">
-                    <PhotoIcon className="h-8 w-8 text-gray-400 mx-auto mb-1" />
-                    <div className="text-xs text-gray-500">No photo</div>
-                  </div>
+                <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                  <PhotoIcon className="h-6 w-6 text-gray-400" />
+                </div>
+              )}
+            </div>
+
+            {/* Check Out Photo */}
+            <div className="text-center">
+              <div className="text-xs font-medium text-gray-700 mb-2">Check Out</div>
+              {attendance.checkOutImage ? (
+                <button
+                  onClick={() => handleViewImage(attendance.checkOutImage!, 'Check Out Photo')}
+                  className="mx-auto w-16 h-16 rounded-full overflow-hidden hover:ring-4 hover:ring-blue-500 hover:ring-offset-2 transition-all group shadow-md"
+                >
+                  <img
+                    src={formatImageSrc(attendance.checkOutImage)}
+                    alt="Check Out"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                  />
+                </button>
+              ) : (
+                <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                  <PhotoIcon className="h-6 w-6 text-gray-400" />
+                  <div className="absolute -bottom-1 text-xs text-gray-500">No photo</div>
                 </div>
               )}
             </div>
@@ -479,29 +510,21 @@ const AttendanceDetailsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Image Modal */}
-      {showImageModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
-          <div className="bg-white rounded-lg overflow-hidden max-w-full max-h-full">
-            <div className="flex items-center justify-between p-3 border-b">
-              <h3 className="text-sm font-medium">Attendance Photo</h3>
-              <button
-                onClick={() => setShowImageModal(false)}
-                className="text-gray-400 hover:text-gray-600 p-1"
-              >
-                <XMarkIcon className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-3">
-              <img
-                src={selectedImage.startsWith('data:') ? selectedImage : `data:image/jpeg;base64,${selectedImage}`}
-                alt="Attendance"
-                className="max-w-full max-h-96 mx-auto rounded"
-              />
-            </div>
-          </div>
+      {/* Image Modal - Using improved Modal component */}
+      <Modal
+        isOpen={showImageModal}
+        onClose={() => setShowImageModal(false)}
+        title={selectedImage.title}
+        size="lg"
+      >
+        <div className="flex justify-center">
+          <img
+            src={formatImageSrc(selectedImage.src)}
+            alt={selectedImage.title}
+            className="max-w-full max-h-96 rounded-lg shadow-lg"
+          />
         </div>
-      )}
+      </Modal>
     </div>
   );
 };
