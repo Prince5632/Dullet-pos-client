@@ -40,6 +40,8 @@ export const API_CONFIG = {
     ORDER_STATS: '/api/orders/stats/summary',
     // Visit endpoints
     CREATE_VISIT: '/api/orders/visits',
+    VISITS: '/api/orders/visits',
+    VISIT_BY_ID: (id: string) => `/api/orders/visits/${id}`,
     // Quick-order endpoints
     QUICK_PRODUCTS: '/api/orders/quick/products',
     QUICK_ORDER: '/api/orders/quick',

@@ -30,6 +30,8 @@ const OrderApprovalPage = lazy(() => import('../pages/orders/OrderApprovalPage')
 const OrderDetailsPage = lazy(() => import('../pages/orders/OrderDetailsPage'));
 const EditOrderPage = lazy(() => import('../pages/orders/EditOrderPage'));
 const CreateVisitPage = lazy(() => import('../pages/orders/CreateVisitPage'));
+const VisitDetailsPage = lazy(() => import('../pages/orders/VisitDetailsPage'));
+const EditVisitPage = lazy(() => import('../pages/orders/EditVisitPage'));
 
 // Attendance Management Pages
 const AttendancePage = lazy(() => import('../pages/attendance/AttendancePage'));
@@ -195,6 +197,22 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute requiredPermission="orders.create">
                 <CreateVisitPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'visits/:visitId',
+            element: (
+              <ProtectedRoute requiredPermission="orders.read">
+                <VisitDetailsPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'visits/:visitId/edit',
+            element: (
+              <ProtectedRoute requiredPermission="orders.update">
+                <EditVisitPage />
               </ProtectedRoute>
             ),
           },

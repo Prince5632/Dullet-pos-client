@@ -7,7 +7,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // Format date utilities
-export const formatDate = (date: string | Date, formatStr: string = 'PPP'): string => {
+export const formatDate = (date: string | Date | null, formatStr: string = 'PPP'): string => {
+  if (!date) return '';
   const dateObj = typeof date === 'string' ? parseISO(date) : date;
   return format(dateObj, formatStr);
 };

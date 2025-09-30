@@ -353,11 +353,18 @@ const OrdersPage: React.FC = () => {
           render: (_value, visit) => (
             <div className="flex items-center justify-end space-x-1 py-1">
               <Link
-                to={`/orders/${visit._id}`}
+                to={`/orders/visits/${visit._id}`}
                 className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-all duration-200"
-                title="View Details"
+                title="View Visit Details"
               >
                 <EyeIcon className="h-4 w-4" />
+              </Link>
+              <Link
+                to={`/orders/visits/${visit._id}/edit`}
+                className="inline-flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-all duration-200"
+                title="Edit Visit"
+              >
+                <PencilIcon className="h-4 w-4" />
               </Link>
               {visit.capturedImage && (
                 <button
@@ -1168,16 +1175,16 @@ const OrdersPage: React.FC = () => {
                             </div>
                             <div className="flex items-center space-x-2 ml-3">
                               <Link
-                                to={`/orders/${order._id}`}
+                                to={viewType === "orders" ? `/orders/${order._id}` : `/orders/visits/${order._id}`}
                                 className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-all duration-200"
-                                title="View Details"
+                                title={viewType === "orders" ? "View Order Details" : "View Visit Details"}
                               >
                                 <EyeIcon className="h-4 w-4" />
                               </Link>
                               <Link
-                                to={`/orders/${order._id}/edit`}
+                                to={viewType === "orders" ? `/orders/${order._id}/edit` : `/orders/visits/${order._id}/edit`}
                                 className="inline-flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-all duration-200"
-                                title="Edit Order"
+                                title={viewType === "orders" ? "Edit Order" : "Edit Visit"}
                               >
                                 <PencilIcon className="h-4 w-4" />
                               </Link>

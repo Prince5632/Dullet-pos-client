@@ -104,6 +104,28 @@ class OrderService {
     throw new Error(response.message || 'Failed to create visit');
   }
 
+  // Get visit by ID
+  async getVisitById(id: string): Promise<Order> {
+    const response = await apiService.get<{ order: Order }>(API_CONFIG.ENDPOINTS.VISIT_BY_ID(id));
+    if (response.success && response.data) {
+      return response.data.order;
+    }
+    throw new Error(response.message || 'Failed to get visit');
+  }
+
+  // Update visit
+  async updateVisit(id: string, visitData: UpdateOrderForm): Promise<Order> {
+    const response = await apiService.put<{ order: Order }>(
+      API_CONFIG.ENDPOINTS.VISIT_BY_ID(id),
+      visitData
+    );
+
+    if (response.success && response.data) {
+      return response.data.order;
+    }
+    throw new Error(response.message || 'Failed to update visit');
+  }
+
   // Quick-order: get catalog
   async getQuickProducts(): Promise<QuickProduct[]> {
     const response = await apiService.get<{ products: QuickProduct[] }>(API_CONFIG.ENDPOINTS.QUICK_PRODUCTS);
