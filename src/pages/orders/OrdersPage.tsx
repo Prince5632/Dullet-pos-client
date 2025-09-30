@@ -898,7 +898,7 @@ const OrdersPage: React.FC = () => {
         </div>
 
         {/* Compact Stats */}
-        {!loading && orders.length > 0 && (
+        {!loading && orders.length > 0 && viewType === "orders" && (
           <div className="grid grid-cols-3 gap-2 mb-4">
             <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
               <div className="text-xs text-gray-500">Total</div>
