@@ -31,7 +31,7 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
 
   const userNavigation = [
     { name: 'Your Profile', href: '/profile', icon: UserCircleIcon },
-    { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
+    // { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
   ];
 
   return (

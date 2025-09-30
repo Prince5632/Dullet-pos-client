@@ -263,7 +263,7 @@ export const router = createBrowserRouter([
         path: 'settings',
         element: (
           <ProtectedRoute requiredPermission="settings.manage">
-            <SettingsPage />
+            <ProfilePage />
           </ProtectedRoute>
         ),
       },
