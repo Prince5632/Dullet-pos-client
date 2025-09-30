@@ -125,7 +125,7 @@ const DashboardLayout: React.FC = () => {
       </Transition.Root>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
+      <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
         <Sidebar
           navigation={filteredNavigation}
           currentPath={location.pathname}
@@ -134,13 +134,13 @@ const DashboardLayout: React.FC = () => {
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-72">
-        {/* Top bar */}
+      <div className="lg:pl-64">
+        {/* Top bar - Compact */}
         <TopBar onMenuClick={() => setSidebarOpen(true)} />
 
-        {/* Page content */}
-        <main className="py-6">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Page content - Mobile-optimized padding */}
+        <main className="py-3 sm:py-4">
+          <div className="mx-auto max-w-7xl px-3 sm:px-4 lg:px-6">
             <Outlet />
           </div>
         </main>
