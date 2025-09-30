@@ -3,6 +3,7 @@ import { ChevronDownIcon, MagnifyingGlassIcon, UserIcon, PlusIcon, XMarkIcon } f
 import { customerService } from '../../services/customerService';
 import type { Customer, CreateCustomerForm } from '../../types';
 import { toast } from 'react-hot-toast';
+import Modal from '../ui/Modal'; // Import your improved Modal component
 
 interface CustomerSelectorProps {
   selectedCustomerId?: string;
@@ -87,7 +88,6 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
         setSearchTerm('');
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
@@ -190,6 +190,23 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
     }
   };
 
+  const closeCreateModal = () => {
+    setShowCreateModal(false);
+    // Reset form
+    setCreateFormData({
+      businessName: '',
+      contactPersonName: '',
+      phone: '',
+      address: {
+        street: '',
+        city: '',
+        state: 'Punjab',
+        pincode: '',
+      },
+      customerType: 'Retailer',
+    });
+  };
+
   return (
     <div className="space-y-1">
       {label && (
@@ -203,11 +220,11 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
           className={`
             relative w-full cursor-pointer rounded-md border px-3 py-2 text-left shadow-sm
             ${disabled 
-              ? 'bg-gray-100 cursor-not-allowed' 
+              ? 'bg-gray-100 cursor-not-allowed'
               : 'bg-white hover:border-gray-400'
             }
             ${error 
-              ? 'border-red-300 focus-within:border-red-500 focus-within:ring-red-500' 
+              ? 'border-red-300 focus-within:border-red-500 focus-within:ring-red-500'
               : 'border-gray-300 focus-within:border-blue-500 focus-within:ring-blue-500'
             }
             focus-within:outline-none focus-within:ring-1 transition-colors
@@ -366,156 +383,135 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
         <p className="text-sm text-red-600">{error}</p>
       )}
 
-      {/* Create Customer Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black bg-opacity-50">
-          {/* Modal */}
-          <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Create New Customer
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600"
-                >
-                  <XMarkIcon className="h-6 w-6" />
-                </button>
-              </div>
+      {/* Create Customer Modal - Using improved Modal component */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={closeCreateModal}
+        title="Create New Customer"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Business Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={createFormData.businessName}
+              onChange={(e) => handleCreateFormChange('businessName', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter business name"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Contact Person Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={createFormData.contactPersonName}
+              onChange={(e) => handleCreateFormChange('contactPersonName', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter contact person name"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Phone Number <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="tel"
+              value={createFormData.phone}
+              onChange={(e) => handleCreateFormChange('phone', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter phone number"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Street Address <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={createFormData.address.street}
+              onChange={(e) => handleCreateFormChange('address.street', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter street address"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                City <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={createFormData.address.city}
+                onChange={(e) => handleCreateFormChange('address.city', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter city"
+              />
             </div>
-
-            {/* Form */}
-            <div className="px-6 py-4">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Business Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={createFormData.businessName}
-                    onChange={(e) => handleCreateFormChange('businessName', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter business name"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Contact Person Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={createFormData.contactPersonName}
-                    onChange={(e) => handleCreateFormChange('contactPersonName', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter contact person name"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone Number <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="tel"
-                    value={createFormData.phone}
-                    onChange={(e) => handleCreateFormChange('phone', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter phone number"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Street Address <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={createFormData.address.street}
-                    onChange={(e) => handleCreateFormChange('address.street', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter street address"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      City <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={createFormData.address.city}
-                      onChange={(e) => handleCreateFormChange('address.city', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Enter city"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Pincode <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={createFormData.address.pincode}
-                      onChange={(e) => handleCreateFormChange('address.pincode', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Enter pincode"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Customer Type
-                  </label>
-                  <select
-                    value={createFormData.customerType}
-                    onChange={(e) => handleCreateFormChange('customerType', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="Retailer">Retailer</option>
-                    <option value="Distributor">Distributor</option>
-                    <option value="Wholesaler">Wholesaler</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCreateCustomer}
-                  disabled={createLoading}
-                  className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {createLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block"></div>
-                      Creating...
-                    </>
-                  ) : (
-                    'Create Customer'
-                  )}
-                </button>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Pincode <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={createFormData.address.pincode}
+                onChange={(e) => handleCreateFormChange('address.pincode', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter pincode"
+              />
             </div>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Customer Type
+            </label>
+            <select
+              value={createFormData.customerType}
+              onChange={(e) => handleCreateFormChange('customerType', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="Retailer">Retailer</option>
+              <option value="Distributor">Distributor</option>
+              <option value="Wholesaler">Wholesaler</option>
+            </select>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={closeCreateModal}
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleCreateCustomer}
+              disabled={createLoading}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {createLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Creating...
+                </>
+              ) : (
+                'Create Customer'
+              )}
+            </button>
+          </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 };
