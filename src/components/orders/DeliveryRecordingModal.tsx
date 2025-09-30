@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   MapPinIcon, 
   CurrencyRupeeIcon,
@@ -34,6 +34,10 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
       address: ''
     }
   });
+  const [driverSigned, setDriverSigned] = useState(false);
+  const [receiverSigned, setReceiverSigned] = useState(false);
+  const [driverSignature, setDriverSignature] = useState('');
+  const [receiverSignature, setReceiverSignature] = useState('');
 
   const driverSignatureRef = useRef<SignaturePadRef>(null);
   const receiverSignatureRef = useRef<SignaturePadRef>(null);
@@ -68,14 +72,39 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
     }
   };
 
+  // Polling fallback to keep "Next" enabled even if onChange doesn't fire on some devices
+  useEffect(() => {
+    let intervalId: number | undefined;
+    if (activeStep === 2) {
+      intervalId = window.setInterval(() => {
+        if (driverSignatureRef.current && !driverSignatureRef.current.isEmpty()) {
+          const sig = driverSignatureRef.current.getSignature();
+          setDriverSignature(sig);
+          setDriverSigned(true);
+        }
+      }, 200);
+    } else if (activeStep === 3) {
+      intervalId = window.setInterval(() => {
+        if (receiverSignatureRef.current && !receiverSignatureRef.current.isEmpty()) {
+          const sig = receiverSignatureRef.current.getSignature();
+          setReceiverSignature(sig);
+          setReceiverSigned(true);
+        }
+      }, 200);
+    }
+    return () => {
+      if (intervalId) window.clearInterval(intervalId);
+    };
+  }, [activeStep]);
+
   const validateCurrentStep = () => {
     switch (activeStep) {
       case 1:
         return formData.amountCollected >= 0;
       case 2:
-        return driverSignatureRef.current && !driverSignatureRef.current.isEmpty();
+        return !!driverSignature || driverSigned;
       case 3:
-        return receiverSignatureRef.current && !receiverSignatureRef.current.isEmpty();
+        return !!receiverSignature || receiverSigned;
       default:
         return true;
     }
@@ -87,10 +116,13 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
       return;
     }
 
-    const driverSignature = driverSignatureRef.current?.getSignature();
-    const receiverSignature = receiverSignatureRef.current?.getSignature();
+    const driverSigToSend = driverSignature || driverSignatureRef.current?.getSignature() || '';
+    const receiverSigToSend = receiverSignature || receiverSignatureRef.current?.getSignature() || '';
 
-    if (!driverSignature || !receiverSignature) {
+    console.log('Driver signature:', driverSigToSend ? `${driverSigToSend.substring(0, 30)}...` : 'EMPTY');
+    console.log('Receiver signature:', receiverSigToSend ? `${receiverSigToSend.substring(0, 30)}...` : 'EMPTY');
+
+    if (!driverSigToSend || !receiverSigToSend) {
       toast.error('Both driver and receiver signatures are required');
       return;
     }
@@ -105,8 +137,8 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
           longitude: 0
         } : undefined,
         signatures: {
-          driver: driverSignature,
-          receiver: receiverSignature
+          driver: driverSigToSend,
+          receiver: receiverSigToSend
         },
         settlement: {
           amountCollected: formData.amountCollected,
@@ -136,6 +168,10 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
     });
     driverSignatureRef.current?.clear();
     receiverSignatureRef.current?.clear();
+    setDriverSigned(false);
+    setReceiverSigned(false);
+    setDriverSignature('');
+    setReceiverSignature('');
     onClose();
   };
 
@@ -290,6 +326,10 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
             height={200}
             backgroundColor="#ffffff"
             penColor="#000000"
+            onChange={(data) => {
+              setDriverSignature(data);
+              setDriverSigned(!!data);
+            }}
             className="border-2 border-dashed border-gray-300 rounded-lg"
           />
         </div>
@@ -320,6 +360,10 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
             height={200}
             backgroundColor="#ffffff"
             penColor="#000000"
+            onChange={(data) => {
+              setReceiverSignature(data);
+              setReceiverSigned(!!data);
+            }}
             className="border-2 border-dashed border-gray-300 rounded-lg"
           />
         </div>
