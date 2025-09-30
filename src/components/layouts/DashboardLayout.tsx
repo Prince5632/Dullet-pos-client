@@ -64,48 +64,55 @@ const DashboardLayout: React.FC = () => {
     !item.permission || hasPermission(item.permission)
   );
 
+  // Close mobile sidebar
+  const closeMobileSidebar = () => {
+    setSidebarOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile sidebar */}
+      {/* Mobile sidebar with improved overlay */}
       <Transition.Root show={sidebarOpen} as={Fragment}>
         <Dialog as="div" className="relative z-50 lg:hidden" onClose={setSidebarOpen}>
+          {/* Backdrop with lighter overlay */}
           <Transition.Child
             as={Fragment}
-            enter="transition-opacity ease-linear duration-300"
+            enter="transition-opacity ease-out duration-200"
             enterFrom="opacity-0"
             enterTo="opacity-100"
-            leave="transition-opacity ease-linear duration-300"
+            leave="transition-opacity ease-in duration-150"
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <div className="fixed inset-0 bg-gray-900/80" />
+            <div className="fixed inset-0 bg-gray-600/50 backdrop-blur-sm" />
           </Transition.Child>
 
           <div className="fixed inset-0 flex">
             <Transition.Child
               as={Fragment}
-              enter="transition ease-in-out duration-300 transform"
+              enter="transition ease-out duration-200 transform"
               enterFrom="-translate-x-full"
               enterTo="translate-x-0"
-              leave="transition ease-in-out duration-300 transform"
+              leave="transition ease-in duration-150 transform"
               leaveFrom="translate-x-0"
               leaveTo="-translate-x-full"
             >
               <Dialog.Panel className="relative mr-16 flex w-full max-w-xs flex-1">
+                {/* Close button with better styling */}
                 <Transition.Child
                   as={Fragment}
-                  enter="ease-in-out duration-300"
+                  enter="ease-out duration-200"
                   enterFrom="opacity-0"
                   enterTo="opacity-100"
-                  leave="ease-in-out duration-300"
+                  leave="ease-in duration-150"
                   leaveFrom="opacity-100"
                   leaveTo="opacity-0"
                 >
-                  <div className="absolute left-full top-0 flex w-16 justify-center pt-5">
+                  <div className="absolute left-full top-0 flex w-16 justify-center pt-4">
                     <button
                       type="button"
-                      className="-m-2.5 p-2.5"
-                      onClick={() => setSidebarOpen(false)}
+                      className="flex items-center justify-center w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
+                      onClick={closeMobileSidebar}
                     >
                       <span className="sr-only">Close sidebar</span>
                       <XMarkIcon className="h-6 w-6 text-white" aria-hidden="true" />
@@ -113,11 +120,15 @@ const DashboardLayout: React.FC = () => {
                   </div>
                 </Transition.Child>
                 
-                <Sidebar
-                  navigation={filteredNavigation}
-                  currentPath={location.pathname}
-                  mobile={true}
-                />
+                {/* Mobile Sidebar with auto-close functionality */}
+                <div className="flex grow flex-col bg-white shadow-xl border-r border-gray-200 rounded-r-xl overflow-hidden">
+                  <Sidebar
+                    navigation={filteredNavigation}
+                    currentPath={location.pathname}
+                    mobile={true}
+                    onClose={closeMobileSidebar}
+                  />
+                </div>
               </Dialog.Panel>
             </Transition.Child>
           </div>
@@ -135,7 +146,7 @@ const DashboardLayout: React.FC = () => {
 
       {/* Main content */}
       <div className="lg:pl-64">
-        {/* Top bar - Compact */}
+        {/* Top bar - Pass close function for consistency */}
         <TopBar onMenuClick={() => setSidebarOpen(true)} />
 
         {/* Page content - Mobile-optimized padding */}
