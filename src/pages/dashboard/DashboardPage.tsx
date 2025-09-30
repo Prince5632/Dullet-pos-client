@@ -4,7 +4,6 @@ import {
   UsersIcon,
   ShieldCheckIcon,
   ClockIcon,
-  EyeIcon,
   PlusIcon,
   DocumentTextIcon,
   TruckIcon,
@@ -18,15 +17,14 @@ import {
   UserGroupIcon,
   ShoppingCartIcon,
   BanknotesIcon,
-  ChartPieIcon,
   ClipboardDocumentListIcon,
   SparklesIcon,
   FireIcon,
-  LightBulbIcon
+  LightBulbIcon,
+  ChevronRightIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import { orderService } from '../../services/orderService';
-// import { userService } from '../../services/userService';
 import type { Order, Godown } from '../../types';
 import { apiService } from '../../services/api';
 import { API_CONFIG } from '../../config/api';
@@ -79,21 +77,15 @@ const DashboardPage: React.FC = () => {
     try {
       setLoading(true);
       
-      // Fetch stats based on permissions
       const promises = [];
       
       if (hasPermission('orders.read')) {
         promises.push(orderService.getOrderStats({ godownId: selectedGodownId }));
         promises.push(orderService.getOrders({ limit: 5, sortBy: 'orderDate', sortOrder: 'desc', godownId: selectedGodownId }));
       }
-      
-      if (hasPermission('users.read')) {
-        // promises.push(userService.getUserStats()); // Will be implemented when backend is ready
-      }
 
       const results = await Promise.allSettled(promises);
       
-      // Process results
       let orderStats: any = null;
       let orders: Order[] = [];
 
@@ -118,7 +110,7 @@ const DashboardPage: React.FC = () => {
           pendingApproval: orderStats?.pendingOrders || 0,
         },
         users: {
-          total: 25, // Mock data - will be replaced with real API
+          total: 25,
           active: 23,
           todayLogins: 12,
         },
@@ -126,7 +118,7 @@ const DashboardPage: React.FC = () => {
           today: orderStats?.monthlyRevenue || 0,
           thisWeek: orderStats?.monthlyRevenue || 0,
           thisMonth: orderStats?.monthlyRevenue || 0,
-          growth: 5.2, // Mock growth percentage
+          growth: 5.2,
         }
       });
       
@@ -152,617 +144,6 @@ const DashboardPage: React.FC = () => {
     return '🌙';
   };
 
-  const getRoleDashboard = () => {
-    const roleName = user?.role?.name?.toLowerCase();
-    
-    switch (roleName) {
-      case 'super admin':
-      case 'admin':
-        return getAdminDashboard();
-      case 'manager':
-        return getManagerDashboard();
-      case 'sales executive':
-        return getSalesDashboard();
-      case 'staff':
-        return getStaffDashboard();
-      default:
-        return getDefaultDashboard();
-    }
-  };
-
-  const getAdminDashboard = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Primary Stats */}
-      <div className="lg:col-span-2 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          {stats && [
-            {
-              label: 'Total Revenue',
-              value: orderService.formatCurrency(stats.revenue.today),
-              subtitle: 'Today',
-              icon: BanknotesIcon,
-              color: 'emerald',
-              bgColor: 'bg-emerald-50',
-              iconColor: 'text-emerald-600',
-              trend: stats.revenue.growth,
-            },
-            {
-              label: 'Orders',
-              value: stats.orders.total.toString(),
-              subtitle: `${stats.orders.todayOrders} today`,
-              icon: ClipboardDocumentListIcon,
-              color: 'blue',
-              bgColor: 'bg-blue-50',
-              iconColor: 'text-blue-600',
-            },
-            {
-              label: 'Users',
-              value: stats.users.total.toString(),
-              subtitle: `${stats.users.todayLogins} logins today`,
-              icon: UserGroupIcon,
-              color: 'purple',
-              bgColor: 'bg-purple-50',
-              iconColor: 'text-purple-600',
-            },
-            {
-              label: 'Pending Approval',
-              value: stats.orders.pendingApproval.toString(),
-              subtitle: 'Requires attention',
-              icon: ExclamationTriangleIcon,
-              color: 'amber',
-              bgColor: 'bg-amber-50',
-              iconColor: 'text-amber-600',
-              urgent: stats.orders.pendingApproval > 0,
-            },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className={`relative overflow-hidden bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-all duration-200 ${
-                stat.urgent ? 'ring-2 ring-amber-200 bg-amber-50' : ''
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                  <div className="flex items-center mt-2 gap-2">
-                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                    {stat.trend !== undefined && (
-                      <div className={`flex items-center text-sm ${
-                        stat.trend >= 0 ? 'text-emerald-600' : 'text-red-600'
-                      }`}>
-                        {stat.trend >= 0 ? (
-                          <ArrowTrendingUpIcon className="h-4 w-4 mr-1" />
-                        ) : (
-                          <ArrowTrendingDownIcon className="h-4 w-4 mr-1" />
-                        )}
-                        {Math.abs(stat.trend)}%
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">{stat.subtitle}</p>
-                </div>
-                <div className={`${stat.bgColor} rounded-lg p-3`}>
-                  <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
-                </div>
-              </div>
-              {stat.urgent && (
-                <div className="absolute top-2 right-2">
-                  <div className="h-3 w-3 bg-amber-400 rounded-full animate-pulse"></div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Recent Orders */}
-        {recentOrders.length > 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Recent Orders</h3>
-                <Link
-                  to="/orders"
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700"
-                >
-                  View all
-                </Link>
-              </div>
-            </div>
-            <div className="divide-y divide-gray-200">
-              {recentOrders.slice(0, 5).map((order) => (
-                <div key={order._id} className="px-6 py-4 hover:bg-gray-50 transition-colors duration-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <Avatar name={order.customer?.businessName || 'Customer'} size="sm" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{order.orderNumber}</p>
-                        <p className="text-sm text-gray-500">{order.customer?.businessName}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-gray-900">
-                          {orderService.formatCurrency(order.totalAmount)}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {orderService.formatDate(order.orderDate)}
-                        </p>
-                      </div>
-                      <Badge className={orderService.getStatusColor(order.status)}>
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Sidebar */}
-      <div className="space-y-6">
-        {/* Quick Actions */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-              <SparklesIcon className="h-5 w-5 mr-2 text-blue-600" />
-              Quick Actions
-            </h3>
-          </div>
-          <div className="p-6 space-y-4">
-            {[
-              {
-                label: 'Create Order',
-                href: '/orders/new',
-                icon: PlusIcon,
-                color: 'blue',
-                permission: 'orders.create',
-              },
-              {
-                label: 'Add User',
-                href: '/users/create',
-                icon: UsersIcon,
-                color: 'green',
-                permission: 'users.create',
-              },
-              {
-                label: 'Create Role',
-                href: '/roles/create',
-                icon: ShieldCheckIcon,
-                color: 'purple',
-                permission: 'roles.create',
-              },
-              {
-                label: 'View Reports',
-                href: '/reports',
-                icon: ChartBarIcon,
-                color: 'orange',
-                permission: 'reports.read',
-              },
-            ]
-              .filter(action => hasPermission(action.permission))
-              .map((action) => (
-                <Link
-                  key={action.label}
-                  to={action.href}
-                  className={`flex items-center p-3 rounded-lg border border-gray-200 hover:border-${action.color}-200 hover:bg-${action.color}-50 transition-all duration-200 group`}
-                >
-                  <div className={`p-2 rounded-md bg-${action.color}-100 group-hover:bg-${action.color}-200 transition-colors duration-200`}>
-                    <action.icon className={`h-4 w-4 text-${action.color}-600`} />
-                  </div>
-                  <span className="ml-3 text-sm font-medium text-gray-900">{action.label}</span>
-                </Link>
-              ))}
-          </div>
-        </div>
-
-        {/* System Health */}
-        {/* <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-              <ChartPieIcon className="h-5 w-5 mr-2 text-green-600" />
-              System Health
-            </h3>
-          </div>
-          <div className="p-6 space-y-4">
-            {[
-              { label: 'API Server', status: 'online', color: 'green' },
-              { label: 'Database', status: 'connected', color: 'green' },
-              { label: 'File Storage', status: 'operational', color: 'green' },
-              { label: 'Background Jobs', status: 'running', color: 'green' },
-            ].map((item) => (
-              <div key={item.label} className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">{item.label}</span>
-                <div className="flex items-center">
-                  <div className={`h-2 w-2 bg-${item.color}-400 rounded-full mr-2`}></div>
-                  <span className={`text-xs font-medium text-${item.color}-600 capitalize`}>
-                    {item.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div> */}
-      </div>
-    </div>
-  );
-
-  const getManagerDashboard = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 space-y-6">
-        {/* Manager-specific metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {stats && [
-            {
-              label: 'Pending Approvals',
-              value: stats.orders.pendingApproval.toString(),
-              subtitle: 'Requires your attention',
-              icon: ClockIcon,
-              color: 'amber',
-              urgent: stats.orders.pendingApproval > 0,
-            },
-            {
-              label: 'Today\'s Orders',
-              value: stats.orders.todayOrders.toString(),
-              subtitle: orderService.formatCurrency(stats.revenue.today),
-              icon: ShoppingCartIcon,
-              color: 'blue',
-            },
-            {
-              label: 'Team Performance',
-              value: '95%',
-              subtitle: 'This month',
-              icon: TruckIcon,
-              color: 'green',
-            },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className={`bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-all duration-200 ${
-                stat.urgent ? 'ring-2 ring-amber-200' : ''
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-2">{stat.value}</p>
-                  <p className="text-xs text-gray-500 mt-1">{stat.subtitle}</p>
-                </div>
-                <div className={`bg-${stat.color}-50 rounded-lg p-3`}>
-                  <stat.icon className={`h-6 w-6 text-${stat.color}-600`} />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Orders requiring approval */}
-        {hasPermission('orders.approve') && (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Orders Pending Approval</h3>
-                <Link
-                  to="/orders/approval"
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700"
-                >
-                  View all
-                </Link>
-              </div>
-            </div>
-            <div className="p-6">
-              {recentOrders.filter(o => o.status === 'pending').length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircleIcon className="h-12 w-12 text-green-400 mx-auto mb-4" />
-                  <p className="text-gray-500">All orders are approved! 🎉</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {recentOrders
-                    .filter(o => o.status === 'pending')
-                    .slice(0, 3)
-                    .map((order) => (
-                      <div key={order._id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                        <div>
-                          <p className="font-medium text-gray-900">{order.orderNumber}</p>
-                          <p className="text-sm text-gray-500">{order.customer?.businessName}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium text-gray-900">{orderService.formatCurrency(order.totalAmount)}</p>
-                          <Link
-                            to={`/orders/approval`}
-                            className="text-xs text-blue-600 hover:text-blue-700"
-                          >
-                            Review →
-                          </Link>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="space-y-6">
-        {/* Manager Quick Actions */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-              <FireIcon className="h-5 w-5 mr-2 text-purple-600" />
-              Manager Tools
-            </h3>
-          </div>
-          <div className="p-6 space-y-4">
-            {[
-              {
-                label: 'Approve Orders',
-                href: '/orders/approval',
-                icon: CheckCircleIcon,
-                color: 'green',
-                badge: stats?.orders.pendingApproval || 0,
-              },
-              {
-                label: 'Team Performance',
-                href: '/reports/team',
-                icon: ChartBarIcon,
-                color: 'blue',
-              },
-              {
-                label: 'Production Status',
-                href: '/production',
-                icon: BuildingOfficeIcon,
-                color: 'orange',
-              },
-            ].map((action) => (
-              <Link
-                key={action.label}
-                to={action.href}
-                className={`flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-${action.color}-200 hover:bg-${action.color}-50 transition-all duration-200`}
-              >
-                <div className="flex items-center">
-                  <div className={`p-2 rounded-md bg-${action.color}-100`}>
-                    <action.icon className={`h-4 w-4 text-${action.color}-600`} />
-                  </div>
-                  <span className="ml-3 text-sm font-medium text-gray-900">{action.label}</span>
-                </div>
-                {action.badge && action.badge > 0 && (
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full bg-${action.color}-100 text-${action.color}-600`}>
-                    {action.badge}
-                  </span>
-                )}
-              </Link>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const getSalesDashboard = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 space-y-6">
-        {/* Sales metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {stats && [
-            {
-              label: 'My Orders Today',
-              value: stats.orders.todayOrders.toString(),
-              subtitle: orderService.formatCurrency(stats.revenue.today),
-              icon: ShoppingCartIcon,
-              color: 'blue',
-            },
-            {
-              label: 'This Month',
-              value: stats.orders.total.toString(),
-              subtitle: orderService.formatCurrency(stats.revenue.thisMonth),
-              icon: CalendarIcon,
-              color: 'green',
-            },
-            {
-              label: 'Conversion Rate',
-              value: '87%',
-              subtitle: 'Above target',
-              icon: ArrowTrendingUpIcon,
-              color: 'emerald',
-            },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-all duration-200"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-2">{stat.value}</p>
-                  <p className="text-xs text-gray-500 mt-1">{stat.subtitle}</p>
-                </div>
-                <div className={`bg-${stat.color}-50 rounded-lg p-3`}>
-                  <stat.icon className={`h-6 w-6 text-${stat.color}-600`} />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Recent orders */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">My Recent Orders</h3>
-          </div>
-          <div className="p-6">
-            {recentOrders.length === 0 ? (
-              <div className="text-center py-8">
-                <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No orders yet. Create your first order!</p>
-                <Link
-                  to="/orders/new"
-                  className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-                >
-                  <PlusIcon className="h-4 w-4 mr-2" />
-                  Create Order
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {recentOrders.slice(0, 5).map((order) => (
-                  <div key={order._id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div>
-                      <p className="font-medium text-gray-900">{order.orderNumber}</p>
-                      <p className="text-sm text-gray-500">{order.customer?.businessName}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-gray-900">{orderService.formatCurrency(order.totalAmount)}</p>
-                      <Badge className={orderService.getStatusColor(order.status)}>
-                        {order.status}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        {/* Sales Tools */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-              <LightBulbIcon className="h-5 w-5 mr-2 text-green-600" />
-              Sales Tools
-            </h3>
-          </div>
-          <div className="p-6 space-y-4">
-            {[
-              {
-                label: 'Create Order',
-                href: '/orders/new',
-                icon: PlusIcon,
-                color: 'blue',
-              },
-              {
-                label: 'Customer List',
-                href: '/customers',
-                icon: UsersIcon,
-                color: 'green',
-              },
-              {
-                label: 'My Performance',
-                href: '/reports/sales',
-                icon: ChartBarIcon,
-                color: 'purple',
-              },
-            ].map((action) => (
-              <Link
-                key={action.label}
-                to={action.href}
-                className={`flex items-center p-3 rounded-lg border border-gray-200 hover:border-${action.color}-200 hover:bg-${action.color}-50 transition-all duration-200`}
-              >
-                <div className={`p-2 rounded-md bg-${action.color}-100`}>
-                  <action.icon className={`h-4 w-4 text-${action.color}-600`} />
-                </div>
-                <span className="ml-3 text-sm font-medium text-gray-900">{action.label}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* Sales Tips */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl border border-blue-200 p-6">
-          <div className="flex items-center mb-4">
-            <div className="bg-blue-100 rounded-lg p-2">
-              <LightBulbIcon className="h-5 w-5 text-blue-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 ml-3">Sales Tip</h3>
-          </div>
-          <p className="text-sm text-gray-700">
-            Follow up with customers within 24 hours of order delivery to ensure satisfaction and encourage repeat business.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-
-  const getStaffDashboard = () => (
-    <div className="max-w-4xl mx-auto">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Tasks */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">My Tasks</h3>
-          </div>
-          <div className="p-6">
-            <div className="space-y-3">
-              {[
-                { task: 'Process order #ORD001', priority: 'high', completed: false },
-                { task: 'Update inventory', priority: 'medium', completed: true },
-                { task: 'Prepare dispatch list', priority: 'low', completed: false },
-              ].map((item, index) => (
-                <div key={index} className={`flex items-center p-3 border rounded-lg ${
-                  item.completed ? 'bg-green-50 border-green-200' : 'border-gray-200'
-                }`}>
-                  <input
-                    type="checkbox"
-                    checked={item.completed}
-                    className="h-4 w-4 text-blue-600 rounded"
-                    readOnly
-                  />
-                  <span className={`ml-3 text-sm ${
-                    item.completed ? 'line-through text-gray-500' : 'text-gray-900'
-                  }`}>
-                    {item.task}
-                  </span>
-                  <span className={`ml-auto px-2 py-1 text-xs rounded-full ${
-                    item.priority === 'high' ? 'bg-red-100 text-red-600' :
-                    item.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' :
-                    'bg-gray-100 text-gray-600'
-                  }`}>
-                    {item.priority}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Access */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Quick Access</h3>
-          </div>
-          <div className="p-6 space-y-4">
-            {[
-              { label: 'View Orders', href: '/orders', icon: ClipboardDocumentListIcon },
-              { label: 'Check Inventory', href: '/inventory', icon: BuildingOfficeIcon },
-              { label: 'My Profile', href: '/profile', icon: EyeIcon },
-            ].map((action) => (
-              <Link
-                key={action.label}
-                to={action.href}
-                className="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-              >
-                <action.icon className="h-5 w-5 text-gray-600 mr-3" />
-                <span className="text-sm font-medium text-gray-900">{action.label}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const getDefaultDashboard = () => (
-    <div className="text-center py-12">
-      <EyeIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-      <h3 className="text-lg font-medium text-gray-900 mb-2">Welcome to Dullet Industries</h3>
-      <p className="text-gray-500">Your personalized dashboard will appear here based on your role.</p>
-    </div>
-  );
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-96">
@@ -771,78 +152,388 @@ const DashboardPage: React.FC = () => {
     );
   }
 
+  const roleName = user?.role?.name?.toLowerCase();
+
   return (
-    <div className="space-y-8">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-2xl shadow-xl">
-        <div className="absolute inset-0 bg-black opacity-10"></div>
-        <div className="relative px-8 py-12">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-            <div className="mb-6 md:mb-0">
-              <div className="flex items-center mb-4">
-                <div className="text-4xl mr-3">{getTimeIcon()}</div>
-                <div>
-                  <h1 className="text-3xl md:text-4xl font-bold text-white">
+    <div className="space-y-4 pb-6">
+      {/* Compact Hero Section */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 rounded-2xl shadow-lg">
+        <div className="absolute inset-0 bg-black/5"></div>
+        <div className="relative px-4 py-6 sm:px-6">
+          <div className="flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-3xl">{getTimeIcon()}</span>
+                <div className="min-w-0">
+                  <h1 className="text-xl sm:text-2xl font-bold text-white truncate">
                     {getGreeting()}, {user?.firstName}!
                   </h1>
-                  <p className="text-blue-100 text-lg mt-2">
-                    Welcome back to your {user?.role?.name} dashboard
+                  <p className="text-emerald-100 text-xs sm:text-sm truncate">
+                    {user?.role?.name} Dashboard
                   </p>
                 </div>
               </div>
-              <div className="flex items-center text-blue-100">
-                <CalendarIcon className="h-5 w-5 mr-2" />
-                <span>{new Date().toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}</span>
-              </div>
             </div>
             
-            <div className="flex items-center space-x-6 text-blue-100">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-white">{stats?.orders.todayOrders || 0}</p>
-                <p className="text-sm">Orders Today</p>
+            {/* Today's Quick Stats */}
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="text-right">
+                <p className="text-lg sm:text-xl font-bold text-white">{stats?.orders.todayOrders || 0}</p>
+                <p className="text-[10px] sm:text-xs text-emerald-100">Today</p>
               </div>
-              <div className="h-12 w-px bg-blue-300"></div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-white">
-                  {stats?.revenue.today ? orderService.formatCurrency(stats.revenue.today) : '₹0'}
+              <div className="h-8 w-px bg-emerald-300/50"></div>
+              <div className="text-right">
+                <p className="text-lg sm:text-xl font-bold text-white">
+                  ₹{((stats?.revenue.today || 0) / 1000).toFixed(0)}k
                 </p>
-                <p className="text-sm">Revenue Today</p>
+                <p className="text-[10px] sm:text-xs text-emerald-100">Revenue</p>
               </div>
             </div>
           </div>
         </div>
-        
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 -mt-4 -mr-4 h-32 w-32 rounded-full bg-white opacity-5"></div>
-        <div className="absolute bottom-0 left-0 -mb-6 -ml-6 h-24 w-24 rounded-full bg-white opacity-5"></div>
       </div>
 
-      {/* Godown selector */}
-      <div className="flex items-center gap-3">
-        {godowns.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-lg p-3">
-            <label className="text-sm text-gray-600 mr-2">Godown:</label>
+      {/* Godown Selector - Compact */}
+      {godowns.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-3">
+          <div className="flex items-center gap-2">
+            <BuildingOfficeIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
             <select
               value={selectedGodownId}
               onChange={(e) => { setSelectedGodownId(e.target.value); fetchDashboardData(); }}
-              className="px-2 py-1 border border-gray-300 rounded-md text-sm"
+              className="flex-1 text-sm border-0 focus:ring-0 bg-transparent text-gray-700 font-medium"
             >
-              <option value="">All</option>
+              <option value="">All Godowns</option>
               {godowns.map(g => (
-                <option key={g._id} value={g._id}>{g.name} ({g.location.city}{g.location.area ? ` - ${g.location.area}` : ''})</option>
+                <option key={g._id} value={g._id}>
+                  {g.name} - {g.location.city}
+                </option>
               ))}
             </select>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Role-based dashboard content */}
-      {getRoleDashboard()}
+      {/* Role-based Content */}
+      {(roleName === 'super admin' || roleName === 'admin') && (
+        <>
+          {/* Compact Stats Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {stats && [
+              {
+                label: 'Revenue',
+                value: `₹${((stats.revenue.today || 0) / 1000).toFixed(1)}k`,
+                subtitle: 'Today',
+                icon: BanknotesIcon,
+                bgColor: 'bg-emerald-500',
+                trend: stats.revenue.growth,
+              },
+              {
+                label: 'Orders',
+                value: stats.orders.total.toString(),
+                subtitle: 'Total',
+                icon: ClipboardDocumentListIcon,
+                bgColor: 'bg-blue-500',
+              },
+              {
+                label: 'Pending',
+                value: stats.orders.pendingApproval.toString(),
+                subtitle: 'Approval',
+                icon: ExclamationTriangleIcon,
+                bgColor: 'bg-amber-500',
+                urgent: stats.orders.pendingApproval > 0,
+              },
+              {
+                label: 'Users',
+                value: stats.users.total.toString(),
+                subtitle: `${stats.users.active} active`,
+                icon: UserGroupIcon,
+                bgColor: 'bg-purple-500',
+              },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className={`relative bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-sm ${
+                  stat.urgent ? 'ring-2 ring-amber-200' : ''
+                }`}
+              >
+                <div className={`${stat.bgColor} rounded-lg p-2 w-fit mb-2`}>
+                  <stat.icon className="h-4 w-4 text-white" />
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{stat.value}</p>
+                  {stat.trend !== undefined && (
+                    <span className={`text-xs ${stat.trend >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {stat.trend >= 0 ? '↑' : '↓'}{Math.abs(stat.trend)}%
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-600 mt-0.5">{stat.label}</p>
+                <p className="text-[10px] text-gray-400">{stat.subtitle}</p>
+                {stat.urgent && (
+                  <div className="absolute top-2 right-2 h-2 w-2 bg-amber-400 rounded-full animate-pulse"></div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+              <SparklesIcon className="h-4 w-4 mr-2 text-emerald-600" />
+              Quick Actions
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { label: 'New Order', href: '/orders/new', icon: PlusIcon, color: 'blue', permission: 'orders.create' },
+                { label: 'Add User', href: '/users/create', icon: UsersIcon, color: 'green', permission: 'users.create' },
+                { label: 'New Role', href: '/roles/create', icon: ShieldCheckIcon, color: 'purple', permission: 'roles.create' },
+                { label: 'Approvals', href: '/orders/approval', icon: CheckCircleIcon, color: 'amber', permission: 'orders.approve' },
+              ]
+                .filter(action => hasPermission(action.permission))
+                .map((action) => (
+                  <Link
+                    key={action.label}
+                    to={action.href}
+                    className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-all active:scale-95"
+                  >
+                    <div className={`p-2 rounded-lg bg-${action.color}-100 mb-2`}>
+                      <action.icon className={`h-4 w-4 text-${action.color}-600`} />
+                    </div>
+                    <span className="text-xs font-medium text-gray-700 text-center">{action.label}</span>
+                  </Link>
+                ))}
+            </div>
+          </div>
+
+          {/* Recent Orders */}
+          {recentOrders.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-900">Recent Orders</h3>
+                <Link to="/orders" className="text-xs font-medium text-emerald-600 hover:text-emerald-700 flex items-center">
+                  View all <ChevronRightIcon className="h-3 w-3 ml-1" />
+                </Link>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {recentOrders.slice(0, 5).map((order) => (
+                  <Link
+                    key={order._id}
+                    to={`/orders/${order._id}`}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                  >
+                    <Avatar name={order.customer?.businessName || 'Customer'} size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{order.orderNumber}</p>
+                      <p className="text-xs text-gray-500 truncate">{order.customer?.businessName}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-sm font-semibold text-gray-900">
+                        ₹{((order.totalAmount || 0) / 1000).toFixed(1)}k
+                      </p>
+                      <Badge className={`${orderService.getStatusColor(order.status)} text-[10px] px-1.5 py-0.5`}>
+                        {order.status}
+                      </Badge>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {roleName === 'manager' && (
+        <>
+          {/* Manager Stats */}
+          <div className="grid grid-cols-3 gap-3">
+            {stats && [
+              {
+                label: 'Pending',
+                value: stats.orders.pendingApproval.toString(),
+                subtitle: 'Approvals',
+                icon: ClockIcon,
+                bgColor: 'bg-amber-500',
+                urgent: stats.orders.pendingApproval > 0,
+              },
+              {
+                label: 'Today',
+                value: stats.orders.todayOrders.toString(),
+                subtitle: 'Orders',
+                icon: ShoppingCartIcon,
+                bgColor: 'bg-blue-500',
+              },
+              {
+                label: 'Team',
+                value: '95%',
+                subtitle: 'Performance',
+                icon: TruckIcon,
+                bgColor: 'bg-green-500',
+              },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className={`bg-white rounded-xl border border-gray-200 p-3 shadow-sm ${
+                  stat.urgent ? 'ring-2 ring-amber-200' : ''
+                }`}
+              >
+                <div className={`${stat.bgColor} rounded-lg p-2 w-fit mb-2`}>
+                  <stat.icon className="h-4 w-4 text-white" />
+                </div>
+                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-[10px] text-gray-600 mt-0.5">{stat.label}</p>
+                <p className="text-[10px] text-gray-400">{stat.subtitle}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Manager Actions */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+              <FireIcon className="h-4 w-4 mr-2 text-orange-600" />
+              Manager Tools
+            </h3>
+            <div className="space-y-2">
+              {[
+                { label: 'Approve Orders', href: '/orders/approval', icon: CheckCircleIcon, badge: stats?.orders.pendingApproval },
+                { label: 'Team Performance', href: '/reports/team', icon: ChartBarIcon },
+                { label: 'Production Status', href: '/production', icon: BuildingOfficeIcon },
+              ].map((action) => (
+                <Link
+                  key={action.label}
+                  to={action.href}
+                  className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-all active:scale-98"
+                >
+                  <div className="flex items-center gap-3">
+                    <action.icon className="h-5 w-5 text-gray-600" />
+                    <span className="text-sm font-medium text-gray-900">{action.label}</span>
+                  </div>
+                  {action.badge && action.badge > 0 && (
+                    <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-700">
+                      {action.badge}
+                    </span>
+                  )}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {roleName === 'sales executive' && (
+        <>
+          {/* Sales Stats */}
+          <div className="grid grid-cols-3 gap-3">
+            {stats && [
+              {
+                label: 'Today',
+                value: stats.orders.todayOrders.toString(),
+                subtitle: `₹${((stats.revenue.today || 0) / 1000).toFixed(0)}k`,
+                icon: ShoppingCartIcon,
+                bgColor: 'bg-blue-500',
+              },
+              {
+                label: 'Month',
+                value: stats.orders.total.toString(),
+                subtitle: 'Orders',
+                icon: CalendarIcon,
+                bgColor: 'bg-green-500',
+              },
+              {
+                label: 'Rate',
+                value: '87%',
+                subtitle: 'Convert',
+                icon: ArrowTrendingUpIcon,
+                bgColor: 'bg-emerald-500',
+              },
+            ].map((stat) => (
+              <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+                <div className={`${stat.bgColor} rounded-lg p-2 w-fit mb-2`}>
+                  <stat.icon className="h-4 w-4 text-white" />
+                </div>
+                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-[10px] text-gray-600 mt-0.5">{stat.label}</p>
+                <p className="text-[10px] text-gray-400">{stat.subtitle}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Sales Actions */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+              <LightBulbIcon className="h-4 w-4 mr-2 text-yellow-600" />
+              Sales Tools
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: 'New Order', href: '/orders/new', icon: PlusIcon },
+                { label: 'Customers', href: '/customers', icon: UsersIcon },
+                { label: 'Quick Order', href: '/orders/quick', icon: DocumentTextIcon },
+                { label: 'Reports', href: '/reports/sales', icon: ChartBarIcon },
+              ].map((action) => (
+                <Link
+                  key={action.label}
+                  to={action.href}
+                  className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-all active:scale-95"
+                >
+                  <action.icon className="h-5 w-5 text-gray-600 mb-2" />
+                  <span className="text-xs font-medium text-gray-700">{action.label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Sales Tip */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-4">
+            <div className="flex gap-3">
+              <div className="bg-blue-100 rounded-lg p-2 h-fit">
+                <LightBulbIcon className="h-4 w-4 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-1">💡 Pro Tip</h3>
+                <p className="text-xs text-gray-700 leading-relaxed">
+                  Follow up within 24 hours of delivery to boost customer satisfaction and repeat orders.
+                </p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Recent Orders for Sales/Manager */}
+      {(roleName === 'manager' || roleName === 'sales executive') && recentOrders.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-900">My Recent Orders</h3>
+            <Link to="/orders" className="text-xs font-medium text-emerald-600 hover:text-emerald-700 flex items-center">
+              View all <ChevronRightIcon className="h-3 w-3 ml-1" />
+            </Link>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {recentOrders.slice(0, 5).map((order) => (
+              <Link
+                key={order._id}
+                to={`/orders/${order._id}`}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              >
+                <Avatar name={order.customer?.businessName || 'Customer'} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{order.orderNumber}</p>
+                  <p className="text-xs text-gray-500 truncate">{order.customer?.businessName}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-semibold text-gray-900">
+                    ₹{((order.totalAmount || 0) / 1000).toFixed(1)}k
+                  </p>
+                  <Badge className={`${orderService.getStatusColor(order.status)} text-[10px] px-1.5 py-0.5`}>
+                    {order.status}
+                  </Badge>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
