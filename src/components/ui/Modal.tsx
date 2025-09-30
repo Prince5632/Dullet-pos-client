@@ -21,63 +21,67 @@ const Modal: React.FC<ModalProps> = ({
   className,
 }) => {
   const sizeClasses = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-    xl: 'max-w-4xl',
-    '2xl': 'max-w-6xl',
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
   };
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
+        {/* Background Overlay - Clean light overlay instead of black */}
         <Transition.Child
           as={Fragment}
-          enter="ease-out duration-300"
+          enter="ease-out duration-200"
           enterFrom="opacity-0"
           enterTo="opacity-100"
-          leave="ease-in duration-200"
+          leave="ease-in duration-150"
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black bg-opacity-25 backdrop-blur-sm" />
+          <div className="fixed inset-0 bg-gray-500/20 backdrop-blur-sm" />
         </Transition.Child>
 
+        {/* Modal Container */}
         <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-start sm:items-center justify-center p-4 text-center">
+          <div className="flex min-h-full items-center justify-center p-3 sm:p-4">
             <Transition.Child
               as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 scale-95"
-              enterTo="opacity-100 scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-95"
+              enter="ease-out duration-200"
+              enterFrom="opacity-0 scale-95 translate-y-4"
+              enterTo="opacity-100 scale-100 translate-y-0"
+              leave="ease-in duration-150"
+              leaveFrom="opacity-100 scale-100 translate-y-0"
+              leaveTo="opacity-0 scale-95 translate-y-4"
             >
               <Dialog.Panel
                 className={cn(
-                  'w-full transform rounded-lg bg-white text-left align-middle shadow-xl transition-all max-h-[85vh] overflow-y-auto',
+                  'w-full transform rounded-xl bg-white text-left shadow-xl transition-all',
+                  'border border-gray-200',
+                  'max-h-[90vh] overflow-hidden flex flex-col',
                   sizeClasses[size],
                   className
                 )}
               >
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                  <Dialog.Title as="h3" className="text-lg font-medium text-gray-900">
+                {/* Header - Fixed */}
+                <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-white flex-shrink-0">
+                  <Dialog.Title as="h3" className="text-base sm:text-lg font-semibold text-gray-900 truncate pr-4">
                     {title}
                   </Dialog.Title>
                   <button
                     type="button"
-                    className="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors flex-shrink-0"
                     onClick={onClose}
                   >
                     <span className="sr-only">Close</span>
-                    <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+                    <XMarkIcon className="h-5 w-5" aria-hidden="true" />
                   </button>
                 </div>
 
-                {/* Content */}
-                <div className="px-6 py-4">
+                {/* Content - Scrollable */}
+                <div className="px-4 sm:px-6 py-4 overflow-y-auto flex-1">
                   {children}
                 </div>
               </Dialog.Panel>
