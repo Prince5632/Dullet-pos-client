@@ -325,6 +325,162 @@ const OrderDetailsPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Delivery Information */}
+            {(order.status === 'delivered' || order.status === 'completed') && (order.driverAssignment || order.signatures || order.settlements) && (
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-sm border border-green-200">
+                <div className="px-4 sm:px-6 py-4 border-b border-green-200 bg-green-100/50">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <CheckCircleIcon className="h-5 w-5 mr-2 text-green-600" />
+                    Delivery Confirmation
+                  </h3>
+                  {order.driverAssignment?.deliveryAt && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      Completed on {orderService.formatDate(order.driverAssignment.deliveryAt)}
+                    </p>
+                  )}
+                </div>
+                
+                <div className="p-4 sm:p-6 space-y-6">
+                  {/* Driver Information */}
+                  {order.driverAssignment?.driver && (
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center gap-3 mb-3">
+                        <TruckIcon className="h-5 w-5 text-blue-600" />
+                        <h4 className="text-sm font-semibold text-gray-900">Delivered By</h4>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Avatar name={order.driverAssignment.driver.fullName || 'Driver'} size="md" />
+                        <div>
+                          <p className="font-medium text-gray-900">{order.driverAssignment.driver.fullName}</p>
+                          <p className="text-sm text-gray-600">{order.driverAssignment.driver.email}</p>
+                          {order.driverAssignment.driver.phone && (
+                            <p className="text-sm text-gray-500">{order.driverAssignment.driver.phone}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Settlement Information */}
+                  {order.settlements && order.settlements.length > 0 && (
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center gap-3 mb-3">
+                        <CurrencyRupeeIcon className="h-5 w-5 text-green-600" />
+                        <h4 className="text-sm font-semibold text-gray-900">Payment Settlement</h4>
+                      </div>
+                      {order.settlements.map((settlement, idx) => (
+                        <div key={idx} className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Amount Collected</span>
+                            <span className="text-lg font-bold text-green-600">
+                              {orderService.formatCurrency(settlement.amountCollected || 0)}
+                            </span>
+                          </div>
+                          {settlement.notes && (
+                            <div className="bg-gray-50 rounded p-3 mt-2">
+                              <p className="text-xs font-medium text-gray-700 mb-1">Settlement Notes</p>
+                              <p className="text-sm text-gray-600">{settlement.notes}</p>
+                            </div>
+                          )}
+                          {settlement.recordedAt && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Recorded {orderService.formatDate(settlement.recordedAt)}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Delivery Location */}
+                  {order.driverAssignment?.deliveryLocation?.address && (
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-start gap-3">
+                        <MapPinIcon className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-900 mb-1">Delivery Location</h4>
+                          <p className="text-sm text-gray-600">{order.driverAssignment.deliveryLocation.address}</p>
+                          {(order.driverAssignment.deliveryLocation.latitude || order.driverAssignment.deliveryLocation.longitude) && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Coordinates: {order.driverAssignment.deliveryLocation.latitude?.toFixed(6)}, {order.driverAssignment.deliveryLocation.longitude?.toFixed(6)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Driver Notes */}
+                  {order.driverAssignment?.driverNotes && (
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-start gap-3">
+                        <DocumentTextIcon className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-900 mb-1">Delivery Notes</h4>
+                          <p className="text-sm text-gray-600">{order.driverAssignment.driverNotes}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Signatures */}
+                  {(order.signatures?.driver || order.signatures?.receiver) && (
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
+                        <PencilIcon className="h-4 w-4 mr-2 text-purple-600" />
+                        Digital Signatures
+                      </h4>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Driver Signature */}
+                        {order.signatures.driver && (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <TruckIcon className="h-4 w-4 text-blue-600" />
+                              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Driver Signature</p>
+                            </div>
+                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-3 border-2 border-dashed border-blue-200">
+                              <img 
+                                src={order.signatures.driver} 
+                                alt="Driver Signature"
+                                className="w-full h-auto max-h-32 object-contain"
+                              />
+                            </div>
+                            <p className="text-xs text-gray-500 text-center">Signed by {order.driverAssignment?.driver?.fullName || 'Driver'}</p>
+                          </div>
+                        )}
+
+                        {/* Customer Signature */}
+                        {order.signatures.receiver && (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <UserIcon className="h-4 w-4 text-green-600" />
+                              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Customer Signature</p>
+                            </div>
+                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border-2 border-dashed border-green-200">
+                              <img 
+                                src={order.signatures.receiver} 
+                                alt="Customer Signature"
+                                className="w-full h-auto max-h-32 object-contain"
+                              />
+                            </div>
+                            <p className="text-xs text-gray-500 text-center">Received by {order.customer?.contactPersonName || 'Customer'}</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+                          <CheckCircleIcon className="h-4 w-4 text-green-600" />
+                          <span>Digitally signed and verified</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Order Notes */}
             {(order.notes || order.internalNotes) && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200">

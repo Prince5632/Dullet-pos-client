@@ -1,4 +1,4 @@
-import { useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useRef, useEffect, forwardRef, useImperativeHandle, useState } from 'react';
 import SignaturePadLib from 'signature_pad';
 import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
 
@@ -32,11 +32,13 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const signaturePadRef = useRef<SignaturePadLib | null>(null);
+  const [isPadEmpty, setIsPadEmpty] = useState(true);
 
   useImperativeHandle(ref, () => ({
     clear: () => {
       if (signaturePadRef.current) {
         signaturePadRef.current.clear();
+        setIsPadEmpty(true);
         onChange?.('');
       }
     },
@@ -52,6 +54,7 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
     fromDataURL: (dataURL: string) => {
       if (signaturePadRef.current) {
         signaturePadRef.current.fromDataURL(dataURL);
+        setIsPadEmpty(false);
         onChange?.(dataURL);
       }
     }
@@ -70,13 +73,34 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
       });
 
       // Set up event handlers
-      const handleEnd = () => {
-        if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
-          onChange?.(signaturePadRef.current.toDataURL('image/png'));
-        }
+      const emitChange = () => {
+        if (!signaturePadRef.current) return;
+        const empty = signaturePadRef.current.isEmpty();
+        setIsPadEmpty(empty);
+        onChange?.(empty ? '' : signaturePadRef.current.toDataURL('image/png'));
       };
 
-      signaturePadRef.current.addEventListener('endStroke', handleEnd);
+      // signature_pad exposes onBegin/onEnd callbacks, not DOM events
+      const sigInstanceAny = signaturePadRef.current as unknown as any;
+      // Prefer v5 event API if available
+      if (typeof sigInstanceAny.addEventListener === 'function') {
+        sigInstanceAny.addEventListener('beginStroke', emitChange);
+        sigInstanceAny.addEventListener('endStroke', emitChange);
+      } else {
+        // Fallback to legacy callbacks if using older signature_pad typings
+        (signaturePadRef.current as unknown as { onEnd?: () => void; onBegin?: () => void }).onEnd = emitChange;
+        (signaturePadRef.current as unknown as { onEnd?: () => void; onBegin?: () => void }).onBegin = emitChange;
+      }
+
+      // Fallback: listen to pointerup/mouseup to ensure change fires
+      const canvasEl = canvasRef.current;
+      const fallback = () => emitChange();
+      const fallbackMove = () => emitChange();
+      canvasEl.addEventListener('pointerup', fallback);
+      canvasEl.addEventListener('mouseup', fallback);
+      canvasEl.addEventListener('touchend', fallback);
+      canvasEl.addEventListener('pointerdown', fallbackMove);
+      canvasEl.addEventListener('mousemove', fallbackMove);
 
       // Set canvas background
       const canvas = canvasRef.current;
@@ -88,9 +112,20 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
 
       return () => {
         if (signaturePadRef.current) {
-          signaturePadRef.current.removeEventListener('endStroke', handleEnd);
+          if (typeof sigInstanceAny.removeEventListener === 'function') {
+            sigInstanceAny.removeEventListener('beginStroke', emitChange);
+            sigInstanceAny.removeEventListener('endStroke', emitChange);
+          } else {
+            (signaturePadRef.current as unknown as { onEnd?: () => void; onBegin?: () => void }).onEnd = undefined;
+            (signaturePadRef.current as unknown as { onEnd?: () => void; onBegin?: () => void }).onBegin = undefined;
+          }
           signaturePadRef.current.off();
         }
+        canvasEl.removeEventListener('pointerup', fallback);
+        canvasEl.removeEventListener('mouseup', fallback);
+        canvasEl.removeEventListener('touchend', fallback);
+        canvasEl.removeEventListener('pointerdown', fallbackMove);
+        canvasEl.removeEventListener('mousemove', fallbackMove);
       };
     }
   }, [backgroundColor, penColor, penWidth, onChange]);
@@ -118,11 +153,12 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
   const clearSignature = () => {
     if (signaturePadRef.current) {
       signaturePadRef.current.clear();
+      setIsPadEmpty(true);
       onChange?.('');
     }
   };
 
-  const isEmpty = signaturePadRef.current ? signaturePadRef.current.isEmpty() : true;
+  const isEmpty = isPadEmpty;
 
   return (
     <div className={`relative inline-block ${className}`}>
