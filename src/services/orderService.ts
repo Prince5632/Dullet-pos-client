@@ -50,8 +50,8 @@ class OrderService {
     return await apiService.get<{ orders: Order[] }>(url);
   }
 
-  // Get all widgets with pagination and filtering
-  async getWidgets(params: OrderListParams = {}): Promise<ApiResponse<{ orders: Order[] }>> {
+  // Get all visits with pagination and filtering
+  async getVisits(params: OrderListParams = {}): Promise<ApiResponse<{ orders: Order[] }>> {
     const queryParams = new URLSearchParams();
     
     Object.entries(params).forEach(([key, value]) => {
@@ -60,7 +60,7 @@ class OrderService {
       }
     });
 
-    const url = `${API_CONFIG.ENDPOINTS.ORDERS}/widgets?${queryParams.toString()}`;
+    const url = `${API_CONFIG.ENDPOINTS.ORDERS}/visits?${queryParams.toString()}`;
     return await apiService.get<{ orders: Order[] }>(url);
   }
 

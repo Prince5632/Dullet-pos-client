@@ -1,62 +1,62 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { 
-  PlusIcon, 
-  FunnelIcon, 
-  EyeIcon, 
+import React, { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
+import {
+  PlusIcon,
+  FunnelIcon,
+  EyeIcon,
   PencilIcon,
   CalendarIcon,
   CurrencyRupeeIcon,
   ClockIcon,
   XMarkIcon,
-  ClipboardDocumentListIcon
-} from '@heroicons/react/24/outline';
-import { orderService } from '../../services/orderService';
-import { customerService } from '../../services/customerService';
-import { useAuth } from '../../contexts/AuthContext';
-import { useDebounce } from '../../hooks/useDebounce';
+  ClipboardDocumentListIcon,
+} from "@heroicons/react/24/outline";
+import { orderService } from "../../services/orderService";
+import { customerService } from "../../services/customerService";
+import { useAuth } from "../../contexts/AuthContext";
+import { useDebounce } from "../../hooks/useDebounce";
 // import { Table, Pagination, Badge, Avatar } from '../../components/ui';
-import type { Order, Customer, TableColumn, Godown } from '../../types';
-import { apiService } from '../../services/api';
-import { API_CONFIG } from '../../config/api';
+import type { Order, Customer, TableColumn, Godown } from "../../types";
+import { apiService } from "../../services/api";
+import { API_CONFIG } from "../../config/api";
 // import { toast } from 'react-hot-toast';
-import Table from '../../components/ui/Table';
-import Pagination from '../../components/ui/Pagination';
+import Table from "../../components/ui/Table";
+import Pagination from "../../components/ui/Pagination";
 // import Badge from '../../components/ui/Badge';
-import Avatar from '../../components/ui/Avatar';
-import OrderStatusDropdown from '../../components/orders/OrderStatusDropdown';
+import Avatar from "../../components/ui/Avatar";
+import OrderStatusDropdown from "../../components/orders/OrderStatusDropdown";
 
 const OrdersPage: React.FC = () => {
   // const navigate = useNavigate();
   const { hasPermission } = useAuth();
-  
+
   // State
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [godowns, setGodowns] = useState<Godown[]>([]);
-  const [godownFilter, setGodownFilter] = useState('');
-  const [viewType, setViewType] = useState<'orders' | 'widgets'>('orders');
-  
+  const [godownFilter, setGodownFilter] = useState("");
+  const [viewType, setViewType] = useState<"orders" | "visits">("orders");
+
   // Filters
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
-  const [customerFilter, setCustomerFilter] = useState('');
-  const [dateFromFilter, setDateFromFilter] = useState('');
-  const [dateToFilter, setDateToFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState("");
+  const [customerFilter, setCustomerFilter] = useState("");
+  const [dateFromFilter, setDateFromFilter] = useState("");
+  const [dateToFilter, setDateToFilter] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
   const [limit] = useState(10);
-  
+
   // Sorting
-  const [sortBy, setSortBy] = useState('orderDate');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortBy, setSortBy] = useState("orderDate");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // Debounced search
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -81,21 +81,26 @@ const OrdersPage: React.FC = () => {
         godownId: godownFilter,
       };
 
-      const response = viewType === 'orders' 
-        ? await orderService.getOrders(params)
-        : await orderService.getWidgets(params);
-      
+      const response =
+        viewType === "orders"
+          ? await orderService.getOrders(params)
+          : await orderService.getVisits(params);
+
       if (response.success && response.data) {
         setOrders(response.data.orders || []);
-        if (response.pagination) {
-          setCurrentPage(response.pagination.currentPage || 1);
-          setTotalPages(response.pagination.totalPages || 1);
-          setTotalOrders((response.pagination as any).totalOrders || 0);
+
+        if (response?.data?.pagination) {
+          setCurrentPage(response?.data?.pagination?.currentPage || 1);
+          setTotalPages(response?.data?.pagination?.totalPages || 1);
+          setTotalOrders(
+            (response?.data?.pagination as any).totalOrders ||
+              0
+          );
         }
       }
     } catch (err) {
-      console.error('Failed to load orders:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load orders');
+      console.error("Failed to load :", err);
+      setError(err instanceof Error ? err.message : "Failed to load.");
     } finally {
       setLoading(false);
     }
@@ -118,7 +123,7 @@ const OrdersPage: React.FC = () => {
       const customerList = await customerService.getAllCustomers();
       setCustomers(customerList);
     } catch (err) {
-      console.error('Failed to load customers:', err);
+      console.error("Failed to load customers:", err);
     }
   }, []);
 
@@ -134,7 +139,9 @@ const OrdersPage: React.FC = () => {
   useEffect(() => {
     (async () => {
       try {
-        const res = await apiService.get<{ godowns: Godown[] }>(API_CONFIG.ENDPOINTS.GODOWNS);
+        const res = await apiService.get<{ godowns: Godown[] }>(
+          API_CONFIG.ENDPOINTS.GODOWNS
+        );
         if (res.success && res.data) setGodowns(res.data.godowns);
       } catch {}
     })();
@@ -145,69 +152,82 @@ const OrdersPage: React.FC = () => {
     if (currentPage !== 1) {
       setCurrentPage(1);
     }
-  }, [debouncedSearchTerm, statusFilter, paymentStatusFilter, customerFilter, dateFromFilter, dateToFilter, currentPage]);
+  }, [
+    debouncedSearchTerm,
+    statusFilter,
+    paymentStatusFilter,
+    customerFilter,
+    dateFromFilter,
+    dateToFilter,
+    currentPage,
+  ]);
 
   // Handlers
   const handleSort = (field: string) => {
     if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
       setSortBy(field);
-      setSortOrder('desc');
+      setSortOrder("desc");
     }
   };
 
-
   const clearFilters = () => {
-    setSearchTerm('');
-    setStatusFilter('');
-    setPaymentStatusFilter('');
-    setCustomerFilter('');
-    setGodownFilter('');
-    setDateFromFilter('');
-    setDateToFilter('');
+    setSearchTerm("");
+    setStatusFilter("");
+    setPaymentStatusFilter("");
+    setCustomerFilter("");
+    setGodownFilter("");
+    setDateFromFilter("");
+    setDateToFilter("");
     setCurrentPage(1);
   };
 
   const handleOrderUpdate = (updatedOrder: Order) => {
-    setOrders(prev => prev.map(order => 
-      order._id === updatedOrder._id ? updatedOrder : order
-    ));
+    setOrders((prev) =>
+      prev.map((order) =>
+        order._id === updatedOrder._id ? updatedOrder : order
+      )
+    );
   };
 
   // Table columns
   const getColumns = (): TableColumn<Order>[] => {
-    if (viewType === 'widgets') {
+    if (viewType === "visits") {
       return [
         {
-          key: 'orderNumber',
-          label: 'Widget Details',
+          key: "orderNumber",
+          label: "Visit Details",
           sortable: true,
-          render: (_value, widget) => (
+          render: (_value, visit) => (
             <div className="min-w-0 py-1">
               <div className="flex items-center gap-2 mb-1">
                 <div className="font-semibold text-gray-900 text-sm">
-                  {widget.orderNumber}
+                  {visit.orderNumber}
                 </div>
               </div>
               <div className="text-xs text-gray-500">
-                Created: {orderService.formatDate(widget.orderDate)}
+                Created: {orderService.formatDate(visit.orderDate)}
               </div>
               <div className="text-xs text-gray-400">
-                {Math.ceil((new Date().getTime() - new Date(widget.orderDate).getTime()) / (1000 * 60 * 60 * 24))} days ago
+                {Math.ceil(
+                  (new Date().getTime() - new Date(visit.orderDate).getTime()) /
+                    (1000 * 60 * 60 * 24)
+                )}{" "}
+                days ago
               </div>
             </div>
           ),
         },
         {
-          key: 'customer',
-          label: 'Customer',
+          key: "customer",
+          label: "Customer",
           render: (customer) => (
             <div className="flex items-center space-x-3 min-w-0 py-1">
-              <Avatar name={customer?.businessName || 'Customer'} size="sm" />
+              <Avatar name={customer?.businessName || "Customer"} size="sm" />
               <div className="min-w-0 flex-1">
                 <div className="font-medium text-gray-900 truncate text-sm">
-                  {customer?.businessName || '—'}
+                  {customer?.businessName || "—"}
                 </div>
                 <div className="text-xs text-gray-500 truncate">
                   {customer?.contactPersonName || customer?.customerId}
@@ -217,66 +237,73 @@ const OrdersPage: React.FC = () => {
           ),
         },
         {
-          key: 'scheduleDate',
-          label: 'Schedule',
+          key: "scheduleDate",
+          label: "Schedule",
           sortable: true,
-          render: (_value, widget) => (
+          render: (_value, visit) => (
             <div className="min-w-0 py-1">
               <div className="font-semibold text-gray-900 text-sm mb-1">
-                {widget.scheduleDate ? orderService.formatDate(widget.scheduleDate) : '—'}
+                {visit.scheduleDate
+                  ? orderService.formatDate(visit.scheduleDate)
+                  : "—"}
               </div>
-              {widget.scheduleDate && (
-                <div className={`text-xs ${
-                  new Date(widget.scheduleDate) < new Date() 
-                    ? 'text-red-600' 
-                    : new Date(widget.scheduleDate).toDateString() === new Date().toDateString()
-                    ? 'text-blue-600'
-                    : 'text-green-600'
-                }`}>
-                  {new Date(widget.scheduleDate) < new Date() 
-                    ? 'Overdue' 
-                    : new Date(widget.scheduleDate).toDateString() === new Date().toDateString()
-                    ? 'Today'
-                    : 'Upcoming'
-                  }
+              {visit.scheduleDate && (
+                <div
+                  className={`text-xs ${
+                    new Date(visit.scheduleDate) < new Date()
+                      ? "text-red-600"
+                      : new Date(visit.scheduleDate).toDateString() ===
+                        new Date().toDateString()
+                      ? "text-blue-600"
+                      : "text-green-600"
+                  }`}
+                >
+                  {new Date(visit.scheduleDate) < new Date()
+                    ? "Overdue"
+                    : new Date(visit.scheduleDate).toDateString() ===
+                      new Date().toDateString()
+                    ? "Today"
+                    : "Upcoming"}
                 </div>
               )}
             </div>
           ),
         },
         {
-          key: 'notes',
-          label: 'Notes & Location',
-          render: (_value, widget) => (
+          key: "notes",
+          label: "Notes & Location",
+          render: (_value, visit) => (
             <div className="min-w-0 py-1">
               <div className="text-sm text-gray-900 mb-1 truncate">
-                {widget.notes || 'No notes'}
+                {visit.notes || "No notes"}
               </div>
-              {widget.captureLocation && (
+              {visit.captureLocation && (
                 <div className="text-xs text-gray-500 truncate">
-                  📍 {widget.captureLocation.address || `${widget.captureLocation.latitude}, ${widget.captureLocation.longitude}`}
+                  📍{" "}
+                  {visit.captureLocation.address ||
+                    `${visit.captureLocation.latitude}, ${visit.captureLocation.longitude}`}
                 </div>
               )}
             </div>
           ),
         },
         {
-          key: 'actions',
-          label: 'Actions',
-          render: (_value, widget) => (
+          key: "actions",
+          label: "Actions",
+          render: (_value, visit) => (
             <div className="flex items-center justify-end space-x-1 py-1">
               <Link
-                to={`/orders/${widget._id}`}
+                to={`/orders/${visit._id}`}
                 className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-all duration-200"
                 title="View Details"
               >
                 <EyeIcon className="h-4 w-4" />
               </Link>
-              {widget.capturedImage && (
+              {visit.capturedImage && (
                 <button
                   onClick={() => {
                     // TODO: Open image modal
-                    console.log('View image:', widget.capturedImage);
+                    console.log("View image:", visit.capturedImage);
                   }}
                   className="inline-flex items-center justify-center w-8 h-8 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-all duration-200"
                   title="View Image"
@@ -292,86 +319,96 @@ const OrdersPage: React.FC = () => {
 
     // Default order columns
     return [
-    {
-      key: 'orderNumber',
-      label: 'Order Details',
-      sortable: true,
-      render: (_value, order) => (
-        <div className="min-w-0 py-1">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="font-semibold text-gray-900 text-sm">
-              {order.orderNumber}
+      {
+        key: "orderNumber",
+        label: "Order Details",
+        sortable: true,
+        render: (_value, order) => (
+          <div className="min-w-0 py-1">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="font-semibold text-gray-900 text-sm">
+                {order.orderNumber}
+              </div>
+              {order.priority !== "normal" && (
+                <span
+                  className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
+                    order.priority === "urgent"
+                      ? "bg-red-100 text-red-700"
+                      : order.priority === "high"
+                      ? "bg-orange-100 text-orange-700"
+                      : "bg-gray-100 text-gray-700"
+                  }`}
+                >
+                  {order.priority.toUpperCase()}
+                </span>
+              )}
             </div>
-            {order.priority !== 'normal' && (
-              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
-                order.priority === 'urgent' ? 'bg-red-100 text-red-700' :
-                order.priority === 'high' ? 'bg-orange-100 text-orange-700' :
-                'bg-gray-100 text-gray-700'
-              }`}>
-                {order.priority.toUpperCase()}
-              </span>
+            <div className="text-xs text-gray-500">
+              {orderService.formatDate(order.orderDate)}
+            </div>
+            <div className="text-xs text-gray-400">
+              {Math.ceil(
+                (new Date().getTime() - new Date(order.orderDate).getTime()) /
+                  (1000 * 60 * 60 * 24)
+              )}{" "}
+              days old
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: "customer",
+        label: "Customer",
+        render: (customer) => (
+          <div className="flex items-center space-x-3 min-w-0 py-1">
+            <Avatar name={customer?.businessName || "Customer"} size="sm" />
+            <div className="min-w-0 flex-1">
+              <div className="font-medium text-gray-900 truncate text-sm">
+                {customer?.businessName || "—"}
+              </div>
+              <div className="text-xs text-gray-500 truncate">
+                {customer?.contactPersonName || customer?.customerId}
+              </div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: "items",
+        label: "Order Summary",
+        render: (_value, order) => (
+          <div className="min-w-0 py-1">
+            <div className="font-semibold text-gray-900 text-sm mb-1">
+              {orderService.formatCurrency(order.totalAmount)}
+            </div>
+            <div className="text-xs text-gray-500 mb-1">
+              {order.items?.length || 0} item
+              {(order.items?.length || 0) !== 1 ? "s" : ""} •{" "}
+              {order.paymentTerms}
+            </div>
+            {order.godown?.name && (
+              <div className="text-xs text-gray-400">{order.godown.name}</div>
             )}
-          </div>
-          <div className="text-xs text-gray-500">
-            {orderService.formatDate(order.orderDate)}
-          </div>
-          <div className="text-xs text-gray-400">
-            {Math.ceil((new Date().getTime() - new Date(order.orderDate).getTime()) / (1000 * 60 * 60 * 24))} days old
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'customer',
-      label: 'Customer',
-      render: (customer) => (
-        <div className="flex items-center space-x-3 min-w-0 py-1">
-          <Avatar name={customer?.businessName || 'Customer'} size="sm" />
-          <div className="min-w-0 flex-1">
-            <div className="font-medium text-gray-900 truncate text-sm">
-              {customer?.businessName || '—'}
-            </div>
-            <div className="text-xs text-gray-500 truncate">
-              {customer?.contactPersonName || customer?.customerId}
+            <div className="text-xs text-gray-400 truncate">
+              {order.items?.[0]?.productName}
+              {order.items?.length > 1 && ` +${order.items.length - 1} more`}
             </div>
           </div>
-        </div>
-      ),
-    },
-    {
-      key: 'items',
-      label: 'Order Summary',
-      render: (_value, order) => (
-        <div className="min-w-0 py-1">
-          <div className="font-semibold text-gray-900 text-sm mb-1">
-            {orderService.formatCurrency(order.totalAmount)}
-          </div>
-          <div className="text-xs text-gray-500 mb-1">
-            {order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? 's' : ''} • {order.paymentTerms}
-          </div>
-          {order.godown?.name && (
-            <div className="text-xs text-gray-400">{order.godown.name}</div>
-          )}
-          <div className="text-xs text-gray-400 truncate">
-            {order.items?.[0]?.productName}
-            {order.items?.length > 1 && ` +${order.items.length - 1} more`}
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (_value, order) => (
-        <div className="min-w-0 py-1">
-          <div className="mb-2">
-            <OrderStatusDropdown
-              order={order}
-              onOrderUpdate={handleOrderUpdate}
-              compact
-            />
-          </div>
-          {/* <div className="flex items-center gap-1">
+        ),
+      },
+      {
+        key: "status",
+        label: "Status",
+        render: (_value, order) => (
+          <div className="min-w-0 py-1">
+            <div className="mb-2">
+              <OrderStatusDropdown
+                order={order}
+                onOrderUpdate={handleOrderUpdate}
+                compact
+              />
+            </div>
+            {/* <div className="flex items-center gap-1">
             <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
               orderService.getPaymentStatusColor(order.paymentStatus)
             }`}>
@@ -383,32 +420,32 @@ const OrdersPage: React.FC = () => {
               {order.paymentStatus}
             </span>
           </div> */}
-        </div>
-      ),
-    },
-    {
-      key: 'actions',
-      label: 'Actions',
-      render: (_value, order) => (
-        <div className="flex items-center justify-end space-x-1 py-1">
-          <Link
-            to={`/orders/${order._id}`}
-            className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-all duration-200"
-            title="View Details"
-          >
-            <EyeIcon className="h-4 w-4" />
-          </Link>
-          <Link
-            to={`/orders/${order._id}/edit`}
-            className="inline-flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-all duration-200"
-            title="Edit Order"
-          >
-            <PencilIcon className="h-4 w-4" />
-          </Link>
-        </div>
-      ),
-    },
-  ];
+          </div>
+        ),
+      },
+      {
+        key: "actions",
+        label: "Actions",
+        render: (_value, order) => (
+          <div className="flex items-center justify-end space-x-1 py-1">
+            <Link
+              to={`/orders/${order._id}`}
+              className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-all duration-200"
+              title="View Details"
+            >
+              <EyeIcon className="h-4 w-4" />
+            </Link>
+            <Link
+              to={`/orders/${order._id}/edit`}
+              className="inline-flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-all duration-200"
+              title="Edit Order"
+            >
+              <PencilIcon className="h-4 w-4" />
+            </Link>
+          </div>
+        ),
+      },
+    ];
   };
 
   if (error) {
@@ -416,7 +453,9 @@ const OrdersPage: React.FC = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-600 text-xl mb-2">⚠️</div>
-          <h3 className="text-lg font-medium text-gray-900 mb-1">Error Loading Orders</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-1">
+            Error Loading Orders
+          </h3>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={loadOrders}
@@ -445,64 +484,65 @@ const OrdersPage: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-4">
                     <h1 className="text-2xl font-bold text-gray-900">
-                      {viewType === 'orders' ? 'Orders' : 'Widgets'}
+                      {viewType === "orders" ? "Orders" : "Visits"}
                     </h1>
                     {/* View Type Switch */}
                     <div className="flex bg-gray-100 rounded-lg p-1">
                       <button
-                        onClick={() => setViewType('orders')}
+                        onClick={() => setViewType("orders")}
                         className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
-                          viewType === 'orders'
-                            ? 'bg-white text-blue-600 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
+                          viewType === "orders"
+                            ? "bg-white text-blue-600 shadow-sm"
+                            : "text-gray-600 hover:text-gray-900"
                         }`}
                       >
                         Orders
                       </button>
                       <button
-                        onClick={() => setViewType('widgets')}
+                        onClick={() => setViewType("visits")}
                         className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
-                          viewType === 'widgets'
-                            ? 'bg-white text-blue-600 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
+                          viewType === "visits"
+                            ? "bg-white text-blue-600 shadow-sm"
+                            : "text-gray-600 hover:text-gray-900"
                         }`}
                       >
-                        Widgets
+                        Visits
                       </button>
                     </div>
                   </div>
                   <p className="mt-1 text-sm text-gray-500">
-                    {viewType === 'orders' 
-                      ? 'Manage customer orders and track their progress'
-                      : 'Manage widgets with scheduled tasks and location tracking'
-                    }
+                    {viewType === "orders"
+                      ? "Manage customer orders and track their progress"
+                      : "Manage visits with scheduled tasks and location tracking"}
                   </p>
                 </div>
               </div>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-              {hasPermission('orders.approve') && (
+              {hasPermission("orders.approve") && (
                 <Link
                   to="/orders/approval"
                   className="relative inline-flex items-center justify-center px-3 sm:px-4 py-2.5 border border-amber-200 text-sm font-medium rounded-lg shadow-sm text-amber-700 bg-amber-50 hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all duration-200 touch-manipulation"
                 >
                   <ClockIcon className="h-4 w-4 mr-2 flex-shrink-0" />
                   <span className="truncate">Pending Approval</span>
-                  {orders.filter(o => o.status === 'pending').length > 0 && (
+                  {orders.filter((o) => o.status === "pending").length > 0 && (
                     <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-200 text-amber-800 animate-pulse">
-                      {orders.filter(o => o.status === 'pending').length}
+                      {orders.filter((o) => o.status === "pending").length}
                     </span>
                   )}
                 </Link>
               )}
               <Link
-                to={viewType === 'orders' ? "/orders/new" : "/orders/widgets/new"}
+                to={
+                  viewType === "orders" ? "/orders/new" : "/orders/visits/new"
+                }
                 className="inline-flex items-center justify-center px-4 sm:px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 hover:shadow-md touch-manipulation"
               >
                 <PlusIcon className="h-4 w-4 mr-2 flex-shrink-0" />
                 <span className="hidden sm:inline">
-                  {viewType === 'orders' ? 'Create Order' : 'Create Widget'}
+                  {viewType === "orders" ? "Create Order" : "Create Visits"}
                 </span>
                 <span className="sm:hidden">New</span>
               </Link>
@@ -520,15 +560,25 @@ const OrdersPage: React.FC = () => {
               <div className="flex-1 min-w-0">
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
+                    <svg
+                      className="h-5 w-5 text-gray-400"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   </div>
                   <input
                     type="text"
-                    placeholder={viewType === 'orders' 
-                      ? "Search by order number, customer name..." 
-                      : "Search by widget number, customer name..."
+                    placeholder={
+                      viewType === "orders"
+                        ? "Search by order number, customer name..."
+                        : "Search by visit number, customer name..."
                     }
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -536,7 +586,7 @@ const OrdersPage: React.FC = () => {
                   />
                   {searchTerm && (
                     <button
-                      onClick={() => setSearchTerm('')}
+                      onClick={() => setSearchTerm("")}
                       className="absolute inset-y-0 right-0 pr-3 flex items-center"
                     >
                       <XMarkIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
@@ -544,64 +594,127 @@ const OrdersPage: React.FC = () => {
                   )}
                 </div>
               </div>
-              
+
               {/* Quick Filters */}
               <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-2 lg:pb-0">
-                {(viewType === 'orders' ? [
-                  { value: 'pending', label: 'Pending', color: 'amber', count: orders.filter(o => o.status === 'pending').length },
-                  { value: 'approved', label: 'Approved', color: 'emerald', count: orders.filter(o => o.status === 'approved').length },
-                  { value: 'processing', label: 'Production', color: 'blue', count: orders.filter(o => o.status === 'processing').length },
-                  { value: 'completed', label: 'Completed', color: 'green', count: orders.filter(o => o.status === 'completed').length }
-                ] : [
-                  { value: 'today', label: 'Today', color: 'blue', count: orders.filter(o => {
-                    const today = new Date().toDateString();
-                    return o.scheduleDate && new Date(o.scheduleDate).toDateString() === today;
-                  }).length },
-                  { value: 'upcoming', label: 'Upcoming', color: 'green', count: orders.filter(o => {
-                    const tomorrow = new Date();
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    return o.scheduleDate && new Date(o.scheduleDate) >= tomorrow;
-                  }).length },
-                  { value: 'overdue', label: 'Overdue', color: 'red', count: orders.filter(o => {
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    return o.scheduleDate && new Date(o.scheduleDate) < today;
-                  }).length }
-                ]).map((filter) => (
+                {(viewType === "orders"
+                  ? [
+                      {
+                        value: "pending",
+                        label: "Pending",
+                        color: "amber",
+                        count: orders.filter((o) => o.status === "pending")
+                          .length,
+                      },
+                      {
+                        value: "approved",
+                        label: "Approved",
+                        color: "emerald",
+                        count: orders.filter((o) => o.status === "approved")
+                          .length,
+                      },
+                      {
+                        value: "processing",
+                        label: "Production",
+                        color: "blue",
+                        count: orders.filter((o) => o.status === "processing")
+                          .length,
+                      },
+                      {
+                        value: "completed",
+                        label: "Completed",
+                        color: "green",
+                        count: orders.filter((o) => o.status === "completed")
+                          .length,
+                      },
+                    ]
+                  : [
+                      {
+                        value: "today",
+                        label: "Today",
+                        color: "blue",
+                        count: orders.filter((o) => {
+                          const today = new Date().toDateString();
+                          return (
+                            o.scheduleDate &&
+                            new Date(o.scheduleDate).toDateString() === today
+                          );
+                        }).length,
+                      },
+                      {
+                        value: "upcoming",
+                        label: "Upcoming",
+                        color: "green",
+                        count: orders.filter((o) => {
+                          const tomorrow = new Date();
+                          tomorrow.setDate(tomorrow.getDate() + 1);
+                          return (
+                            o.scheduleDate &&
+                            new Date(o.scheduleDate) >= tomorrow
+                          );
+                        }).length,
+                      },
+                      {
+                        value: "overdue",
+                        label: "Overdue",
+                        color: "red",
+                        count: orders.filter((o) => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          return (
+                            o.scheduleDate && new Date(o.scheduleDate) < today
+                          );
+                        }).length,
+                      },
+                    ]
+                ).map((filter) => (
                   <button
                     key={filter.value}
-                    onClick={() => setStatusFilter(statusFilter === filter.value ? '' : filter.value)}
+                    onClick={() =>
+                      setStatusFilter(
+                        statusFilter === filter.value ? "" : filter.value
+                      )
+                    }
                     className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap touch-manipulation ${
                       statusFilter === filter.value
-                        ? 'bg-blue-100 text-blue-800 ring-2 ring-blue-200 shadow-sm'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900 active:bg-gray-300'
+                        ? "bg-blue-100 text-blue-800 ring-2 ring-blue-200 shadow-sm"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900 active:bg-gray-300"
                     }`}
                   >
                     <span>{filter.label}</span>
                     {filter.count > 0 && (
-                      <span className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-xs font-semibold ${
-                        statusFilter === filter.value ? 'bg-blue-200 text-blue-800' : 'bg-gray-200 text-gray-600'
-                      }`}>
-                        {filter.count}</span>
+                      <span
+                        className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-xs font-semibold ${
+                          statusFilter === filter.value
+                            ? "bg-blue-200 text-blue-800"
+                            : "bg-gray-200 text-gray-600"
+                        }`}
+                      >
+                        {filter.count}
+                      </span>
                     )}
                   </button>
                 ))}
-                
+
                 <div className="h-6 w-px bg-gray-300 mx-1" />
-                
+
                 <button
                   onClick={() => setShowFilters(!showFilters)}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     showFilters
-                      ? 'bg-blue-50 text-blue-700 ring-2 ring-blue-200'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? "bg-blue-50 text-blue-700 ring-2 ring-blue-200"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
                   <FunnelIcon className="h-4 w-4" />
                   <span>Filters</span>
                 </button>
-                
-                {(statusFilter || paymentStatusFilter || customerFilter || dateFromFilter || dateToFilter) && (
+
+                {(statusFilter ||
+                  paymentStatusFilter ||
+                  customerFilter ||
+                  dateFromFilter ||
+                  dateToFilter) && (
                   <button
                     onClick={clearFilters}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200"
@@ -686,8 +799,11 @@ const OrdersPage: React.FC = () => {
                       className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     >
                       <option value="">All Godowns</option>
-                      {godowns.map(g => (
-                        <option key={g._id} value={g._id}>{g.name} ({g.location.city}{g.location.area ? ` - ${g.location.area}` : ''})</option>
+                      {godowns.map((g) => (
+                        <option key={g._id} value={g._id}>
+                          {g.name} ({g.location.city}
+                          {g.location.area ? ` - ${g.location.area}` : ""})
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -698,38 +814,51 @@ const OrdersPage: React.FC = () => {
         </div>
 
         {/* Orders Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">{/* No stacking context */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          {/* No stacking context */}
           <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {loading ? 'Loading...' : `${totalOrders} Order${totalOrders !== 1 ? 's' : ''}`}
+                  {loading
+                    ? "Loading..."
+                    : `${totalOrders} ${viewType === "orders" ? "order" : "visit"}${totalOrders !== 1 ? "s" : ""}`}
                 </h3>
                 {!loading && totalOrders > 0 && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {statusFilter ? `${statusFilter} orders` : 'All orders'}
+                    {statusFilter ? `${statusFilter} ${viewType === "orders" ? "orders" : "visits"}` : `All ${viewType === "orders" ? "orders" : "visits"}`}
                   </span>
                 )}
               </div>
-              
+
               {!loading && orders.length > 0 && (
                 <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                   <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded-md border">
                     <CalendarIcon className="h-4 w-4 flex-shrink-0" />
                     <span className="whitespace-nowrap font-medium">
-                      Today: {orders.filter(o => new Date(o.orderDate).toDateString() === new Date().toDateString()).length}
+                      Today:{" "}
+                      {
+                        orders.filter(
+                          (o) =>
+                            new Date(o.orderDate).toDateString() ===
+                            new Date().toDateString()
+                        ).length
+                      }
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded-md border">
                     <ClockIcon className="h-4 w-4 flex-shrink-0 text-amber-500" />
                     <span className="whitespace-nowrap font-medium">
-                      Pending: {orders.filter(o => o.status === 'pending').length}
+                      Pending:{" "}
+                      {orders.filter((o) => o.status === "pending").length}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded-md border">
                     <CurrencyRupeeIcon className="h-4 w-4 flex-shrink-0 text-green-500" />
                     <span className="whitespace-nowrap font-medium">
-                      {orderService.formatCurrency(orders.reduce((sum, o) => sum + o.totalAmount, 0))}
+                      {orderService.formatCurrency(
+                        orders.reduce((sum, o) => sum + o.totalAmount, 0)
+                      )}
                     </span>
                   </div>
                 </div>
@@ -742,7 +871,9 @@ const OrdersPage: React.FC = () => {
             <div className="flex items-center justify-center py-12">
               <div className="flex items-center space-x-2">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span className="text-gray-600 font-medium">Loading orders...</span>
+                <span className="text-gray-600 font-medium">
+                  Loading orders...
+                </span>
               </div>
             </div>
           ) : orders.length === 0 ? (
@@ -750,19 +881,21 @@ const OrdersPage: React.FC = () => {
               <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                 <ClipboardDocumentListIcon className="w-12 h-12 text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No orders found</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No {viewType === "orders" ? "orders" : "visits"} found
+              </h3>
               <p className="text-gray-500 mb-6 max-w-sm mx-auto">
-                {statusFilter || searchTerm || customerFilter ? 
-                  'Try adjusting your filters to see more orders.' : 
-                  'Get started by creating your first order.'}
+                {statusFilter || searchTerm || customerFilter
+                  ? "Try adjusting your filters to see more orders."
+                  : "Get started by creating your first order."}
               </p>
               {!statusFilter && !searchTerm && !customerFilter ? (
                 <Link
-                  to="/orders/new"
+                  to={viewType === "orders" ? "/orders/new" : "/orders/visits/new"}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
                 >
                   <PlusIcon className="h-4 w-4 mr-2" />
-                  Create First Order
+                  Create First {viewType === "orders" ? "Order" : "Visit"}
                 </Link>
               ) : (
                 <button
@@ -780,32 +913,48 @@ const OrdersPage: React.FC = () => {
               <div className="block lg:hidden">
                 <div className="divide-y divide-gray-200">
                   {orders.map((order) => (
-                    <div key={order._id} className="p-4 hover:bg-gray-50 transition-colors">
+                    <div
+                      key={order._id}
+                      className="p-4 hover:bg-gray-50 transition-colors"
+                    >
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
                             <h3 className="font-semibold text-gray-900 text-sm">
                               {order.orderNumber}
                             </h3>
-                            {order.priority !== 'normal' && (
-                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
-                                order.priority === 'urgent' ? 'bg-red-100 text-red-700' :
-                                order.priority === 'high' ? 'bg-orange-100 text-orange-700' :
-                                'bg-gray-100 text-gray-700'
-                              }`}>
+                            {order.priority !== "normal" && (
+                              <span
+                                className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
+                                  order.priority === "urgent"
+                                    ? "bg-red-100 text-red-700"
+                                    : order.priority === "high"
+                                    ? "bg-orange-100 text-orange-700"
+                                    : "bg-gray-100 text-gray-700"
+                                }`}
+                              >
                                 {order.priority.toUpperCase()}
                               </span>
                             )}
                           </div>
-                          
+
                           <div className="flex items-center gap-2 mb-2">
-                            <Avatar name={order.customer?.businessName || 'Customer'} size="sm" />
+                            <Avatar
+                              name={order.customer?.businessName || "Customer"}
+                              size="sm"
+                            />
                             <div className="min-w-0">
                               <div className="font-medium text-gray-900 text-sm truncate">
-                                {order.customer?.businessName || '—'}
+                                {order.customer?.businessName || "—"}
                               </div>
                               <div className="text-xs text-gray-500">
-                                {orderService.formatDate(order.orderDate)} • {Math.ceil((new Date().getTime() - new Date(order.orderDate).getTime()) / (1000 * 60 * 60 * 24))} days old
+                                {orderService.formatDate(order.orderDate)} •{" "}
+                                {Math.ceil(
+                                  (new Date().getTime() -
+                                    new Date(order.orderDate).getTime()) /
+                                    (1000 * 60 * 60 * 24)
+                                )}{" "}
+                                days old
                               </div>
                             </div>
                           </div>
@@ -816,16 +965,25 @@ const OrdersPage: React.FC = () => {
                                 {orderService.formatCurrency(order.totalAmount)}
                               </div>
                               <div className="text-xs text-gray-500">
-                                {order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? 's' : ''} • {order.paymentTerms}
+                                {order.items?.length || 0} item
+                                {(order.items?.length || 0) !== 1
+                                  ? "s"
+                                  : ""} • {order.paymentTerms}
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
-                                orderService.getPaymentStatusColor(order.paymentStatus)
-                              }`}>
-                                {order.paymentStatus === 'pending' ? 'P' :
-                                 order.paymentStatus === 'partial' ? 'PP' :
-                                 order.paymentStatus === 'paid' ? '✓' : 'OD'}
+                              <span
+                                className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${orderService.getPaymentStatusColor(
+                                  order.paymentStatus
+                                )}`}
+                              >
+                                {order.paymentStatus === "pending"
+                                  ? "P"
+                                  : order.paymentStatus === "partial"
+                                  ? "PP"
+                                  : order.paymentStatus === "paid"
+                                  ? "✓"
+                                  : "OD"}
                               </span>
                             </div>
                           </div>
