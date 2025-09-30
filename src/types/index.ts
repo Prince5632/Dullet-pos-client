@@ -29,7 +29,13 @@ export interface User {
   phone: string;
   profilePhoto?: string;
   role: Role;
-  department: 'Sales' | 'Production' | 'Management' | 'Admin' | 'Warehouse' | 'Finance';
+  department:
+    | "Sales"
+    | "Production"
+    | "Management"
+    | "Admin"
+    | "Warehouse"
+    | "Finance";
   position: string;
   isActive: boolean;
   isTwoFactorEnabled: boolean;
@@ -58,8 +64,19 @@ export interface Role {
 export interface Permission {
   _id: string;
   name: string;
-  module: 'users' | 'roles' | 'orders' | 'billing' | 'stock' | 'production' | 'godowns' | 'customers' | 'employees' | 'reports' | 'settings';
-  action: 'create' | 'read' | 'update' | 'delete' | 'approve' | 'manage';
+  module:
+    | "users"
+    | "roles"
+    | "orders"
+    | "billing"
+    | "stock"
+    | "production"
+    | "godowns"
+    | "customers"
+    | "employees"
+    | "reports"
+    | "settings";
+  action: "create" | "read" | "update" | "delete" | "approve" | "manage";
   description: string;
   isActive: boolean;
 }
@@ -94,7 +111,7 @@ export interface Attendance {
     address?: string;
   };
   godown?: Godown;
-  status: 'present' | 'late' | 'half_day' | 'absent';
+  status: "present" | "late" | "half_day" | "absent";
   workingHours: number;
   notes?: string;
   isAutoMarked: boolean;
@@ -121,11 +138,11 @@ export interface AttendanceListParams {
   search?: string;
   userId?: string;
   godownId?: string;
-  status?: 'present' | 'late' | 'half_day' | 'absent';
+  status?: "present" | "late" | "half_day" | "absent";
   startDate?: string;
   endDate?: string;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export interface MarkAttendanceForm {
@@ -175,7 +192,7 @@ export interface CreateUserForm {
   phone: string;
   password: string;
   roleId: string;
-  department: User['department'];
+  department: User["department"];
   position: string;
   profilePhoto?: File;
   primaryGodownId?: string;
@@ -220,7 +237,7 @@ export interface Customer {
   creditDays: number;
   outstandingAmount: number;
   isActive: boolean;
-  customerType: 'Retailer' | 'Distributor' | 'Wholesaler';
+  customerType: "Retailer" | "Distributor" | "Wholesaler";
   lastOrderDate?: string;
   totalOrders: number;
   totalOrderValue: number;
@@ -251,7 +268,7 @@ export interface CreateCustomerForm {
   panNumber?: string;
   creditLimit?: number;
   creditDays?: number;
-  customerType: 'Retailer' | 'Distributor' | 'Wholesaler';
+  customerType: "Retailer" | "Distributor" | "Wholesaler";
   notes?: string;
 }
 
@@ -263,10 +280,17 @@ export interface OrderItem {
   productName: string;
   grade?: string;
   quantity: number;
-  unit: 'KG' | 'Quintal' | 'Ton' | 'Bags';
+  unit: "KG" | "Quintal" | "Ton" | "Bags";
   ratePerUnit: number;
   totalAmount: number;
-  packaging: 'Standard' | 'Custom' | '5kg Bags' | '10kg Bags' | '25kg Bags' | '50kg Bags' | 'Loose';
+  packaging:
+    | "Standard"
+    | "Custom"
+    | "5kg Bags"
+    | "10kg Bags"
+    | "25kg Bags"
+    | "50kg Bags"
+    | "Loose";
 }
 
 export interface Order {
@@ -279,8 +303,16 @@ export interface Order {
   discountPercentage: number;
   taxAmount: number;
   totalAmount: number;
-  status: 'pending' | 'approved' | 'driver_assigned' | 'out_for_delivery' | 'delivered' | 'completed' | 'cancelled' | 'rejected';
-  priority: 'low' | 'normal' | 'high' | 'urgent';
+  status:
+    | "pending"
+    | "approved"
+    | "driver_assigned"
+    | "out_for_delivery"
+    | "delivered"
+    | "completed"
+    | "cancelled"
+    | "rejected";
+  priority: "low" | "normal" | "high" | "urgent";
   orderDate: string;
   requiredDate?: string;
   managerApproval?: {
@@ -316,8 +348,8 @@ export interface Order {
     recordedBy?: User;
     recordedAt?: string;
   }>;
-  paymentTerms: 'Cash' | 'Credit' | 'Advance';
-  paymentStatus: 'pending' | 'partial' | 'paid' | 'overdue';
+  paymentTerms: "Cash" | "Credit" | "Advance";
+  paymentStatus: "pending" | "partial" | "paid" | "overdue";
   paidAmount: number;
   deliveryAddress?: {
     street: string;
@@ -352,8 +384,8 @@ export interface CreateOrderForm {
   discountPercentage?: number;
   discount?: number;
   taxAmount?: number;
-  paymentTerms: 'Cash' | 'Credit' | 'Advance';
-  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  paymentTerms: "Cash" | "Credit" | "Advance";
+  priority?: "low" | "normal" | "high" | "urgent";
   requiredDate?: string;
   deliveryAddress?: {
     street: string;
@@ -368,11 +400,18 @@ export interface CreateOrderForm {
 
 export interface UpdateOrderForm extends Partial<CreateOrderForm> {
   paidAmount?: number;
-  paymentStatus?: Order['paymentStatus'];
+  paymentStatus?: Order["paymentStatus"];
+  capturedImage?: string;
+  captureLocation?: {
+    latitude?: number;
+    longitude?: number;
+    address?: string;
+  };
+  items: OrderItem[];
 }
 
 export interface OrderStatusUpdate {
-  status: Order['status'];
+  status: Order["status"];
   notes?: string;
 }
 
@@ -382,7 +421,14 @@ export interface QuickProduct {
   name: string;
   pricePerKg: number;
   bagSizeKg?: number;
-  defaultPackaging?: 'Standard' | 'Custom' | '5kg Bags' | '10kg Bags' | '25kg Bags' | '50kg Bags' | 'Loose';
+  defaultPackaging?:
+    | "Standard"
+    | "Custom"
+    | "5kg Bags"
+    | "10kg Bags"
+    | "25kg Bags"
+    | "50kg Bags"
+    | "Loose";
   category?: string;
 }
 
@@ -390,18 +436,18 @@ export interface QuickOrderItemInput {
   productKey: string;
   quantityKg?: number;
   bags?: number;
-  packaging?: OrderItem['packaging'];
+  packaging?: OrderItem["packaging"];
 }
 
 export interface CreateQuickOrderForm {
   customer: string;
   items: QuickOrderItemInput[];
-  paymentTerms?: Order['paymentTerms'];
-  priority?: Order['priority'];
+  paymentTerms?: Order["paymentTerms"];
+  priority?: Order["priority"];
   notes?: string;
   deliveryInstructions?: string;
   paidAmount?: number;
-  paymentStatus?: Order['paymentStatus'];
+  paymentStatus?: Order["paymentStatus"];
   godown?: string;
 }
 
