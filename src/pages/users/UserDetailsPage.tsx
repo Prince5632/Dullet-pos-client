@@ -343,7 +343,7 @@ const UserDetailsPage: React.FC = () => {
                   </dd>
                 </div>
                 
-                <div>
+                {/* <div>
                   <dt className="text-sm font-medium text-gray-500">Two-Factor Auth</dt>
                   <dd className="mt-1">
                     <Badge variant={user.isTwoFactorEnabled ? 'success' : 'default'}>
@@ -355,7 +355,7 @@ const UserDetailsPage: React.FC = () => {
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Last Login IP</dt>
                   <dd className="mt-1 text-sm text-gray-900">{user.lastLoginIP || 'N/A'}</dd>
-                </div>
+                </div> */}
               </dl>
             </div>
           </div>

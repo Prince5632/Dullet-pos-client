@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import Select from 'react-select';
 import {
   ArrowLeftIcon,
   CameraIcon,
@@ -404,21 +405,26 @@ const EditUserPage: React.FC = () => {
                 <label htmlFor="department" className="block text-sm font-medium text-gray-700">
                   Department *
                 </label>
-                <select
+                <Select
                   id="department"
-                  {...register('department')}
-                  className={cn(
-                    'mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm',
-                    errors.department 
-                      ? 'border-red-300 focus:border-red-500' 
-                      : 'border-gray-300 focus:border-blue-500'
-                  )}
-                >
-                  <option value="">Select department</option>
-                  {departments.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
-                </select>
+                  value={departments.find(dept => dept === watch('department')) ? { value: watch('department'), label: watch('department') } : null}
+                  onChange={(option) => setValue('department', option?.value || '')}
+                  options={departments.map(dept => ({ value: dept, label: dept }))}
+                  placeholder="Select department"
+                  isClearable
+                  className="mt-1"
+                  classNamePrefix="react-select"
+                  styles={{
+                    control: (base, state) => ({
+                      ...base,
+                      borderColor: errors.department ? '#f87171' : state.isFocused ? '#3b82f6' : '#d1d5db',
+                      boxShadow: state.isFocused ? '0 0 0 1px #3b82f6' : 'none',
+                      '&:hover': {
+                        borderColor: errors.department ? '#f87171' : '#3b82f6'
+                      }
+                    })
+                  }}
+                />
                 {errors.department && (
                   <p className="mt-1 text-sm text-red-600">{errors.department.message}</p>
                 )}
@@ -461,30 +467,63 @@ const EditUserPage: React.FC = () => {
               {/* Godown Assignment */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">Primary Godown</label>
-                <select
-                  value={selectedPrimaryGodownId}
-                  onChange={(e) => setSelectedPrimaryGodownId(e.target.value)}
-                  className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm border-gray-300 focus:border-blue-500"
-                >
-                  <option value="">Select primary godown</option>
-                  {godowns.map(g => (
-                    <option key={g._id} value={g._id}>{g.name} ({g.location.city}{g.location.area ? ` - ${g.location.area}` : ''})</option>
-                  ))}
-                </select>
+                <Select
+                  value={godowns.find(g => g._id === selectedPrimaryGodownId) ? { 
+                    value: selectedPrimaryGodownId, 
+                    label: `${godowns.find(g => g._id === selectedPrimaryGodownId)?.name} (${godowns.find(g => g._id === selectedPrimaryGodownId)?.location.city}${godowns.find(g => g._id === selectedPrimaryGodownId)?.location.area ? ` - ${godowns.find(g => g._id === selectedPrimaryGodownId)?.location.area}` : ''})`
+                  } : null}
+                  onChange={(option) => setSelectedPrimaryGodownId(option?.value || '')}
+                  options={godowns.map(g => ({ 
+                    value: g._id, 
+                    label: `${g.name} (${g.location.city}${g.location.area ? ` - ${g.location.area}` : ''})`
+                  }))}
+                  placeholder="Select primary godown"
+                  isClearable
+                  className="mt-1"
+                  classNamePrefix="react-select"
+                  styles={{
+                    control: (base, state) => ({
+                      ...base,
+                      borderColor: state.isFocused ? '#3b82f6' : '#d1d5db',
+                      boxShadow: state.isFocused ? '0 0 0 1px #3b82f6' : 'none',
+                      '&:hover': {
+                        borderColor: '#3b82f6'
+                      }
+                    })
+                  }}
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Accessible Godowns</label>
-                <select
-                  multiple
-                  value={selectedAccessibleGodownIds}
-                  onChange={(e) => setSelectedAccessibleGodownIds(Array.from(e.target.selectedOptions).map(o => o.value))}
-                  className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm border-gray-300 focus:border-blue-500 h-28"
-                >
-                  {godowns.map(g => (
-                    <option key={g._id} value={g._id}>{g.name} ({g.location.city}{g.location.area ? ` - ${g.location.area}` : ''})</option>
-                  ))}
-                </select>
+                <Select
+                  isMulti
+                  value={selectedAccessibleGodownIds.map(id => {
+                    const godown = godowns.find(g => g._id === id);
+                    return godown ? {
+                      value: id,
+                      label: `${godown.name} (${godown.location.city}${godown.location.area ? ` - ${godown.location.area}` : ''})`
+                    } : null;
+                  }).filter(Boolean)}
+                  onChange={(options) => setSelectedAccessibleGodownIds(options ? options.map(option => option.value) : [])}
+                  options={godowns.map(g => ({ 
+                    value: g._id, 
+                    label: `${g.name} (${g.location.city}${g.location.area ? ` - ${g.location.area}` : ''})`
+                  }))}
+                  placeholder="Select accessible godowns"
+                  className="mt-1"
+                  classNamePrefix="react-select"
+                  styles={{
+                    control: (base, state) => ({
+                      ...base,
+                      borderColor: state.isFocused ? '#3b82f6' : '#d1d5db',
+                      boxShadow: state.isFocused ? '0 0 0 1px #3b82f6' : 'none',
+                      '&:hover': {
+                        borderColor: '#3b82f6'
+                      }
+                    })
+                  }}
+                />
               </div>
             </div>
           </div>
