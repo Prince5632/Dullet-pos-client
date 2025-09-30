@@ -35,7 +35,10 @@ const OrdersPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [godowns, setGodowns] = useState<Godown[]>([]);
   const [godownFilter, setGodownFilter] = useState("");
-  const [viewType, setViewType] = useState<"orders" | "visits">("orders");
+  const [viewType, setViewType] = useState<"orders" | "visits">(() => {
+    const savedViewType = localStorage.getItem("ordersPage_viewType");
+    return (savedViewType === "visits" || savedViewType === "orders") ? savedViewType : "orders";
+  });
 
   // Common Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -197,6 +200,11 @@ const OrdersPage: React.FC = () => {
       } catch {}
     })();
   }, []);
+
+  // Persist viewType selection to localStorage
+  useEffect(() => {
+    localStorage.setItem("ordersPage_viewType", viewType);
+  }, [viewType]);
 
   // Reset page when filters change
   useEffect(() => {
