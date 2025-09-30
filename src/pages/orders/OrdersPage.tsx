@@ -22,6 +22,7 @@ import { API_CONFIG } from "../../config/api";
 import Table from "../../components/ui/Table";
 import Pagination from "../../components/ui/Pagination";
 import Avatar from "../../components/ui/Avatar";
+import Modal from "../../components/ui/Modal";
 import OrderStatusDropdown from "../../components/orders/OrderStatusDropdown";
 
 const OrdersPage: React.FC = () => {
@@ -68,6 +69,25 @@ const OrdersPage: React.FC = () => {
 
   // Debounced search
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // Image modal state
+  const [selectedImage, setSelectedImage] = useState<{
+    src: string;
+    title: string;
+  }>({ src: "", title: "" });
+  const [showImageModal, setShowImageModal] = useState(false);
+
+  const formatImageSrc = (imageData: string) => {
+    return imageData.startsWith("data:")
+      ? imageData
+      : `data:image/jpeg;base64,${imageData}`;
+  };
+
+  const handleViewImage = (imageData: string, title: string) => {
+    const formattedSrc = formatImageSrc(imageData);
+    setSelectedImage({ src: formattedSrc, title });
+    setShowImageModal(true);
+  };
 
   // Load data functions
   const loadOrders = useCallback(async () => {
@@ -362,14 +382,22 @@ const OrdersPage: React.FC = () => {
               </Link>
               {visit.capturedImage && (
                 <button
-                  onClick={() => {
-                    // TODO: Open image modal
-                    console.log("View image:", visit.capturedImage);
-                  }}
+                  onClick={() =>
+                    handleViewImage(
+                      visit.capturedImage,
+                      `Visit Image - ${
+                        visit.customer?.businessName || "Unknown Customer"
+                      }`
+                    )
+                  }
                   className="inline-flex items-center justify-center w-8 h-8 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-all duration-200"
                   title="View Image"
                 >
-                  📷
+                  <img
+                    src={formatImageSrc(visit.capturedImage)}
+                    alt="Check In"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                  />
                 </button>
               )}
             </div>
@@ -557,7 +585,7 @@ const OrdersPage: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              {hasPermission("orders.approve") && (
+              {hasPermission("orders.approve") && viewType === "orders" && (
                 <Link
                   to="/orders/approval"
                   className="relative inline-flex items-center justify-center px-2 py-1.5 border border-amber-200 text-xs font-medium rounded-lg text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
@@ -875,7 +903,7 @@ const OrdersPage: React.FC = () => {
             <div className="text-center py-8">
               <ClipboardDocumentListIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
               <h3 className="text-sm font-medium text-gray-900 mb-1">
-                No orders found
+                No {viewType === "orders" ? "orders" : "visits"} found
               </h3>
               <p className="text-xs text-gray-500 mb-4">
                 {statusFilter || searchTerm
@@ -1011,6 +1039,21 @@ const OrdersPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Image Modal */}
+      <Modal
+        isOpen={showImageModal}
+        onClose={() => setShowImageModal(false)}
+        title={selectedImage.title}
+      >
+        <div className="flex justify-center">
+          <img
+            src={selectedImage.src}
+            alt={selectedImage.title}
+            className="max-w-full max-h-96 object-contain rounded-lg"
+          />
+        </div>
+      </Modal>
     </div>
   );
 };
