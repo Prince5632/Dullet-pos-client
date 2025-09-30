@@ -333,7 +333,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
   const showOverlay = isLoading || !!error || reconnecting || !stablePlaying || !hasPermission;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/20 backdrop-blur-sm">
       <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
@@ -348,7 +348,6 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         <p className="text-sm text-gray-600 mb-4 text-center">{instructions}</p>
 
         <div className="relative bg-gray-900 rounded-lg overflow-hidden mb-4">
-          {/* Always mounted video element */}
           <div className="aspect-video relative">
             <video
               ref={videoRef}
