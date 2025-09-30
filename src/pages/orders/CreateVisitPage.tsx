@@ -32,6 +32,7 @@ interface LocationData {
   longitude: number;
   accuracy?: number;
   timestamp: number;
+  address?: string;
 }
 
 const CreateVisitPage: React.FC = () => {
@@ -45,8 +46,9 @@ const CreateVisitPage: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [location, setLocation] = useState<LocationData | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [manualAddress, setManualAddress] = useState<string>("");
   const [showCameraCapture, setShowCameraCapture] = useState(false);
-
   const {
     register,
     handleSubmit,
@@ -55,6 +57,33 @@ const CreateVisitPage: React.FC = () => {
   } = useForm<CreateVisitForm>({
     resolver: yupResolver(schema) as any,
   });
+
+  const getAddressFromCoordinates = async (
+    latitude: number,
+    longitude: number
+  ): Promise<string> => {
+    try {
+      setAddressLoading(true);
+      // Using OpenStreetMap Nominatim API for reverse geocoding (free service)
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch address");
+      }
+
+      const data = await response.json();
+      return (
+        data.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+      );
+    } catch (error) {
+      console.error("Error getting address:", error);
+      return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+    } finally {
+      setAddressLoading(false);
+    }
+  };
 
   const getCurrentLocation = () => {
     setLocationLoading(true);
@@ -66,16 +95,25 @@ const CreateVisitPage: React.FC = () => {
     }
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
+        // Get address from coordinates
+        const address = await getAddressFromCoordinates(latitude, longitude);
+
         const locationData: LocationData = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
+          latitude,
+          longitude,
           accuracy: position.coords.accuracy,
           timestamp: Date.now(),
+          address,
         };
+
         setLocation(locationData);
+        setManualAddress(address);
         setLocationLoading(false);
-        toast.success("Location captured successfully");
+        toast.success("Location and address captured successfully");
       },
       (error) => {
         console.error("Error getting location:", error);
@@ -90,7 +128,10 @@ const CreateVisitPage: React.FC = () => {
     );
   };
 
-  const handleCameraCapture = (imageData: string | null, imageFile: File | null) => {
+  const handleCameraCapture = (
+    imageData: string | null,
+    imageFile: File | null
+  ) => {
     if (imageData && imageFile) {
       setCapturedImage(imageFile);
       setImagePreview(imageData);
@@ -105,6 +146,16 @@ const CreateVisitPage: React.FC = () => {
   const removeImage = () => {
     setCapturedImage(null);
     setImagePreview(null);
+  };
+
+  const updateAddress = (newAddress: string) => {
+    setManualAddress(newAddress);
+    if (location) {
+      setLocation({
+        ...location,
+        address: newAddress,
+      });
+    }
   };
 
   const onSubmit = async (data: CreateVisitForm) => {
@@ -131,21 +182,8 @@ const CreateVisitPage: React.FC = () => {
         formData.append("notes", data.notes);
       }
 
-      // Create visit using fetch directly since we need to send FormData
-      const response = await fetch("/api/orders/visits", {
-        method: "POST",
-        body: formData,
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create visit");
-      }
-
-      const result = await response.json();
+      // Create visit using orderService
+      const result = await orderService.createVisit(formData);
       toast.success("Visit created successfully!");
       navigate(`/orders?view=visits`);
     } catch (error) {
@@ -198,7 +236,10 @@ const CreateVisitPage: React.FC = () => {
                 </h3>
                 <CustomerSelector
                   selectedCustomerId={selectedCustomerId}
-                  onCustomerChange={(customerId: string, customer: Customer | null) => {
+                  onCustomerChange={(
+                    customerId: string,
+                    customer: Customer | null
+                  ) => {
                     setSelectedCustomerId(customerId);
                     setSelectedCustomer(customer);
                     setValue("customer", customerId);
@@ -223,7 +264,7 @@ const CreateVisitPage: React.FC = () => {
                     <input
                       type="date"
                       {...register("scheduleDate")}
-                      
+                      min={new Date().toISOString().split("T")[0]} // disables past dates
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                     />
                     {errors.scheduleDate && (
@@ -323,7 +364,7 @@ const CreateVisitPage: React.FC = () => {
                 )}
 
                 {location && (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                       <div className="flex items-center text-green-800">
                         <MapPinIcon className="h-5 w-5 mr-2" />
@@ -339,13 +380,44 @@ const CreateVisitPage: React.FC = () => {
                         )}
                       </div>
                     </div>
+
+                    {/* Address Field */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Address
+                      </label>
+                      <div className="relative">
+                        <textarea
+                          value={manualAddress}
+                          onChange={(e) => updateAddress(e.target.value)}
+                          placeholder="Address will be automatically populated or enter manually"
+                          rows={3}
+                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors resize-none"
+                          disabled={true}
+                        />
+                        {addressLoading && (
+                          <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg">
+                            <div className="flex items-center text-sm text-gray-600">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-500 mr-2"></div>
+                              Getting address...
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Address is automatically detected from coordinates but
+                        can be edited manually
+                      </p>
+                    </div>
+
                     <button
                       type="button"
                       onClick={getCurrentLocation}
-                      disabled={locationLoading}
-                      className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                      disabled={locationLoading || addressLoading}
+                      className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors disabled:opacity-50"
                     >
-                      Update Location
+                      <MapPinIcon className="h-4 w-4 mr-2" />
+                      {locationLoading ? "Updating..." : "Update Location"}
                     </button>
                   </div>
                 )}

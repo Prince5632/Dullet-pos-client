@@ -38,6 +38,8 @@ export const API_CONFIG = {
     ORDER_RECORD_DELIVERY: (id: string) => `/api/orders/${id}/record-delivery`,
     CUSTOMER_ORDER_HISTORY: (customerId: string) => `/api/orders/customer/${customerId}/history`,
     ORDER_STATS: '/api/orders/stats/summary',
+    // Visit endpoints
+    CREATE_VISIT: '/api/orders/visits',
     // Quick-order endpoints
     QUICK_PRODUCTS: '/api/orders/quick/products',
     QUICK_ORDER: '/api/orders/quick',

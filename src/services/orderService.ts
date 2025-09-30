@@ -86,6 +86,24 @@ class OrderService {
     throw new Error(response.message || 'Failed to create order');
   }
 
+  // Create new visit
+  async createVisit(visitData: FormData): Promise<Order> {
+    const response = await apiService.post<{ visit: Order }>(
+      API_CONFIG.ENDPOINTS.CREATE_VISIT,
+      visitData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+
+    if (response.success && response.data) {
+      return response.data.visit;
+    }
+    throw new Error(response.message || 'Failed to create visit');
+  }
+
   // Quick-order: get catalog
   async getQuickProducts(): Promise<QuickProduct[]> {
     const response = await apiService.get<{ products: QuickProduct[] }>(API_CONFIG.ENDPOINTS.QUICK_PRODUCTS);
