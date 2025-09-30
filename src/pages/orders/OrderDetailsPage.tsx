@@ -143,31 +143,31 @@ const OrderDetailsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+      {/* Compact Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="px-3 sm:px-4 py-2.5 sm:py-3">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => navigate('/orders')}
-                className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+                className="p-1.5 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
               >
                 <ArrowLeftIcon className="h-5 w-5" />
               </button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Order {order.orderNumber}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
+                  {order.orderNumber}
                 </h1>
-                <div className="flex items-center gap-3 mt-1">
-                  <Badge className={currentStatusInfo.color}>
-                    <currentStatusInfo.icon className="h-3 w-3 mr-1" />
-                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <Badge className={`${currentStatusInfo.color} text-[10px] px-1.5 py-0.5`}>
+                    <currentStatusInfo.icon className="h-3 w-3 mr-0.5" />
+                    {order.status}
                   </Badge>
-                  <span className="text-sm text-gray-500">
-                    Created {orderService.formatDate(order.orderDate)}
+                  <span className="text-[10px] text-gray-500">
+                    {orderService.formatDate(order.orderDate)}
                   </span>
                   {order.godown && (
-                    <span className="text-sm text-gray-500">
+                    <span className="text-[10px] text-gray-500">
                       • {order.godown.name}
                     </span>
                   )}
@@ -175,7 +175,7 @@ const OrderDetailsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
               {hasPermission('orders.update') && (
                 <OrderStatusDropdown
                   order={order}
@@ -184,25 +184,25 @@ const OrderDetailsPage: React.FC = () => {
               )}
               <button
                 onClick={handleShare}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-lg shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+                className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors flex-shrink-0"
               >
-                <ShareIcon className="h-4 w-4 mr-2" />
-                Share
+                <ShareIcon className="h-3.5 w-3.5 sm:mr-1" />
+                <span className="hidden sm:inline">Share</span>
               </button>
               <button
                 onClick={handlePrint}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-lg shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+                className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors flex-shrink-0"
               >
-                <PrinterIcon className="h-4 w-4 mr-2" />
-                Print
+                <PrinterIcon className="h-3.5 w-3.5 sm:mr-1" />
+                <span className="hidden sm:inline">Print</span>
               </button>
               {hasPermission('orders.update') && (
                 <Link
                   to={`/orders/${order._id}/edit`}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors flex-shrink-0"
                 >
-                  <PencilIcon className="h-4 w-4 mr-2" />
-                  Edit Order
+                  <PencilIcon className="h-3.5 w-3.5 sm:mr-1" />
+                  <span className="hidden sm:inline">Edit</span>
                 </Link>
               )}
             </div>
@@ -211,48 +211,48 @@ const OrderDetailsPage: React.FC = () => {
       </div>
 
       {/* Content */}
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="px-3 sm:px-4 py-3 sm:py-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-3 sm:space-y-4">
             {/* Customer Information */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <UserIcon className="h-5 w-5 mr-2 text-blue-600" />
-                  Customer Information
+              <div className="px-3 sm:px-4 py-2.5 border-b border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                  <UserIcon className="h-4 w-4 mr-1.5 text-blue-600" />
+                  Customer
                 </h3>
               </div>
-              <div className="p-6">
-                <div className="flex items-start gap-4">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start gap-3">
                   <Avatar 
                     name={order.customer?.businessName || 'Customer'} 
-                    size="lg" 
+                    size="md" 
                   />
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-lg font-medium text-gray-900">
+                    <h4 className="text-sm font-medium text-gray-900">
                       {order.customer?.businessName || 'N/A'}
                     </h4>
-                    <p className="text-sm text-gray-600 mb-3">
+                    <p className="text-xs text-gray-600 mb-2">
                       {order.customer?.contactPersonName || 'N/A'}
                     </p>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {order.customer?.phone && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <PhoneIcon className="h-4 w-4 mr-2 text-gray-400" />
+                        <div className="flex items-center text-xs text-gray-600">
+                          <PhoneIcon className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
                           {order.customer.phone}
                         </div>
                       )}
                       {order.customer?.email && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <EnvelopeIcon className="h-4 w-4 mr-2 text-gray-400" />
+                        <div className="flex items-center text-xs text-gray-600">
+                          <EnvelopeIcon className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
                           {order.customer.email}
                         </div>
                       )}
                       {order.customer?.address && (
-                        <div className="flex items-start text-sm text-gray-600 sm:col-span-2">
-                          <MapPinIcon className="h-4 w-4 mr-2 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex items-start text-xs text-gray-600 sm:col-span-2">
+                          <MapPinIcon className="h-3.5 w-3.5 mr-1.5 text-gray-400 mt-0.5 flex-shrink-0" />
                           <span>
                             {[
                               order.customer.address.street,
@@ -270,91 +270,121 @@ const OrderDetailsPage: React.FC = () => {
 
             {/* Order Items */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <DocumentTextIcon className="h-5 w-5 mr-2 text-blue-600" />
-                  Order Items
+              <div className="px-3 sm:px-4 py-2.5 border-b border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                  <DocumentTextIcon className="h-4 w-4 mr-1.5 text-blue-600" />
+                  Items
                 </h3>
               </div>
-              <div className="overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Product
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Quantity
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Rate
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Amount
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {order.items?.map((item, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {item.productName}
-                            </div>
-                            {item.packaging && (
-                              <div className="text-sm text-gray-500">
-                                Packaging: {item.packaging}
-                              </div>
-                            )}
+              <div className="p-3 sm:p-0">
+                {/* Mobile: Card view */}
+                <div className="sm:hidden space-y-2">
+                  {order.items?.map((item, index) => (
+                    <div key={index} className="p-2.5 border border-gray-200 rounded-lg">
+                      <div className="flex justify-between items-start mb-1">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-medium text-gray-900 truncate">
+                            {item.productName}
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {item.quantity} {item.unit}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {orderService.formatCurrency(item.ratePerUnit)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {item.packaging && (
+                            <div className="text-[10px] text-gray-500">
+                              {item.packaging}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-xs font-semibold text-gray-900">
                           {orderService.formatCurrency(item.totalAmount)}
-                        </td>
+                        </div>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-gray-600">
+                        <span>{item.quantity} {item.unit}</span>
+                        <span>@ {orderService.formatCurrency(item.ratePerUnit)}/unit</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop: Table view */}
+                <div className="hidden sm:block overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">
+                          Product
+                        </th>
+                        <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">
+                          Quantity
+                        </th>
+                        <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">
+                          Rate
+                        </th>
+                        <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">
+                          Amount
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {order.items?.map((item, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="px-4 py-2.5">
+                            <div>
+                              <div className="text-xs font-medium text-gray-900">
+                                {item.productName}
+                              </div>
+                              {item.packaging && (
+                                <div className="text-[10px] text-gray-500">
+                                  {item.packaging}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-gray-900">
+                            {item.quantity} {item.unit}
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-gray-900">
+                            {orderService.formatCurrency(item.ratePerUnit)}
+                          </td>
+                          <td className="px-4 py-2.5 text-xs font-medium text-gray-900">
+                            {orderService.formatCurrency(item.totalAmount)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 
             {/* Delivery Information */}
             {(order.status === 'delivered' || order.status === 'completed') && (order.driverAssignment || order.signatures || order.settlements) && (
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-sm border border-green-200">
-                <div className="px-4 sm:px-6 py-4 border-b border-green-200 bg-green-100/50">
-                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                    <CheckCircleIcon className="h-5 w-5 mr-2 text-green-600" />
+                <div className="px-3 sm:px-4 py-2.5 border-b border-green-200 bg-green-100/50">
+                  <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                    <CheckCircleIcon className="h-4 w-4 mr-1.5 text-green-600" />
                     Delivery Confirmation
                   </h3>
                   {order.driverAssignment?.deliveryAt && (
-                    <p className="text-sm text-gray-600 mt-1">
-                      Completed on {orderService.formatDate(order.driverAssignment.deliveryAt)}
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      {orderService.formatDate(order.driverAssignment.deliveryAt)}
                     </p>
                   )}
                 </div>
                 
-                <div className="p-4 sm:p-6 space-y-6">
+                <div className="p-3 sm:p-4 space-y-3">
                   {/* Driver Information */}
                   {order.driverAssignment?.driver && (
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                      <div className="flex items-center gap-3 mb-3">
-                        <TruckIcon className="h-5 w-5 text-blue-600" />
-                        <h4 className="text-sm font-semibold text-gray-900">Delivered By</h4>
+                    <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <TruckIcon className="h-4 w-4 text-blue-600" />
+                        <h4 className="text-xs font-semibold text-gray-900">Delivered By</h4>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Avatar name={order.driverAssignment.driver.fullName || 'Driver'} size="md" />
+                      <div className="flex items-center gap-2">
+                        <Avatar name={order.driverAssignment.driver.fullName || 'Driver'} size="sm" />
                         <div>
-                          <p className="font-medium text-gray-900">{order.driverAssignment.driver.fullName}</p>
-                          <p className="text-sm text-gray-600">{order.driverAssignment.driver.email}</p>
+                          <p className="text-xs font-medium text-gray-900">{order.driverAssignment.driver.fullName}</p>
+                          <p className="text-[10px] text-gray-600">{order.driverAssignment.driver.email}</p>
                           {order.driverAssignment.driver.phone && (
-                            <p className="text-sm text-gray-500">{order.driverAssignment.driver.phone}</p>
+                            <p className="text-[10px] text-gray-500">{order.driverAssignment.driver.phone}</p>
                           )}
                         </div>
                       </div>
@@ -363,28 +393,28 @@ const OrderDetailsPage: React.FC = () => {
 
                   {/* Settlement Information */}
                   {order.settlements && order.settlements.length > 0 && (
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                      <div className="flex items-center gap-3 mb-3">
-                        <CurrencyRupeeIcon className="h-5 w-5 text-green-600" />
-                        <h4 className="text-sm font-semibold text-gray-900">Payment Settlement</h4>
+                    <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CurrencyRupeeIcon className="h-4 w-4 text-green-600" />
+                        <h4 className="text-xs font-semibold text-gray-900">Payment Settlement</h4>
                       </div>
                       {order.settlements.map((settlement, idx) => (
-                        <div key={idx} className="space-y-2">
+                        <div key={idx} className="space-y-1.5">
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-600">Amount Collected</span>
-                            <span className="text-lg font-bold text-green-600">
+                            <span className="text-xs text-gray-600">Collected</span>
+                            <span className="text-base font-bold text-green-600">
                               {orderService.formatCurrency(settlement.amountCollected || 0)}
                             </span>
                           </div>
                           {settlement.notes && (
-                            <div className="bg-gray-50 rounded p-3 mt-2">
-                              <p className="text-xs font-medium text-gray-700 mb-1">Settlement Notes</p>
-                              <p className="text-sm text-gray-600">{settlement.notes}</p>
+                            <div className="bg-gray-50 rounded p-2 mt-1.5">
+                              <p className="text-[10px] font-medium text-gray-700 mb-0.5">Notes</p>
+                              <p className="text-xs text-gray-600">{settlement.notes}</p>
                             </div>
                           )}
                           {settlement.recordedAt && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              Recorded {orderService.formatDate(settlement.recordedAt)}
+                            <p className="text-[10px] text-gray-500 mt-0.5">
+                              {orderService.formatDate(settlement.recordedAt)}
                             </p>
                           )}
                         </div>
@@ -425,54 +455,54 @@ const OrderDetailsPage: React.FC = () => {
 
                   {/* Signatures */}
                   {(order.signatures?.driver || order.signatures?.receiver) && (
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                      <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
-                        <PencilIcon className="h-4 w-4 mr-2 text-purple-600" />
-                        Digital Signatures
+                    <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                      <h4 className="text-xs font-semibold text-gray-900 mb-2.5 flex items-center">
+                        <PencilIcon className="h-3.5 w-3.5 mr-1.5 text-purple-600" />
+                        Signatures
                       </h4>
                       
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         {/* Driver Signature */}
                         {order.signatures.driver && (
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <TruckIcon className="h-4 w-4 text-blue-600" />
-                              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Driver Signature</p>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <TruckIcon className="h-3.5 w-3.5 text-blue-600" />
+                              <p className="text-[10px] font-semibold text-gray-700 uppercase">Driver</p>
                             </div>
-                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-3 border-2 border-dashed border-blue-200">
+                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-2 border-2 border-dashed border-blue-200">
                               <img 
                                 src={order.signatures.driver} 
                                 alt="Driver Signature"
-                                className="w-full h-auto max-h-32 object-contain"
+                                className="w-full h-auto max-h-24 object-contain"
                               />
                             </div>
-                            <p className="text-xs text-gray-500 text-center">Signed by {order.driverAssignment?.driver?.fullName || 'Driver'}</p>
+                            <p className="text-[10px] text-gray-500 text-center">{order.driverAssignment?.driver?.fullName || 'Driver'}</p>
                           </div>
                         )}
 
                         {/* Customer Signature */}
                         {order.signatures.receiver && (
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <UserIcon className="h-4 w-4 text-green-600" />
-                              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Customer Signature</p>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <UserIcon className="h-3.5 w-3.5 text-green-600" />
+                              <p className="text-[10px] font-semibold text-gray-700 uppercase">Customer</p>
                             </div>
-                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border-2 border-dashed border-green-200">
+                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-2 border-2 border-dashed border-green-200">
                               <img 
                                 src={order.signatures.receiver} 
                                 alt="Customer Signature"
-                                className="w-full h-auto max-h-32 object-contain"
+                                className="w-full h-auto max-h-24 object-contain"
                               />
                             </div>
-                            <p className="text-xs text-gray-500 text-center">Received by {order.customer?.contactPersonName || 'Customer'}</p>
+                            <p className="text-[10px] text-gray-500 text-center">{order.customer?.contactPersonName || 'Customer'}</p>
                           </div>
                         )}
                       </div>
                       
-                      <div className="mt-4 pt-4 border-t border-gray-200">
-                        <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-                          <CheckCircleIcon className="h-4 w-4 text-green-600" />
-                          <span>Digitally signed and verified</span>
+                      <div className="mt-2.5 pt-2.5 border-t border-gray-200">
+                        <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-500">
+                          <CheckCircleIcon className="h-3.5 w-3.5 text-green-600" />
+                          <span>Verified</span>
                         </div>
                       </div>
                     </div>
@@ -484,22 +514,22 @@ const OrderDetailsPage: React.FC = () => {
             {/* Order Notes */}
             {(order.notes || order.internalNotes) && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-900">Notes</h3>
+                <div className="px-3 sm:px-4 py-2.5 border-b border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-900">Notes</h3>
                 </div>
-                <div className="p-6 space-y-4">
+                <div className="p-3 sm:p-4 space-y-2.5">
                   {order.notes && (
                     <div>
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Customer Notes</h4>
-                      <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                      <h4 className="text-xs font-medium text-gray-900 mb-1">Customer Notes</h4>
+                      <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded-lg">
                         {order.notes}
                       </p>
                     </div>
                   )}
                   {order.internalNotes && hasPermission('orders.read') && (
                     <div>
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Internal Notes</h4>
-                      <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                      <h4 className="text-xs font-medium text-gray-900 mb-1">Internal Notes</h4>
+                      <p className="text-xs text-gray-600 bg-blue-50 p-2 rounded-lg">
                         {order.internalNotes}
                       </p>
                     </div>
@@ -510,65 +540,65 @@ const OrderDetailsPage: React.FC = () => {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-3 sm:space-y-4">
             {/* Order Summary */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <CurrencyRupeeIcon className="h-5 w-5 mr-2 text-blue-600" />
-                  Order Summary
+              <div className="px-3 sm:px-4 py-2.5 border-b border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                  <CurrencyRupeeIcon className="h-4 w-4 mr-1.5 text-blue-600" />
+                  Summary
                 </h3>
               </div>
-              <div className="p-6 space-y-4">
-                <div className="flex justify-between text-sm">
+              <div className="p-3 sm:p-4 space-y-2.5">
+                <div className="flex justify-between text-xs">
                   <span className="text-gray-600">Subtotal</span>
                   <span className="font-medium">{orderService.formatCurrency(order.subtotal)}</span>
                 </div>
                 {order.taxAmount > 0 && (
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between text-xs">
                     <span className="text-gray-600">Tax</span>
                     <span className="font-medium">{orderService.formatCurrency(order.taxAmount)}</span>
                   </div>
                 )}
-                <div className="border-t border-gray-200 pt-4">
+                <div className="border-t border-gray-200 pt-2.5">
                   <div className="flex justify-between">
-                    <span className="text-base font-medium text-gray-900">Total</span>
-                    <span className="text-lg font-bold text-gray-900">
+                    <span className="text-sm font-medium text-gray-900">Total</span>
+                    <span className="text-base font-bold text-gray-900">
                       {orderService.formatCurrency(order.totalAmount)}
                     </span>
                   </div>
                 </div>
                 
-                <div className="mt-6 pt-6 border-t border-gray-200 space-y-3">
+                <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
                   {order.paymentTerms !== 'Cash' && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Payment Terms</span>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-600">Terms</span>
                       <span className="font-medium">{order.paymentTerms}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Payment Status</span>
-                    <Badge className={orderService.getPaymentStatusColor(paymentStatusDisplay)}>
-                      {paymentStatusDisplay.charAt(0).toUpperCase() + paymentStatusDisplay.slice(1)}
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-600">Status</span>
+                    <Badge className={`${orderService.getPaymentStatusColor(paymentStatusDisplay)} text-[10px] px-1.5 py-0.5`}>
+                      {paymentStatusDisplay}
                     </Badge>
                   </div>
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between text-xs">
                     <span className="text-gray-600">Paid</span>
                     <span className="font-medium">{orderService.formatCurrency(paidDisplay || 0)}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between text-xs">
                     <span className="text-gray-600">Remaining</span>
-                    <span className="font-medium">{orderService.formatCurrency(remainingDisplay)}</span>
+                    <span className="font-medium text-orange-600">{orderService.formatCurrency(remainingDisplay)}</span>
                   </div>
                   {order.priority !== 'normal' && (
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-xs">
                       <span className="text-gray-600">Priority</span>
-                      <Badge className={
+                      <Badge className={`${
                         order.priority === 'urgent' ? 'bg-red-100 text-red-800' :
                         order.priority === 'high' ? 'bg-orange-100 text-orange-700' :
                         'bg-gray-100 text-gray-700'
-                      }>
-                        {order.priority.charAt(0).toUpperCase() + order.priority.slice(1)}
+                      } text-[10px] px-1.5 py-0.5`}>
+                        {order.priority}
                       </Badge>
                     </div>
                   )}

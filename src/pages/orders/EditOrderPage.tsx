@@ -159,41 +159,41 @@ const EditOrderPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
-      {/* Mobile-optimized Header */}
+      {/* Compact Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 max-w-screen-2xl mx-auto">
-          <div className="flex items-center gap-3 sm:gap-4">
+        <div className="px-3 sm:px-4 py-2.5 sm:py-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => navigate(`/orders/${order._id}`)}
-              className="inline-flex items-center p-2 rounded-lg text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+              className="p-1.5 rounded-lg text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors"
             >
               <ArrowLeftIcon className="h-5 w-5" />
             </button>
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
-                Edit Order {order.orderNumber}
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
+                Edit {order.orderNumber}
               </h1>
-              <p className="hidden sm:block mt-1 text-sm text-gray-600">
-                Modify items and order details
+              <p className="hidden sm:block text-xs text-gray-600">
+                Modify order details
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-screen-2xl mx-auto">
-        <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4 sm:space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 w-full">
+      <div className="px-3 sm:px-4 py-3 sm:py-4">
+        <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-3 sm:space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
             {/* Main Form */}
-            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+            <div className="lg:col-span-2 space-y-3 sm:space-y-4">
               {/* Customer Info (Read-only) */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
-                  <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
                   Customer
                 </h3>
-                <div className="p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-100">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
+                <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                     <div>
                       <span className="font-medium text-gray-700">Business:</span>
                       <p className="text-gray-900">{order.customer?.businessName}</p>
@@ -205,21 +205,21 @@ const EditOrderPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <p className="mt-2 text-xs text-gray-500">
-                  Customer cannot be changed when editing an order
+                <p className="mt-1.5 text-[10px] text-gray-500">
+                  Customer cannot be changed
                 </p>
               </div>
 
               {/* Godown Info (Read-only) */}
               {order.godown && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
-                    <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
                     Godown
                   </h3>
-                  <div className="p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-100">
-                    <p className="text-sm font-medium text-gray-900">{order.godown.name}</p>
-                    <p className="text-sm text-gray-600 mt-1">
+                  <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-100">
+                    <p className="text-xs font-medium text-gray-900">{order.godown.name}</p>
+                    <p className="text-[10px] text-gray-600 mt-0.5">
                       {order.godown.location.city}
                       {order.godown.location.area && `, ${order.godown.location.area}`}
                     </p>
@@ -228,9 +228,9 @@ const EditOrderPage: React.FC = () => {
               )}
 
               {/* Order Items */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
-                  <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
                   Items
                 </h3>
                 <OrderItemEditor
@@ -240,16 +240,16 @@ const EditOrderPage: React.FC = () => {
               </div>
 
               {/* Order Details */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
-                  <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
                   Details
                 </h3>
 
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">
                         Payment Terms <span className="text-red-500">*</span>
                       </label>
                       <select
@@ -324,21 +324,21 @@ const EditOrderPage: React.FC = () => {
 
             {/* Order Summary Sidebar */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 sticky top-20">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 sticky top-16">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
                   Summary
                 </h3>
 
-                <div className="space-y-4">
-                  <div className="flex justify-between text-sm">
+                <div className="space-y-3">
+                  <div className="flex justify-between text-xs">
                     <span className="text-gray-600">Subtotal</span>
                     <span className="font-medium">{orderService.formatCurrency(calculateSubtotal())}</span>
                   </div>
 
                   {/* Discount */}
-                  <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
-                    <div className="text-sm font-medium text-gray-700">Discount</div>
+                  <div className="space-y-2 p-2.5 bg-gray-50 rounded-lg">
+                    <div className="text-xs font-medium text-gray-700">Discount</div>
                     <div className="flex items-center gap-2">
                       <input
                         type="number"
@@ -365,7 +365,7 @@ const EditOrderPage: React.FC = () => {
                   </div>
 
                   {/* Tax */}
-                  <div className="flex justify-between items-center text-sm">
+                  <div className="flex justify-between items-center text-xs">
                     <span className="text-gray-600">Tax</span>
                     <div className="flex items-center gap-1">
                       <span className="text-gray-500">₹</span>
@@ -380,19 +380,19 @@ const EditOrderPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="border-t border-gray-200 pt-4">
-                    <div className="flex justify-between text-lg font-semibold">
+                  <div className="border-t border-gray-200 pt-3">
+                    <div className="flex justify-between text-base font-semibold">
                       <span className="text-gray-900">Total</span>
                       <span className="text-emerald-600">{orderService.formatCurrency(totalAmount)}</span>
                     </div>
                   </div>
 
                   {/* Payment Section */}
-                  <div className="border-t border-gray-200 pt-4 space-y-3">
-                    <h4 className="text-sm font-medium text-gray-900">Payment</h4>
+                  <div className="border-t border-gray-200 pt-3 space-y-2">
+                    <h4 className="text-xs font-medium text-gray-900">Payment</h4>
                     
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center text-sm">
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center text-xs">
                         <span className="text-gray-600">Paid Amount</span>
                         <div className="flex items-center gap-1">
                           <span className="text-gray-500">₹</span>
@@ -407,25 +407,25 @@ const EditOrderPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex justify-between text-sm">
+                      <div className="flex justify-between text-xs">
                         <span className="text-gray-600">Remaining</span>
                         <span className="font-medium text-orange-600">
                           {orderService.formatCurrency(remainingAmount)}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2 pt-2">
+                      <div className="flex items-center gap-1.5 pt-1.5">
                         <button
                           type="button"
                           onClick={() => setValue('paidAmount', totalAmount)}
-                          className="flex-1 px-3 py-1.5 text-xs font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
+                          className="flex-1 px-2 py-1.5 text-[10px] font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 transition-colors active:scale-95"
                         >
-                          Mark as Paid
+                          Mark Paid
                         </button>
                         <button
                           type="button"
                           onClick={() => setValue('paidAmount', 0)}
-                          className="flex-1 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                          className="flex-1 px-2 py-1.5 text-[10px] font-medium rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors active:scale-95"
                         >
                           Clear
                         </button>
@@ -435,11 +435,11 @@ const EditOrderPage: React.FC = () => {
                 </div>
 
                 {/* Desktop Action Buttons */}
-                <div className="hidden lg:block mt-6 space-y-3">
+                <div className="hidden lg:block mt-4 space-y-2">
                   <button
                     type="submit"
                     disabled={saving || orderItems.length === 0}
-                    className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                    className="w-full flex justify-center items-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   >
                     {saving ? (
                       <>
@@ -454,7 +454,7 @@ const EditOrderPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => navigate(`/orders/${order._id}`)}
-                    className="w-full py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200"
+                    className="w-full py-2.5 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200"
                   >
                     Cancel
                   </button>
@@ -465,12 +465,12 @@ const EditOrderPage: React.FC = () => {
         </form>
 
         {/* Mobile Bottom Action Bar */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20 safe-area-inset-bottom">
-          <div className="px-4 py-4 max-w-screen-2xl mx-auto w-full">
-            <div className="flex items-center justify-between gap-3">
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20 safe-area-inset-bottom shadow-lg">
+          <div className="px-3 py-3">
+            <div className="flex items-center justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <div className="text-xs text-gray-500 mb-1">Total Amount</div>
-                <div className="text-lg font-semibold text-emerald-600 truncate">
+                <div className="text-[10px] text-gray-500 mb-0.5">Total Amount</div>
+                <div className="text-base font-bold text-emerald-600 truncate">
                   {orderService.formatCurrency(totalAmount)}
                 </div>
               </div>
@@ -478,7 +478,7 @@ const EditOrderPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => navigate(`/orders/${order._id}`)}
-                  className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
                 >
                   Cancel
                 </button>
@@ -486,7 +486,7 @@ const EditOrderPage: React.FC = () => {
                   type="submit"
                   disabled={saving || orderItems.length === 0}
                   onClick={handleSubmit(onSubmit as any)}
-                  className="px-6 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center whitespace-nowrap"
+                  className="px-4 py-2 border border-transparent rounded-lg text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center whitespace-nowrap"
                 >
                   {saving ? (
                     <>
@@ -503,7 +503,7 @@ const EditOrderPage: React.FC = () => {
         </div>
 
         {/* Mobile Bottom Padding */}
-        <div className="lg:hidden h-20"></div>
+        <div className="lg:hidden h-16"></div>
       </div>
     </div>
   );
