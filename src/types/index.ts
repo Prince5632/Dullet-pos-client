@@ -337,6 +337,12 @@ export interface Order {
   godown?: Godown;
   remainingAmount?: number;
   orderAge?: number;
+  capturedImage?: string;
+  captureLocation?: {
+    latitude?: number;
+    longitude?: number;
+    address?: string;
+  };
 }
 
 export interface CreateOrderForm {

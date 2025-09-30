@@ -101,7 +101,7 @@ interface Visit {
 const EditVisitPage: React.FC = () => {
   const { visitId } = useParams<{ visitId: string }>();
   const navigate = useNavigate();
-  const [visit, setVisit] = useState<Visit | null>(null);
+  const [visit, setVisit] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -117,11 +117,6 @@ const EditVisitPage: React.FC = () => {
   } = useForm<VisitFormData>({
     resolver: yupResolver(visitSchema),
   });
-
-  const watchedScheduleDate = watch("scheduleDate");
-  const watchedNotes = watch("notes");
-  const watchedAddress = watch("address");
-
   useEffect(() => {
     if (!visitId) {
       setError("Visit ID is required");
@@ -141,11 +136,11 @@ const EditVisitPage: React.FC = () => {
 
       // Populate form with visit data
       reset({
-        scheduleDate: visitData.scheduleDate
-          ? visitData.scheduleDate.split("T")[0]
+        scheduleDate: visitData?.scheduleDate
+          ? visitData?.scheduleDate?.split("T")[0]
           : "",
-        notes: visitData.notes || "",
-        address: visitData.captureLocation?.address || "",
+        notes: visitData?.notes || "",
+        address: visitData?.captureLocation?.address || "",
       });
     } catch (err: any) {
       console.error("Error loading visit:", err);
@@ -425,7 +420,7 @@ const EditVisitPage: React.FC = () => {
                       onClick={() =>
                         handleViewImage(visit.capturedImage, "Visit Image")
                       }
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                      className="inline-flex cursor-pointer items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
                     >
                       <CameraIcon className="h-4 w-4 mr-2" />
                       View Image
@@ -444,7 +439,7 @@ const EditVisitPage: React.FC = () => {
                     </h3>
                   </div>
                   <div className="p-3 sm:p-4 space-y-4">
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    {/* <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                       <div className="flex items-center text-green-800 mb-2">
                         <MapPinIcon className="h-4 w-4 mr-2" />
                         <span className="text-xs font-medium">
@@ -463,7 +458,7 @@ const EditVisitPage: React.FC = () => {
                           {formatDate(visit.captureLocation.timestamp)}
                         </div>
                       </div>
-                    </div>
+                    </div> */}
 
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1.5">

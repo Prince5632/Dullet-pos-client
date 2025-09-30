@@ -136,8 +136,13 @@ class OrderService {
   }
 
   // Quick-order: create order
-  async createQuickOrder(data: CreateQuickOrderForm): Promise<Order> {
-    const response = await apiService.post<{ order: Order }>(API_CONFIG.ENDPOINTS.QUICK_ORDER, data);
+  async createQuickOrder(data: CreateQuickOrderForm | FormData): Promise<Order> {
+    const headers = data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : {};
+    const response = await apiService.post<{ order: Order }>(
+      API_CONFIG.ENDPOINTS.QUICK_ORDER, 
+      data,
+      { headers }
+    );
     if (response.success && response.data) {
       return response.data.order;
     }

@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeftIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, XMarkIcon, CameraIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { orderService } from '../../services/orderService';
 import CustomerSelector from '../../components/customers/CustomerSelector';
+import CameraCapture from '../../components/common/CameraCapture';
 import type { QuickProduct, CreateQuickOrderForm, Customer, Godown } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiService } from '../../services/api';
@@ -18,6 +19,14 @@ type SelectedItem = {
   quantityKg?: number;
   packaging?: 'Standard' | 'Custom' | '5kg Bags' | '10kg Bags' | '25kg Bags' | '50kg Bags' | 'Loose';
 };
+
+interface LocationData {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  timestamp: number;
+  address?: string;
+}
 
 // Helper function to format currency in full digits
 const formatCurrency = (amount: number): string => {
@@ -66,6 +75,15 @@ const QuickOrderPage: React.FC = () => {
   const [godowns, setGodowns] = useState<Godown[]>([]);
   const [selectedGodownId, setSelectedGodownId] = useState<string>('');
 
+  // Image and Location capture
+  const [capturedImage, setCapturedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [location, setLocation] = useState<LocationData | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [manualAddress, setManualAddress] = useState<string>("");
+  const [showCameraCapture, setShowCameraCapture] = useState(false);
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -99,6 +117,106 @@ const QuickOrderPage: React.FC = () => {
 
   const handleCustomerChange = (customerId: string, _customer: Customer | null) => {
     setSelectedCustomerId(customerId);
+  };
+
+  const getAddressFromCoordinates = async (
+    latitude: number,
+    longitude: number
+  ): Promise<string> => {
+    try {
+      setAddressLoading(true);
+      // Using OpenStreetMap Nominatim API for reverse geocoding (free service)
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch address");
+      }
+
+      const data = await response.json();
+      return (
+        data.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+      );
+    } catch (error) {
+      console.error("Error getting address:", error);
+      return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+    } finally {
+      setAddressLoading(false);
+    }
+  };
+
+  const getCurrentLocation = () => {
+    setLocationLoading(true);
+
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by this browser");
+      setLocationLoading(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
+        // Get address from coordinates
+        const address = await getAddressFromCoordinates(latitude, longitude);
+
+        const locationData: LocationData = {
+          latitude,
+          longitude,
+          accuracy: position.coords.accuracy,
+          timestamp: Date.now(),
+          address,
+        };
+
+        setLocation(locationData);
+        setManualAddress(address);
+        setLocationLoading(false);
+        toast.success("Location and address captured successfully");
+      },
+      (error) => {
+        console.error("Error getting location:", error);
+        toast.error("Failed to get location. Please try again.");
+        setLocationLoading(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000,
+      }
+    );
+  };
+
+  const handleCameraCapture = (
+    imageData: string | null,
+    imageFile: File | null
+  ) => {
+    if (imageData && imageFile) {
+      setCapturedImage(imageFile);
+      setImagePreview(imageData);
+      toast.success("Photo captured successfully");
+    }
+  };
+
+  const handleCameraClose = () => {
+    setShowCameraCapture(false);
+  };
+
+  const removeImage = () => {
+    setCapturedImage(null);
+    setImagePreview(null);
+  };
+
+  const updateAddress = (newAddress: string) => {
+    setManualAddress(newAddress);
+    if (location) {
+      setLocation({
+        ...location,
+        address: newAddress,
+      });
+    }
   };
 
   const openQtyModal = (product: QuickProduct) => {
@@ -147,7 +265,7 @@ const QuickOrderPage: React.FC = () => {
     return itemsArray.reduce((sum, it) => sum + computeItemKg(it) * it.product.pricePerKg, 0);
   }, [itemsArray]);
 
-  const canSubmit = selectedCustomerId && itemsArray.length > 0 && !creating;
+  const canSubmit = selectedCustomerId && itemsArray.length > 0 && capturedImage && location && !creating;
 
   const handleCreate = async () => {
     try {
@@ -159,25 +277,37 @@ const QuickOrderPage: React.FC = () => {
         toast.error('Add at least one item');
         return;
       }
+      if (!capturedImage) {
+        toast.error('Please capture an image');
+        return;
+      }
+      if (!location) {
+        toast.error('Please capture location');
+        return;
+      }
       setCreating(true);
 
       const paymentStatus: 'pending' | 'partial' | 'paid' = paidAmount >= totalAmount ? 'paid' : (paidAmount > 0 ? 'partial' : 'pending');
 
-      const payload: CreateQuickOrderForm = {
-        customer: selectedCustomerId,
-        items: itemsArray.map(it => ({
-          productKey: it.product.key,
-          packaging: it.packaging,
-          quantityKg: it.quantityKg
-        })),
-        paymentTerms,
-        priority,
-        paidAmount,
-        paymentStatus,
-        godown: selectedGodownId || undefined,
-      };
+      // Prepare form data for file upload
+      const formData = new FormData();
+      formData.append('customer', selectedCustomerId);
+      formData.append('items', JSON.stringify(itemsArray.map(it => ({
+        productKey: it.product.key,
+        packaging: it.packaging,
+        quantityKg: it.quantityKg
+      }))));
+      formData.append('paymentTerms', paymentTerms);
+      formData.append('priority', priority);
+      formData.append('paidAmount', paidAmount.toString());
+      formData.append('paymentStatus', paymentStatus);
+      formData.append('capturedImage', capturedImage);
+      formData.append('captureLocation', JSON.stringify(location));
+      if (selectedGodownId) {
+        formData.append('godown', selectedGodownId);
+      }
 
-      const created = await orderService.createQuickOrder(payload);
+      const created = await orderService.createQuickOrder(formData);
       try {
         if (paidAmount > 0) {
           await orderService.updateOrder(created._id, { paidAmount, paymentStatus });
@@ -492,9 +622,116 @@ const QuickOrderPage: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Image Capture */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 mb-3">
+          <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
+            Image Capture <span className="text-red-500 ml-1">*</span>
+          </h3>
+          
+          {capturedImage ? (
+            <div className="space-y-3">
+              <div className="relative">
+                <img 
+                  src={imagePreview} 
+                  alt="Captured" 
+                  className="w-full h-48 object-cover rounded-lg border border-gray-200"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                >
+                  <XMarkIcon className="h-4 w-4" />
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCameraCapture(true)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <CameraIcon className="h-4 w-4" />
+                Retake Photo
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowCameraCapture(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:border-emerald-400 hover:text-emerald-600 transition-colors"
+            >
+              <CameraIcon className="h-5 w-5" />
+              Capture Image
+            </button>
+          )}
+        </div>
+
+        {/* Location Capture */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 mb-3">
+          <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
+            Location <span className="text-red-500 ml-1">*</span>
+          </h3>
+          
+          {location ? (
+            <div className="space-y-3">
+              {/* <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="font-medium text-gray-600">Latitude:</span>
+                    <div className="text-gray-900">{location.latitude.toFixed(6)}</div>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Longitude:</span>
+                    <div className="text-gray-900">{location.longitude.toFixed(6)}</div>
+                  </div>
+                  <div className="col-span-2">
+                     <span className="font-medium text-gray-600">Accuracy:</span>
+                     <div className="text-gray-900">{location.accuracy.toFixed(0)}m</div>
+                   </div>
+                </div>
+              </div> */}
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Address</label>
+                <textarea
+                   value={manualAddress}
+                   onChange={(e) => setManualAddress(e.target.value)}
+                   onBlur={updateAddress}
+                   placeholder={addressLoading ? "Loading address..." : "Enter address manually or it will be auto-filled"}
+                   disabled={true}
+
+                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-50"
+                   rows={2}
+                 />
+              </div>
+              
+              <button
+                type="button"
+                onClick={getCurrentLocation}
+                disabled={locationLoading}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                <MapPinIcon className="h-4 w-4" />
+                {locationLoading ? 'Updating Location...' : 'Update Location'}
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={getCurrentLocation}
+              disabled={locationLoading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:border-emerald-400 hover:text-emerald-600 transition-colors disabled:opacity-50"
+            >
+              <MapPinIcon className="h-5 w-5" />
+              {locationLoading ? 'Capturing Location...' : 'Capture Location'}
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Mobile Bottom Action Bar */}
+       {/* Mobile Bottom Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20 safe-area-inset-bottom shadow-lg">
         <div className="px-3 py-3">
           <div className="flex items-center justify-between gap-2">
@@ -530,6 +767,15 @@ const QuickOrderPage: React.FC = () => {
 
       {/* Mobile Bottom Padding */}
       <div className="h-16"></div>
+
+      {/* Camera Capture Modal */}
+      {showCameraCapture && (
+        <CameraCapture
+          isOpen={showCameraCapture}
+          onCapture={handleCameraCapture}
+          onClose={handleCameraClose}
+        />
+      )}
 
       {/* Quantity Modal */}
       {activeProduct && (
