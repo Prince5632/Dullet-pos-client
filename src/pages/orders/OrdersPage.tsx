@@ -39,14 +39,25 @@ const OrdersPage: React.FC = () => {
   const [godownFilter, setGodownFilter] = useState("");
   const [viewType, setViewType] = useState<"orders" | "visits">("orders");
 
-  // Filters
+  // Common Filters
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState("");
   const [customerFilter, setCustomerFilter] = useState("");
   const [dateFromFilter, setDateFromFilter] = useState("");
   const [dateToFilter, setDateToFilter] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+
+  // Order-specific Filters
+  const [statusFilter, setStatusFilter] = useState("");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
+  const [minAmountFilter, setMinAmountFilter] = useState("");
+  const [maxAmountFilter, setMaxAmountFilter] = useState("");
+
+  // Visit-specific Filters
+  const [scheduleStatusFilter, setScheduleStatusFilter] = useState("");
+  const [visitStatusFilter, setVisitStatusFilter] = useState("");
+  const [hasImageFilter, setHasImageFilter] = useState("");
+  const [addressFilter, setAddressFilter] = useState("");
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -67,19 +78,35 @@ const OrdersPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const params = {
+      // Build params based on view type
+      const commonParams = {
         page: currentPage,
         limit,
         search: debouncedSearchTerm,
-        status: statusFilter,
-        paymentStatus: paymentStatusFilter,
         customerId: customerFilter,
         dateFrom: dateFromFilter,
         dateTo: dateToFilter,
         sortBy,
         sortOrder,
-        godownId: godownFilter,
       };
+
+      const params = viewType === "orders" 
+        ? {
+            ...commonParams,
+            status: statusFilter,
+            paymentStatus: paymentStatusFilter,
+            priority: priorityFilter,
+            minAmount: minAmountFilter,
+            maxAmount: maxAmountFilter,
+            godownId: godownFilter,
+          }
+        : {
+            ...commonParams,
+            scheduleStatus: scheduleStatusFilter,
+            visitStatus: visitStatusFilter,
+            hasImage: hasImageFilter,
+            address: addressFilter,
+          };
 
       const response =
         viewType === "orders"
@@ -108,14 +135,24 @@ const OrdersPage: React.FC = () => {
     currentPage,
     limit,
     debouncedSearchTerm,
-    statusFilter,
-    paymentStatusFilter,
     customerFilter,
     dateFromFilter,
     dateToFilter,
     sortBy,
     sortOrder,
     viewType,
+    // Order-specific filters
+    statusFilter,
+    paymentStatusFilter,
+    priorityFilter,
+    minAmountFilter,
+    maxAmountFilter,
+    godownFilter,
+    // Visit-specific filters
+    scheduleStatusFilter,
+    visitStatusFilter,
+    hasImageFilter,
+    addressFilter,
   ]);
 
   const loadCustomers = useCallback(async () => {
@@ -154,11 +191,21 @@ const OrdersPage: React.FC = () => {
     }
   }, [
     debouncedSearchTerm,
-    statusFilter,
-    paymentStatusFilter,
     customerFilter,
     dateFromFilter,
     dateToFilter,
+    // Order-specific filters
+    statusFilter,
+    paymentStatusFilter,
+    priorityFilter,
+    minAmountFilter,
+    maxAmountFilter,
+    godownFilter,
+    // Visit-specific filters
+    scheduleStatusFilter,
+    visitStatusFilter,
+    hasImageFilter,
+    addressFilter,
     currentPage,
   ]);
 
@@ -173,13 +220,26 @@ const OrdersPage: React.FC = () => {
   };
 
   const clearFilters = () => {
+    // Clear common filters
     setSearchTerm("");
-    setStatusFilter("");
-    setPaymentStatusFilter("");
     setCustomerFilter("");
-    setGodownFilter("");
     setDateFromFilter("");
     setDateToFilter("");
+    
+    // Clear order-specific filters
+    setStatusFilter("");
+    setPaymentStatusFilter("");
+    setPriorityFilter("");
+    setMinAmountFilter("");
+    setMaxAmountFilter("");
+    setGodownFilter("");
+    
+    // Clear visit-specific filters
+    setScheduleStatusFilter("");
+    setVisitStatusFilter("");
+    setHasImageFilter("");
+    setAddressFilter("");
+    
     setCurrentPage(1);
   };
 
@@ -667,34 +727,46 @@ const OrdersPage: React.FC = () => {
                         }).length,
                       },
                     ]
-                ).map((filter) => (
-                  <button
-                    key={filter.value}
-                    onClick={() =>
-                      setStatusFilter(
-                        statusFilter === filter.value ? "" : filter.value
-                      )
-                    }
-                    className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap touch-manipulation ${
-                      statusFilter === filter.value
-                        ? "bg-blue-100 text-blue-800 ring-2 ring-blue-200 shadow-sm"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900 active:bg-gray-300"
-                    }`}
+                ).map((filter) => {
+                  const isActive = viewType === "orders" 
+                    ? statusFilter === filter.value 
+                    : scheduleStatusFilter === filter.value;
+                  
+                  return (
+                    <button
+                      key={filter.value}
+                      onClick={() => {
+                        if (viewType === "orders") {
+                          setStatusFilter(
+                            statusFilter === filter.value ? "" : filter.value
+                          );
+                        } else {
+                          setScheduleStatusFilter(
+                            scheduleStatusFilter === filter.value ? "" : filter.value
+                          );
+                        }
+                      }}
+                      className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap touch-manipulation ${
+                        isActive
+                          ? "bg-blue-100 text-blue-800 ring-2 ring-blue-200 shadow-sm"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900 active:bg-gray-300"
+                      }`}
                   >
-                    <span>{filter.label}</span>
-                    {filter.count > 0 && (
-                      <span
-                        className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-xs font-semibold ${
-                          statusFilter === filter.value
-                            ? "bg-blue-200 text-blue-800"
-                            : "bg-gray-200 text-gray-600"
+                      <span>{filter.label}</span>
+                      {filter.count > 0 && (
+                        <span
+                          className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-xs font-semibold ${
+                            isActive
+                              ? "bg-blue-200 text-blue-800"
+                              : "bg-gray-200 text-gray-600"
                         }`}
                       >
-                        {filter.count}
-                      </span>
-                    )}
-                  </button>
-                ))}
+                          {filter.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
 
                 <div className="h-6 w-px bg-gray-300 mx-1" />
 
@@ -730,23 +802,7 @@ const OrdersPage: React.FC = () => {
             {showFilters && (
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Payment Status
-                    </label>
-                    <select
-                      value={paymentStatusFilter}
-                      onChange={(e) => setPaymentStatusFilter(e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    >
-                      {orderService.getPaymentStatuses().map((status) => (
-                        <option key={status.value} value={status.value}>
-                          {status.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
+                  {/* Common Filters */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Customer
@@ -789,24 +845,138 @@ const OrdersPage: React.FC = () => {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Godown
-                    </label>
-                    <select
-                      value={godownFilter}
-                      onChange={(e) => setGodownFilter(e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    >
-                      <option value="">All Godowns</option>
-                      {godowns.map((g) => (
-                        <option key={g._id} value={g._id}>
-                          {g.name} ({g.location.city}
-                          {g.location.area ? ` - ${g.location.area}` : ""})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Order-specific Filters */}
+                  {viewType === "orders" && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Payment Status
+                        </label>
+                        <select
+                          value={paymentStatusFilter}
+                          onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                          className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        >
+                          {orderService.getPaymentStatuses().map((status) => (
+                            <option key={status.value} value={status.value}>
+                              {status.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Godown
+                        </label>
+                        <select
+                          value={godownFilter}
+                          onChange={(e) => setGodownFilter(e.target.value)}
+                          className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        >
+                          <option value="">All Godowns</option>
+                          {godowns.map((g) => (
+                            <option key={g._id} value={g._id}>
+                              {g.name} ({g.location.city}
+                              {g.location.area ? ` - ${g.location.area}` : ""})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Priority
+                        </label>
+                        <select
+                          value={priorityFilter}
+                          onChange={(e) => setPriorityFilter(e.target.value)}
+                          className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        >
+                          <option value="">All Priorities</option>
+                          <option value="normal">Normal</option>
+                          <option value="high">High</option>
+                          <option value="urgent">Urgent</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Min Amount
+                        </label>
+                        <input
+                          type="number"
+                          value={minAmountFilter}
+                          onChange={(e) => setMinAmountFilter(e.target.value)}
+                          placeholder="0"
+                          className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Max Amount
+                        </label>
+                        <input
+                          type="number"
+                          value={maxAmountFilter}
+                          onChange={(e) => setMaxAmountFilter(e.target.value)}
+                          placeholder="No limit"
+                          className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Visit-specific Filters */}
+                  {viewType === "visits" && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Visit Status
+                        </label>
+                        <select
+                          value={visitStatusFilter}
+                          onChange={(e) => setVisitStatusFilter(e.target.value)}
+                          className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        >
+                          <option value="">All Statuses</option>
+                          <option value="scheduled">Scheduled</option>
+                          <option value="in-progress">In Progress</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Has Image
+                        </label>
+                        <select
+                          value={hasImageFilter}
+                          onChange={(e) => setHasImageFilter(e.target.value)}
+                          className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        >
+                          <option value="">All Visits</option>
+                          <option value="true">With Image</option>
+                          <option value="false">Without Image</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Address
+                        </label>
+                        <input
+                          type="text"
+                          value={addressFilter}
+                          onChange={(e) => setAddressFilter(e.target.value)}
+                          placeholder="Search by address..."
+                          className="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
