@@ -65,6 +65,15 @@ const OrderDetailsPage: React.FC = () => {
     fetchOrder();
   }, [orderId]);
 
+  // Auto-open share modal if navigated from delivery recording
+  useEffect(() => {
+    if (location.state?.openShareModal && order) {
+      setShowDeliverySummaryModal(true);
+      // Clear the state to prevent reopening on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, order]);
+
   const fetchOrder = async () => {
     try {
       setLoading(true);

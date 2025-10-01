@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   MapPinIcon,
   CurrencyRupeeIcon,
@@ -24,6 +25,7 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
   order,
   onOrderUpdate,
 }) => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [activeStep, setActiveStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -254,6 +256,11 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
       // Update the order and close the modal
       onOrderUpdate(updatedOrder);
       onClose();
+      
+      // Navigate to OrderDetailsPage with flag to open share modal
+      navigate(`/orders/${order._id}`, { 
+        state: { openShareModal: true } 
+      });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to record delivery";
