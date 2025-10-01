@@ -162,7 +162,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const user = await authService.getProfile();
             dispatch({ type: 'AUTH_SUCCESS', payload: user });
           } else {
-            dispatch({ type: 'AUTH_FAILURE', payload: 'Not authenticated' });
+            // No existing session - this is normal, don't show error
+            dispatch({ type: 'LOGOUT' });
           }
         }
       } catch (error) {

@@ -5,43 +5,49 @@ import type { LoginRequest, LoginResponse, User, ChangePasswordForm } from '../t
 class AuthService {
   // Login
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const formData = new FormData();
-    formData.append('email', credentials.email);
-    formData.append('password', credentials.password);
-    
-    if (credentials.faceImage) {
-      formData.append('faceImage', credentials.faceImage);
-    }
-
-    const response = await apiService.post<LoginResponse>(
-      API_CONFIG.ENDPOINTS.LOGIN,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+    try {
+      const formData = new FormData();
+      formData.append('email', credentials.email);
+      formData.append('password', credentials.password);
+      
+      if (credentials.faceImage) {
+        formData.append('faceImage', credentials.faceImage);
       }
-    );
 
-    if (response.success && response.data) {
-      // Set token in API service
-      apiService.setToken(response.data.token);
-      
-      // Store user data and refresh token
-      localStorage.setItem('user_data', JSON.stringify(response.data.user));
-      
-      // Store refresh token if provided
-      if (response.data.refreshToken) {
-        localStorage.setItem('refresh_token', response.data.refreshToken);
+      const response = await apiService.post<LoginResponse>(
+        API_CONFIG.ENDPOINTS.LOGIN,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      if (response.success && response.data) {
+        // Set token in API service
+        apiService.setToken(response.data.token);
+        
+        // Store user data and refresh token
+        localStorage.setItem('user_data', JSON.stringify(response.data.user));
+        
+        // Store refresh token if provided
+        if (response.data.refreshToken) {
+          localStorage.setItem('refresh_token', response.data.refreshToken);
+        }
+        
+        // Store login timestamp for session management
+        localStorage.setItem('login_timestamp', Date.now().toString());
+        
+        return response.data;
       }
-      
-      // Store login timestamp for session management
-      localStorage.setItem('login_timestamp', Date.now().toString());
-      
-      return response.data;
-    }
 
-    throw new Error(response.message || 'Login failed');
+      throw new Error(response.message || 'Login failed');
+    } catch (error: any) {
+      // Extract the server error message from the API error response
+      const serverMessage = error.response?.data?.message || error.message || 'Login failed';
+      throw new Error(serverMessage);
+    }
   }
 
   // Logout

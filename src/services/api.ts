@@ -46,7 +46,8 @@ class ApiService {
         const originalRequest = error.config;
 
         // Handle 401 errors (unauthorized) - but avoid infinite loops
-        if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('refresh-token')) {
+        // Skip token refresh for login endpoint to preserve original error messages
+        if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('refresh-token') && !originalRequest.url?.includes('login')) {
           originalRequest._retry = true;
           
           // Prevent multiple simultaneous refresh attempts
