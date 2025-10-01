@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -29,7 +29,7 @@ type LoginFormData = {
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isLoading, error, clearError } = useAuth();
+  const { login, isLoading, error, clearError, isAuthenticated } = useAuth();
   
   const [showPassword, setShowPassword] = useState(false);
   const [faceImage, setFaceImage] = useState<File | null>(null);
@@ -52,6 +52,15 @@ const LoginPage: React.FC = () => {
     },
   });
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      const from = (location.state as any)?.from?.pathname || '/dashboard';
+      console.log('Already authenticated, redirecting to:', from);
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, isLoading, navigate, location]);
+
   // Handle form submission
   const onSubmit = async (data: LoginFormData) => {
     try {
@@ -64,11 +73,16 @@ const LoginPage: React.FC = () => {
         faceImage: faceImage || undefined,
       };
 
+      console.log('Attempting login...');
       await login(loginData);
+      console.log('Login successful, preparing to navigate...');
       
-      // Redirect to intended page or dashboard
-      const from = (location.state as any)?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
+      // Small delay to ensure state is updated
+      setTimeout(() => {
+        const from = (location.state as any)?.from?.pathname || '/dashboard';
+        console.log('Navigating to:', from);
+        navigate(from, { replace: true });
+      }, 100);
       
     } catch (error: any) {
       // Error is handled by the auth context and displayed via toast

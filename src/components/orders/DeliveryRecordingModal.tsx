@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { 
   MapPinIcon, 
   CurrencyRupeeIcon,
@@ -10,6 +10,7 @@ import SignaturePad, { type SignaturePadRef } from '../ui/SignaturePad';
 import { orderService } from '../../services/orderService';
 import type { Order } from '../../types';
 import { toast } from 'react-hot-toast';
+import { getDeliverySummaryPdfBlob, downloadDeliverySummaryPdf } from '../../utils/pdf';
 
 interface DeliveryRecordingModalProps {
   isOpen: boolean;
@@ -26,6 +27,8 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [activeStep, setActiveStep] = useState(1);
+  const [showSharePrompt, setShowSharePrompt] = useState(false);
+  const [orderForShare, setOrderForShare] = useState<Order | null>(null);
   const [formData, setFormData] = useState({
     notes: '',
     amountCollected: order.remainingAmount || order.totalAmount || 0,
@@ -34,8 +37,6 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
       address: ''
     }
   });
-  const [driverSigned, setDriverSigned] = useState(false);
-  const [receiverSigned, setReceiverSigned] = useState(false);
   const [driverSignature, setDriverSignature] = useState('');
   const [receiverSignature, setReceiverSignature] = useState('');
   const [locationLoading, setLocationLoading] = useState(false);
@@ -77,12 +78,10 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
   // Handle signature changes with useCallback to prevent rerenders
   const handleDriverSignatureChange = useCallback((signature: string) => {
     setDriverSignature(signature);
-    setDriverSigned(!!signature);
   }, []);
 
   const handleReceiverSignatureChange = useCallback((signature: string) => {
     setReceiverSignature(signature);
-    setReceiverSigned(!!signature);
   }, []);
 
   // Fetch current location using geolocation API
@@ -218,8 +217,42 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
 
       const updatedOrder = await orderService.recordDelivery(order._id, payload);
       toast.success('Delivery recorded successfully');
+      // Keep a copy with ensured signatures for PDF generation
+      const mergedForPdf: Order = {
+        ...updatedOrder,
+        signatures: {
+          ...updatedOrder.signatures,
+          driver: driverSigToSend,
+          receiver: receiverSigToSend
+        },
+        driverAssignment: {
+          ...updatedOrder.driverAssignment,
+          deliveryLocation: updatedOrder.driverAssignment?.deliveryLocation || (payload.location ? {
+            latitude: payload.location.latitude,
+            longitude: payload.location.longitude,
+            address: payload.location.address
+          } : undefined)
+        }
+      } as Order;
       onOrderUpdate(updatedOrder);
-      onClose();
+      setOrderForShare(mergedForPdf);
+      console.log('Order for share prepared:', { orderNumber: mergedForPdf.orderNumber, customer: mergedForPdf.customer?.businessName });
+      // Try native share automatically; fall back to prompt if not supported or fails
+      try {
+        console.log('Attempting native share...');
+        const didShare = await tryNativeShare(mergedForPdf);
+        console.log('Native share result:', didShare);
+        if (didShare) {
+          resetForm();
+          onClose();
+        } else {
+          console.log('Showing share prompt...');
+          setShowSharePrompt(true);
+        }
+      } catch (err) {
+        console.log('Native share failed or cancelled:', err);
+        setShowSharePrompt(true);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to record delivery';
       toast.error(message);
@@ -228,7 +261,7 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
     }
   };
 
-  const handleClose = () => {
+  const resetForm = () => {
     setActiveStep(1);
     setFormData({
       notes: '',
@@ -238,12 +271,16 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
     });
     driverSignatureRef.current?.clear();
     receiverSignatureRef.current?.clear();
-    setDriverSigned(false);
-    setReceiverSigned(false);
     setDriverSignature('');
     setReceiverSignature('');
     setLocationLoading(false);
     setCoordinates(null);
+    setShowSharePrompt(false);
+    setOrderForShare(null);
+  };
+
+  const handleClose = () => {
+    resetForm();
     onClose();
   };
 
@@ -478,22 +515,244 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
     </div>
   );
 
+  const generatePdfFile = async (ord: Order) => {
+    const blob = await getDeliverySummaryPdfBlob(ord, {
+      companyName: 'Dullet Industries',
+      companyAddressLines: [
+        `${ord.customer?.address?.street || ''}`,
+        `${ord.customer?.address?.city || ''}, ${ord.customer?.address?.state || 'Punjab'}`
+      ],
+      watermarkText: 'DELIVERED'
+    });
+    const fileName = `delivery_${ord.orderNumber || ord._id}.pdf`;
+    const file = new File([blob], fileName, { type: 'application/pdf' });
+    return { blob, file, fileName };
+  };
+
+  const tryNativeShare = async (ord: Order): Promise<boolean> => {
+    try {
+      const { file } = await generatePdfFile(ord);
+      const navAny = navigator as any;
+      const canShareFiles = typeof navAny.canShare === 'function' && navAny.canShare({ files: [file] });
+      const canShare = typeof navAny.share === 'function';
+      if (canShare && canShareFiles) {
+        await navAny.share({
+          files: [file],
+          title: `Delivery Summary - ${ord.orderNumber}`,
+          text: `Delivery summary for ${ord.customer?.businessName} (Order ${ord.orderNumber}).`
+        });
+        toast.success('Shared successfully');
+        return true;
+      }
+      return false;
+    } catch (error) {
+      // User cancelled or share failed
+      console.log('Share error:', error);
+      return false;
+    }
+  };
+
+  const buildWhatsappNumber = (raw?: string): string | null => {
+    if (!raw) return null;
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length === 12 && digits.startsWith('91')) return digits; // already with country code
+    if (digits.length === 10) return `91${digits}`; // assume India
+    if (digits.length > 0) return digits; // best effort
+    return null;
+  };
+
+  const handleShareNative = async () => {
+    if (!orderForShare) return;
+    try {
+      setLoading(true);
+      const didShare = await tryNativeShare(orderForShare);
+      if (didShare) {
+        handleClose();
+      } else {
+        toast.error('Share not supported on this device');
+      }
+    } catch {
+      toast.error('Failed to share');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleShareWhatsapp = async () => {
+    if (!orderForShare) return;
+    try {
+      setLoading(true);
+      const { blob, fileName } = await generatePdfFile(orderForShare);
+      // Download PDF then open WhatsApp with message
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      const phone = buildWhatsappNumber(orderForShare.customer?.phone || orderForShare.customer?.alternatePhone);
+      const message = `Delivery summary for Order ${orderForShare.orderNumber} has been downloaded as PDF. Total: ₹${(orderForShare.totalAmount || 0).toLocaleString('en-IN')}.`;
+      const waUrl = phone
+        ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+        : `https://wa.me/?text=${encodeURIComponent(message)}`;
+      window.open(waUrl, '_blank');
+      toast.success('PDF downloaded');
+      handleClose();
+    } catch {
+      toast.error('Failed to share on WhatsApp');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleShareEmail = async () => {
+    if (!orderForShare) return;
+    try {
+      setLoading(true);
+      // We cannot attach via mailto, but we can prepare the email content
+      const subject = encodeURIComponent(`Delivery Summary - ${orderForShare.orderNumber}`);
+      const body = encodeURIComponent(
+        `Hello,\n\nPlease find the delivery summary for Order ${orderForShare.orderNumber} for ${orderForShare.customer?.businessName}.\nTotal Amount: ₹${(orderForShare.totalAmount || 0).toLocaleString('en-IN')}\n\n(If the PDF is not attached automatically, please attach the downloaded PDF file.)\n\nThank you.\n`
+      );
+      window.location.href = `mailto:${orderForShare.customer?.email || ''}?subject=${subject}&body=${body}`;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadPdfOnly = async () => {
+    if (!orderForShare) return;
+    try {
+      setLoading(true);
+      await downloadDeliverySummaryPdf(orderForShare, {
+        companyName: 'Dullet Industries',
+        companyAddressLines: [
+          `${orderForShare.customer?.address?.street || ''}`,
+          `${orderForShare.customer?.address?.city || ''}, ${orderForShare.customer?.address?.state || 'Punjab'}`
+        ],
+        watermarkText: 'DELIVERED'
+      });
+      toast.success('PDF downloaded');
+      handleClose();
+    } catch (e) {
+      toast.error('Failed to download PDF');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePrintPdf = async () => {
+    if (!orderForShare) return;
+    try {
+      setLoading(true);
+      const { blob } = await generatePdfFile(orderForShare);
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Record Delivery"
+      title={showSharePrompt ? "Share Delivery Summary" : "Record Delivery"}
       size="xl"
     >
       <div className="space-y-6">
         {/* Step Indicator */}
-        {renderStepIndicator()}
+        {!showSharePrompt && renderStepIndicator()}
 
-        {/* Step Content */}
+        {/* Step Content / Share Prompt */}
         <div className="min-h-[400px]">
-          {activeStep === 1 && renderStep1()}
-          {activeStep === 2 && renderStep2()}
-          {activeStep === 3 && renderStep3()}
+          {!showSharePrompt ? (
+            <>
+              {activeStep === 1 && renderStep1()}
+              {activeStep === 2 && renderStep2()}
+              {activeStep === 3 && renderStep3()}
+            </>
+          ) : (
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900">Send Delivery Summary</h3>
+              <p className="text-sm text-gray-600">
+                Share or export the delivery summary using any of the options below.
+              </p>
+              <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-700">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-gray-500">Order</div>
+                    <div className="font-medium">{orderForShare?.orderNumber}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Customer</div>
+                    <div className="font-medium">{orderForShare?.customer?.businessName}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Total</div>
+                    <div className="font-medium">₹{orderForShare?.totalAmount?.toLocaleString('en-IN')}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Phone</div>
+                    <div className="font-medium">{orderForShare?.customer?.phone}</div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={handleShareNative}
+                  disabled={loading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50"
+                >
+                  {loading ? 'Preparing...' : 'Share...'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleShareWhatsapp}
+                  disabled={loading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                >
+                  WhatsApp
+                </button>
+                <button
+                  type="button"
+                  onClick={handleShareEmail}
+                  disabled={loading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-sky-600 border border-transparent rounded-md hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:opacity-50"
+                >
+                  Email
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadPdfOnly}
+                  disabled={loading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  Download PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePrintPdf}
+                  disabled={loading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-gray-700 border border-transparent rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-700 disabled:opacity-50"
+                >
+                  Print
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  disabled={loading}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  Skip
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}
@@ -512,40 +771,70 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
           </div>
 
           <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            
-            {activeStep < 3 ? (
-              <button
-                type="button"
-                onClick={handleNextStep}
-                disabled={!validateCurrentStep()}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={loading || !validateCurrentStep()}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block"></div>
-                    Recording...
-                  </>
+            {!showSharePrompt ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  disabled={loading}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                {activeStep < 3 ? (
+                  <button
+                    type="button"
+                    onClick={handleNextStep}
+                    disabled={!validateCurrentStep()}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
                 ) : (
-                  'Complete Delivery'
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={loading || !validateCurrentStep()}
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block"></div>
+                        Recording...
+                      </>
+                    ) : (
+                      'Complete Delivery'
+                    )}
+                  </button>
                 )}
-              </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleShareWhatsapp}
+                  disabled={loading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                >
+                  {loading ? 'Preparing...' : 'Send on WhatsApp'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadPdfOnly}
+                  disabled={loading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  Download PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  disabled={loading}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  Skip
+                </button>
+              </>
             )}
           </div>
         </div>

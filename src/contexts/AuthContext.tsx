@@ -130,6 +130,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Initialize auth state on app load
   useEffect(() => {
+    let mounted = true; // Flag to prevent state updates after unmount
+    
     const initializeAuth = async () => {
       try {
         // Only initialize if we're still in loading state
@@ -137,17 +139,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         // Check if user has valid session
         if (authService.isAuthenticated()) {
+          if (!mounted) return;
           dispatch({ type: 'AUTH_START' });
           try {
             const user = await authService.getProfile();
+            if (!mounted) return;
             dispatch({ type: 'AUTH_SUCCESS', payload: user });
           } catch (error) {
             // If profile fetch fails, try to refresh token
             console.log('Profile fetch failed, attempting token refresh...');
             const refreshSuccess = await authService.attemptTokenRefresh();
             
-            if (refreshSuccess) {
+            if (refreshSuccess && mounted) {
               const user = await authService.getProfile();
+              if (!mounted) return;
               dispatch({ type: 'AUTH_SUCCESS', payload: user });
             } else {
               throw error;
@@ -157,27 +162,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Check if we can restore session using refresh token
           const refreshSuccess = await authService.attemptTokenRefresh();
           
-          if (refreshSuccess) {
+          if (refreshSuccess && mounted) {
             dispatch({ type: 'AUTH_START' });
             const user = await authService.getProfile();
+            if (!mounted) return;
             dispatch({ type: 'AUTH_SUCCESS', payload: user });
           } else {
             // No existing session - this is normal, don't show error
-            dispatch({ type: 'LOGOUT' });
+            if (mounted) {
+              dispatch({ type: 'LOGOUT' });
+            }
           }
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
         authService.clearAuthData();
         // Don't show error message during initialization - just set to logged out state
-        dispatch({ type: 'LOGOUT' });
+        if (mounted) {
+          dispatch({ type: 'LOGOUT' });
+        }
       }
     };
 
-    // Only run once on mount
+    // Only run once on mount when initial loading state
     if (state.isLoading && !state.isAuthenticated) {
       initializeAuth();
     }
+
+    return () => {
+      mounted = false; // Cleanup flag
+    };
   }, []); // Empty dependency array to run only once
 
   // Set up user activity tracking to refresh session
@@ -217,13 +231,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Login function
   const login = async (credentials: LoginRequest): Promise<void> => {
+    console.log('[AuthContext] Login started');
     dispatch({ type: 'AUTH_START' });
     
     try {
       const loginResponse = await authService.login(credentials);
+      console.log('[AuthContext] Login API success, user:', loginResponse.user.email);
       dispatch({ type: 'AUTH_SUCCESS', payload: loginResponse.user });
+      console.log('[AuthContext] Auth state updated to SUCCESS');
       toast.success(`Welcome back, ${loginResponse.user.firstName}!`);
     } catch (error: any) {
+      console.error('[AuthContext] Login failed:', error.message);
       const errorMessage = error.message || 'Login failed';
       dispatch({ type: 'AUTH_FAILURE', payload: errorMessage });
       throw error; // Re-throw to handle in component
