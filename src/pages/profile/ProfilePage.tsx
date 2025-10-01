@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
+import React, { useState, useRef } from "react";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
 import {
   CameraIcon,
   XMarkIcon,
@@ -13,56 +13,58 @@ import {
   BuildingOfficeIcon,
   IdentificationIcon,
   ShieldCheckIcon,
-} from '@heroicons/react/24/outline';
-import { useAuth } from '../../contexts/AuthContext';
-import { userService } from '../../services/userService';
-import { authService } from '../../services/authService';
-import type { UpdateUserForm, ChangePasswordForm } from '../../types';
-import { cn, isValidEmail, isValidPhone, formatDate } from '../../utils';
-import Avatar from '../../components/ui/Avatar';
-import Badge from '../../components/ui/Badge';
-import Modal from '../../components/ui/Modal';
-import toast from 'react-hot-toast';
-import { resolveImageSrc } from '../../utils/image';
+} from "@heroicons/react/24/outline";
+import { useAuth } from "../../contexts/AuthContext";
+import { userService } from "../../services/userService";
+import { authService } from "../../services/authService";
+import type { UpdateUserForm, ChangePasswordForm } from "../../types";
+import { cn, isValidEmail, isValidPhone, formatDate } from "../../utils";
+import Avatar from "../../components/ui/Avatar";
+import Badge from "../../components/ui/Badge";
+import Modal from "../../components/ui/Modal";
+import toast from "react-hot-toast";
+import { resolveCapturedImageSrc } from "../../utils/image";
 
 // Validation schemas
 const profileSchema = yup.object({
   firstName: yup
     .string()
-    .required('First name is required')
-    .min(2, 'First name must be at least 2 characters')
-    .max(50, 'First name must be less than 50 characters'),
+    .required("First name is required")
+    .min(2, "First name must be at least 2 characters")
+    .max(50, "First name must be less than 50 characters"),
   lastName: yup
     .string()
-    .required('Last name is required')
-    .min(2, 'Last name must be at least 2 characters')
-    .max(50, 'Last name must be less than 50 characters'),
+    .required("Last name is required")
+    .min(2, "Last name must be at least 2 characters")
+    .max(50, "Last name must be less than 50 characters"),
   email: yup
     .string()
-    .required('Email is required')
-    .test('valid-email', 'Please enter a valid email address', isValidEmail),
+    .required("Email is required")
+    .test("valid-email", "Please enter a valid email address", isValidEmail),
   phone: yup
     .string()
-    .required('Phone number is required')
-    .test('valid-phone', 'Please enter a valid Indian mobile number', isValidPhone),
+    .required("Phone number is required")
+    .test(
+      "valid-phone",
+      "Please enter a valid Indian mobile number",
+      isValidPhone
+    ),
 });
 
 const passwordSchema = yup.object({
-  currentPassword: yup
-    .string()
-    .required('Current password is required'),
+  currentPassword: yup.string().required("Current password is required"),
   newPassword: yup
     .string()
-    .required('New password is required')
-    .min(8, 'Password must be at least 8 characters')
+    .required("New password is required")
+    .min(8, "Password must be at least 8 characters")
     .matches(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
     ),
   confirmPassword: yup
     .string()
-    .required('Please confirm your new password')
-    .oneOf([yup.ref('newPassword')], 'Passwords must match'),
+    .required("Please confirm your new password")
+    .oneOf([yup.ref("newPassword")], "Passwords must match"),
 });
 
 const ProfilePage: React.FC = () => {
@@ -72,7 +74,7 @@ const ProfilePage: React.FC = () => {
   // State
   const [loading, setLoading] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
-  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string>('');
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string>("");
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -87,17 +89,17 @@ const ProfilePage: React.FC = () => {
   }>({
     resolver: yupResolver(profileSchema),
     defaultValues: {
-      firstName: user?.firstName || '',
-      lastName: user?.lastName || '',
-      email: user?.email || '',
-      phone: user?.phone || '',
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      email: user?.email || "",
+      phone: user?.phone || "",
     },
-    mode: 'onBlur',
+    mode: "onBlur",
   });
 
   const passwordForm = useForm<ChangePasswordForm>({
     resolver: yupResolver(passwordSchema),
-    mode: 'onBlur',
+    mode: "onBlur",
   });
 
   // Handle profile photo selection
@@ -105,19 +107,19 @@ const ProfilePage: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please select a valid image file');
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please select a valid image file");
         return;
       }
 
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image size must be less than 5MB');
+        toast.error("Image size must be less than 5MB");
         return;
       }
 
       setProfilePhoto(file);
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -129,9 +131,9 @@ const ProfilePage: React.FC = () => {
 
   const removePhoto = () => {
     setProfilePhoto(null);
-    setProfilePhotoPreview('');
+    setProfilePhotoPreview("");
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
@@ -158,14 +160,14 @@ const ProfilePage: React.FC = () => {
       await userService.updateUser(user._id, updateData);
       // Refresh the page to get updated user data
       window.location.reload();
-      toast.success('Profile updated successfully');
-      
+      toast.success("Profile updated successfully");
+
       // Clear photo state after successful update
       setProfilePhoto(null);
-      setProfilePhotoPreview('');
+      setProfilePhotoPreview("");
     } catch (error: any) {
-      console.error('Failed to update profile:', error);
-      toast.error(error.message || 'Failed to update profile');
+      console.error("Failed to update profile:", error);
+      toast.error(error.message || "Failed to update profile");
     } finally {
       setLoading(false);
     }
@@ -176,12 +178,12 @@ const ProfilePage: React.FC = () => {
     try {
       setLoading(true);
       await authService.changePassword(data);
-      toast.success('Password changed successfully');
+      toast.success("Password changed successfully");
       setPasswordModalOpen(false);
       passwordForm.reset();
     } catch (error: any) {
-      console.error('Failed to change password:', error);
-      toast.error(error.message || 'Failed to change password');
+      console.error("Failed to change password:", error);
+      toast.error(error.message || "Failed to change password");
     } finally {
       setLoading(false);
     }
@@ -215,7 +217,10 @@ const ProfilePage: React.FC = () => {
                 {profilePhotoPreview ? (
                   <div className="relative">
                     <img
-                      src={resolveImageSrc(profilePhotoPreview) || profilePhotoPreview}
+                      src={
+                        resolveCapturedImageSrc(profilePhotoPreview) ||
+                        profilePhotoPreview
+                      }
                       alt="Profile preview"
                       className="h-24 w-24 rounded-full object-cover border-2 border-gray-200"
                     />
@@ -235,7 +240,7 @@ const ProfilePage: React.FC = () => {
                   />
                 )}
               </div>
-              
+
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -244,7 +249,7 @@ const ProfilePage: React.FC = () => {
                 <CameraIcon className="h-4 w-4 mr-2" />
                 Change Photo
               </button>
-              
+
               <input
                 ref={fileInputRef}
                 type="file"
@@ -252,20 +257,15 @@ const ProfilePage: React.FC = () => {
                 onChange={handlePhotoSelect}
                 className="hidden"
               />
-              
+
               <h2 className="mt-4 text-xl font-semibold text-gray-900 text-center">
                 {user.firstName} {user.lastName}
               </h2>
-              
-              <p className="text-gray-600 text-center mb-4">
-                {user.position}
-              </p>
 
-              <Badge
-                variant={user.isActive ? 'success' : 'error'}
-                size="lg"
-              >
-                {user.isActive ? 'Active' : 'Inactive'}
+              <p className="text-gray-600 text-center mb-4">{user.position}</p>
+
+              <Badge variant={user.isActive ? "success" : "error"} size="lg">
+                {user.isActive ? "Active" : "Inactive"}
               </Badge>
 
               <div className="mt-6 w-full space-y-3">
@@ -273,25 +273,25 @@ const ProfilePage: React.FC = () => {
                   <EnvelopeIcon className="h-4 w-4 mr-3 text-gray-400" />
                   <span>{user.email}</span>
                 </div>
-                
+
                 <div className="flex items-center text-sm text-gray-600">
                   <PhoneIcon className="h-4 w-4 mr-3 text-gray-400" />
                   <span>{user.phone}</span>
                 </div>
-                
+
                 <div className="flex items-center text-sm text-gray-600">
                   <IdentificationIcon className="h-4 w-4 mr-3 text-gray-400" />
                   <span>ID: {user.employeeId}</span>
                 </div>
-                
+
                 <div className="flex items-center text-sm text-gray-600">
                   <BuildingOfficeIcon className="h-4 w-4 mr-3 text-gray-400" />
                   <span>{user.department}</span>
                 </div>
-                
+
                 <div className="flex items-center text-sm text-gray-600">
                   <ShieldCheckIcon className="h-4 w-4 mr-3 text-gray-400" />
-                  <span>{user.role?.name || 'No Role'}</span>
+                  <span>{user.role?.name || "No Role"}</span>
                 </div>
               </div>
             </div>
@@ -303,95 +303,120 @@ const ProfilePage: React.FC = () => {
           {/* Personal Information */}
           <div className="bg-white shadow-sm rounded-lg border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Personal Information</h3>
+              <h3 className="text-lg font-medium text-gray-900">
+                Personal Information
+              </h3>
             </div>
-            <form onSubmit={profileForm.handleSubmit(onUpdateProfile)} className="p-6 space-y-4">
+            <form
+              onSubmit={profileForm.handleSubmit(onUpdateProfile)}
+              className="p-6 space-y-4"
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* First Name */}
                 <div>
-                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="firstName"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     First Name *
                   </label>
                   <input
                     type="text"
                     id="firstName"
-                    {...profileForm.register('firstName')}
+                    {...profileForm.register("firstName")}
                     className={cn(
-                      'mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm',
-                      profileForm.formState.errors.firstName 
-                        ? 'border-red-300 focus:border-red-500' 
-                        : 'border-gray-300 focus:border-blue-500'
+                      "mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm",
+                      profileForm.formState.errors.firstName
+                        ? "border-red-300 focus:border-red-500"
+                        : "border-gray-300 focus:border-blue-500"
                     )}
                     placeholder="Enter first name"
                   />
                   {profileForm.formState.errors.firstName && (
-                    <p className="mt-1 text-sm text-red-600">{profileForm.formState.errors.firstName.message}</p>
+                    <p className="mt-1 text-sm text-red-600">
+                      {profileForm.formState.errors.firstName.message}
+                    </p>
                   )}
                 </div>
 
                 {/* Last Name */}
                 <div>
-                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="lastName"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Last Name *
                   </label>
                   <input
                     type="text"
                     id="lastName"
-                    {...profileForm.register('lastName')}
+                    {...profileForm.register("lastName")}
                     className={cn(
-                      'mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm',
-                      profileForm.formState.errors.lastName 
-                        ? 'border-red-300 focus:border-red-500' 
-                        : 'border-gray-300 focus:border-blue-500'
+                      "mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm",
+                      profileForm.formState.errors.lastName
+                        ? "border-red-300 focus:border-red-500"
+                        : "border-gray-300 focus:border-blue-500"
                     )}
                     placeholder="Enter last name"
                   />
                   {profileForm.formState.errors.lastName && (
-                    <p className="mt-1 text-sm text-red-600">{profileForm.formState.errors.lastName.message}</p>
+                    <p className="mt-1 text-sm text-red-600">
+                      {profileForm.formState.errors.lastName.message}
+                    </p>
                   )}
                 </div>
 
                 {/* Email */}
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Email Address *
                   </label>
                   <input
                     type="email"
                     id="email"
-                    {...profileForm.register('email')}
+                    {...profileForm.register("email")}
                     className={cn(
-                      'mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm',
-                      profileForm.formState.errors.email 
-                        ? 'border-red-300 focus:border-red-500' 
-                        : 'border-gray-300 focus:border-blue-500'
+                      "mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm",
+                      profileForm.formState.errors.email
+                        ? "border-red-300 focus:border-red-500"
+                        : "border-gray-300 focus:border-blue-500"
                     )}
                     placeholder="Enter email address"
                   />
                   {profileForm.formState.errors.email && (
-                    <p className="mt-1 text-sm text-red-600">{profileForm.formState.errors.email.message}</p>
+                    <p className="mt-1 text-sm text-red-600">
+                      {profileForm.formState.errors.email.message}
+                    </p>
                   )}
                 </div>
 
                 {/* Phone */}
                 <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="phone"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Phone Number *
                   </label>
                   <input
                     type="tel"
                     id="phone"
-                    {...profileForm.register('phone')}
+                    {...profileForm.register("phone")}
                     className={cn(
-                      'mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm',
-                      profileForm.formState.errors.phone 
-                        ? 'border-red-300 focus:border-red-500' 
-                        : 'border-gray-300 focus:border-blue-500'
+                      "mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm",
+                      profileForm.formState.errors.phone
+                        ? "border-red-300 focus:border-red-500"
+                        : "border-gray-300 focus:border-blue-500"
                     )}
                     placeholder="Enter 10-digit mobile number"
                   />
                   {profileForm.formState.errors.phone && (
-                    <p className="mt-1 text-sm text-red-600">{profileForm.formState.errors.phone.message}</p>
+                    <p className="mt-1 text-sm text-red-600">
+                      {profileForm.formState.errors.phone.message}
+                    </p>
                   )}
                 </div>
               </div>
@@ -408,7 +433,7 @@ const ProfilePage: React.FC = () => {
                       Updating...
                     </>
                   ) : (
-                    'Update Profile'
+                    "Update Profile"
                   )}
                 </button>
               </div>
@@ -418,14 +443,19 @@ const ProfilePage: React.FC = () => {
           {/* Account Security */}
           <div className="bg-white shadow-sm rounded-lg border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Account Security</h3>
+              <h3 className="text-lg font-medium text-gray-900">
+                Account Security
+              </h3>
             </div>
             <div className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">Password</h4>
+                  <h4 className="text-sm font-medium text-gray-900">
+                    Password
+                  </h4>
                   <p className="text-sm text-gray-500">
-                    Last changed: {user.updatedAt ? formatDate(user.updatedAt) : 'Never'}
+                    Last changed:{" "}
+                    {user.updatedAt ? formatDate(user.updatedAt) : "Never"}
                   </p>
                 </div>
                 <button
@@ -451,22 +481,28 @@ const ProfilePage: React.FC = () => {
         title="Change Password"
         size="md"
       >
-        <form onSubmit={passwordForm.handleSubmit(onChangePassword)} className="space-y-4">
+        <form
+          onSubmit={passwordForm.handleSubmit(onChangePassword)}
+          className="space-y-4"
+        >
           {/* Current Password */}
           <div>
-            <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="currentPassword"
+              className="block text-sm font-medium text-gray-700"
+            >
               Current Password *
             </label>
             <div className="relative">
               <input
-                type={showCurrentPassword ? 'text' : 'password'}
+                type={showCurrentPassword ? "text" : "password"}
                 id="currentPassword"
-                {...passwordForm.register('currentPassword')}
+                {...passwordForm.register("currentPassword")}
                 className={cn(
-                  'mt-1 block w-full px-3 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm',
-                  passwordForm.formState.errors.currentPassword 
-                    ? 'border-red-300 focus:border-red-500' 
-                    : 'border-gray-300 focus:border-blue-500'
+                  "mt-1 block w-full px-3 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm",
+                  passwordForm.formState.errors.currentPassword
+                    ? "border-red-300 focus:border-red-500"
+                    : "border-gray-300 focus:border-blue-500"
                 )}
                 placeholder="Enter current password"
               />
@@ -483,25 +519,30 @@ const ProfilePage: React.FC = () => {
               </button>
             </div>
             {passwordForm.formState.errors.currentPassword && (
-              <p className="mt-1 text-sm text-red-600">{passwordForm.formState.errors.currentPassword.message}</p>
+              <p className="mt-1 text-sm text-red-600">
+                {passwordForm.formState.errors.currentPassword.message}
+              </p>
             )}
           </div>
 
           {/* New Password */}
           <div>
-            <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="newPassword"
+              className="block text-sm font-medium text-gray-700"
+            >
               New Password *
             </label>
             <div className="relative">
               <input
-                type={showNewPassword ? 'text' : 'password'}
+                type={showNewPassword ? "text" : "password"}
                 id="newPassword"
-                {...passwordForm.register('newPassword')}
+                {...passwordForm.register("newPassword")}
                 className={cn(
-                  'mt-1 block w-full px-3 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm',
-                  passwordForm.formState.errors.newPassword 
-                    ? 'border-red-300 focus:border-red-500' 
-                    : 'border-gray-300 focus:border-blue-500'
+                  "mt-1 block w-full px-3 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm",
+                  passwordForm.formState.errors.newPassword
+                    ? "border-red-300 focus:border-red-500"
+                    : "border-gray-300 focus:border-blue-500"
                 )}
                 placeholder="Enter new password"
               />
@@ -518,25 +559,30 @@ const ProfilePage: React.FC = () => {
               </button>
             </div>
             {passwordForm.formState.errors.newPassword && (
-              <p className="mt-1 text-sm text-red-600">{passwordForm.formState.errors.newPassword.message}</p>
+              <p className="mt-1 text-sm text-red-600">
+                {passwordForm.formState.errors.newPassword.message}
+              </p>
             )}
           </div>
 
           {/* Confirm Password */}
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="confirmPassword"
+              className="block text-sm font-medium text-gray-700"
+            >
               Confirm New Password *
             </label>
             <div className="relative">
               <input
-                type={showConfirmPassword ? 'text' : 'password'}
+                type={showConfirmPassword ? "text" : "password"}
                 id="confirmPassword"
-                {...passwordForm.register('confirmPassword')}
+                {...passwordForm.register("confirmPassword")}
                 className={cn(
-                  'mt-1 block w-full px-3 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm',
-                  passwordForm.formState.errors.confirmPassword 
-                    ? 'border-red-300 focus:border-red-500' 
-                    : 'border-gray-300 focus:border-blue-500'
+                  "mt-1 block w-full px-3 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm",
+                  passwordForm.formState.errors.confirmPassword
+                    ? "border-red-300 focus:border-red-500"
+                    : "border-gray-300 focus:border-blue-500"
                 )}
                 placeholder="Confirm new password"
               />
@@ -553,10 +599,12 @@ const ProfilePage: React.FC = () => {
               </button>
             </div>
             {passwordForm.formState.errors.confirmPassword && (
-              <p className="mt-1 text-sm text-red-600">{passwordForm.formState.errors.confirmPassword.message}</p>
+              <p className="mt-1 text-sm text-red-600">
+                {passwordForm.formState.errors.confirmPassword.message}
+              </p>
             )}
           </div>
-          
+
           <div className="flex justify-end space-x-3">
             <button
               type="button"
@@ -579,7 +627,7 @@ const ProfilePage: React.FC = () => {
                   Changing...
                 </>
               ) : (
-                'Change Password'
+                "Change Password"
               )}
             </button>
           </div>

@@ -24,6 +24,7 @@ import Pagination from "../../components/ui/Pagination";
 import Avatar from "../../components/ui/Avatar";
 import Modal from "../../components/ui/Modal";
 import OrderStatusDropdown from "../../components/orders/OrderStatusDropdown";
+import { resolveCapturedImageSrc } from "../../utils/image";
 
 const OrdersPage: React.FC = () => {
   const { hasPermission } = useAuth();
@@ -82,16 +83,12 @@ const OrdersPage: React.FC = () => {
   }>({ src: "", title: "" });
   const [showImageModal, setShowImageModal] = useState(false);
 
-  const formatImageSrc = (imageData: string) => {
-    return imageData.startsWith("data:")
-      ? imageData
-      : `data:image/jpeg;base64,${imageData}`;
-  };
-
   const handleViewImage = (imageData: string, title: string) => {
-    const formattedSrc = formatImageSrc(imageData);
-    setSelectedImage({ src: formattedSrc, title });
-    setShowImageModal(true);
+    const formattedSrc = resolveCapturedImageSrc(imageData);
+    if (formattedSrc) {
+      setSelectedImage({ src: formattedSrc, title });
+      setShowImageModal(true);
+    }
   };
 
   // Load data functions
@@ -435,7 +432,7 @@ const OrdersPage: React.FC = () => {
                   title="View Image"
                 >
                   <img
-                    src={formatImageSrc(visit.capturedImage)}
+                    src={resolveCapturedImageSrc(visit.capturedImage) || ''}
                     alt="Check In"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                   />
@@ -1031,7 +1028,7 @@ const OrdersPage: React.FC = () => {
                             title="View Image"
                           >
                             <img
-                              src={formatImageSrc(order.capturedImage)}
+                              src={resolveCapturedImageSrc(order.capturedImage) || ''}
                               alt="Visit Image"
                               className="w-4 h-4 object-cover rounded"
                             />

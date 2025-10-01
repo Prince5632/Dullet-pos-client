@@ -5,6 +5,7 @@ import { userService } from '../../services/userService';
 import { orderService } from '../../services/orderService';
 import type { User, Order } from '../../types';
 import { toast } from 'react-hot-toast';
+import { resolveCapturedImageSrc } from '../../utils/image';
 
 interface DriverAssignmentModalProps {
   isOpen: boolean;
@@ -173,7 +174,7 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({
                           {driver.profilePhoto ? (
                             <img
                               className="h-8 w-8 rounded-full"
-                              src={`data:image/jpeg;base64,${driver?.profilePhoto}`}
+                              src={resolveCapturedImageSrc(driver?.profilePhoto)}
                               alt=""
                             />
                           ) : (

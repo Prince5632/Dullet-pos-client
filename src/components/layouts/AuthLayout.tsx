@@ -20,7 +20,7 @@ const AuthLayout: React.FC = () => {
       {/* Left side - Compact grey banner */}
       <aside
         aria-label="Brand"
-        className="relative overflow-hidden bg-gradient-to-b from-neutral-100 to-neutral-200"
+        className="relative hidden lg:block overflow-hidden bg-gradient-to-b from-neutral-100 to-neutral-200"
       >
         {/* Subtle lighting */}
         <div

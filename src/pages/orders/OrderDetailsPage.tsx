@@ -30,6 +30,7 @@ import OrderActivityTimeline from "../../components/orders/OrderActivityTimeline
 import type { Order } from "../../types";
 import { toast } from "react-hot-toast";
 import Modal from "../../components/ui/Modal";
+import { resolveCapturedImageSrc } from "../../utils/image";
 
 const OrderDetailsPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -257,28 +258,14 @@ Dullet POS - Delivery Management System
 Generated on: ${new Date().toLocaleString("en-IN")}`;
   };
 
-  const formatImageSrc = (imageData: string | undefined): string => {
-    if (!imageData) return "";
-
-    // If it's already a complete URL, return as is
-    if (imageData.startsWith("http://") || imageData.startsWith("https://")) {
-      return imageData;
-    }
-
-    // If it's a base64 string, return as is
-    if (imageData.startsWith("data:image/")) {
-      return imageData;
-    }
-
-    // Default case - assume it's a base64 string
-    return `data:image/jpeg;base64,${imageData}`;
-  };
   const handleViewImage = (imageData: string | undefined, title: string) => {
     if (!imageData) return;
 
-    const formattedSrc = formatImageSrc(imageData);
-    setSelectedImage(formattedSrc);
-    setShowImageModal(true);
+    const formattedSrc = resolveCapturedImageSrc(imageData);
+    if (formattedSrc) {
+      setSelectedImage(formattedSrc);
+      setShowImageModal(true);
+    }
   };
   const handleShare = async () => {
     if (navigator.share) {
