@@ -25,6 +25,7 @@ import Badge from "../../components/ui/Badge";
 import Avatar from "../../components/ui/Avatar";
 import OrderStatusDropdown from "../../components/orders/OrderStatusDropdown";
 import OrderTimeline from "../../components/orders/OrderTimeline";
+import OrderActivityTimeline from "../../components/orders/OrderActivityTimeline";
 import type { Order } from "../../types";
 import { toast } from "react-hot-toast";
 import Modal from "../../components/ui/Modal";
@@ -39,6 +40,9 @@ const OrderDetailsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
+
   useEffect(() => {
     if (!orderId) {
       setError("Order ID is required");
@@ -55,6 +59,8 @@ const OrderDetailsPage: React.FC = () => {
       setError(null);
       const data = await orderService.getOrderById(orderId!);
       setOrder(data);
+      // Fetch activities after order is loaded
+      fetchActivities();
     } catch (err: any) {
       console.error("Error fetching order:", err);
       setError(
@@ -68,6 +74,21 @@ const OrderDetailsPage: React.FC = () => {
     }
   };
 
+  const fetchActivities = async () => {
+    if (!orderId) return;
+    
+    try {
+      setActivitiesLoading(true);
+      const auditTrail = await orderService.getOrderAuditTrail(orderId);
+      setActivities(auditTrail);
+    } catch (err: any) {
+      console.error("Error fetching activities:", err);
+      // Don't show error toast for activities as it's not critical
+    } finally {
+      setActivitiesLoading(false);
+    }
+  };
+  console.log(activities)
   const handleOrderUpdate = (updatedOrder: Order) => {
     setOrder(updatedOrder);
     toast.success("Order updated successfully");
@@ -803,8 +824,12 @@ const OrderDetailsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Timeline */}
-              <OrderTimeline order={order} />
+        
+              {/* Activity Timeline */}
+              <OrderActivityTimeline 
+                activities={activities} 
+                loading={activitiesLoading} 
+              />
             </div>
           </div>
         </div>

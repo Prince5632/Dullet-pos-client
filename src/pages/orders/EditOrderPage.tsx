@@ -718,7 +718,7 @@ const EditOrderPage: React.FC = () => {
                         </label>
                         <select
                           {...register("paymentTerms")}
-                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                          className="w-full px-2.5 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors text-xs"
                         >
                           {orderService.getPaymentTerms().map((term) => (
                             <option key={term} value={term}>

@@ -73,6 +73,15 @@ class OrderService {
     throw new Error(response.message || 'Failed to get order');
   }
 
+  // Get order audit trail
+  async getOrderAuditTrail(id: string): Promise<any[]> {
+    const response = await apiService.get<{ auditTrail: any[] }>(`${API_CONFIG.ENDPOINTS.ORDERS}/${id}/audit-trail`);
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error(response.message || 'Failed to get order audit trail');
+  }
+
   // Create new order
   async createOrder(orderData: CreateOrderForm): Promise<Order> {
     const response = await apiService.post<{ order: Order }>(
