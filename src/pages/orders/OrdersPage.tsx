@@ -37,7 +37,9 @@ const OrdersPage: React.FC = () => {
   const [godownFilter, setGodownFilter] = useState("");
   const [viewType, setViewType] = useState<"orders" | "visits">(() => {
     const savedViewType = localStorage.getItem("ordersPage_viewType");
-    return (savedViewType === "visits" || savedViewType === "orders") ? savedViewType : "orders";
+    return savedViewType === "visits" || savedViewType === "orders"
+      ? savedViewType
+      : "orders";
   });
 
   // Common Filters
@@ -294,7 +296,9 @@ const OrdersPage: React.FC = () => {
   const handleOrderUpdate = (updatedOrder: Order) => {
     setOrders((prev) =>
       prev.map((order) =>
-        order._id === updatedOrder._id ? updatedOrder : order
+        order._id === updatedOrder._id
+          ? { ...order, status: updatedOrder.status }
+          : order
       )
     );
   };
