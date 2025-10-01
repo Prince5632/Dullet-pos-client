@@ -1006,17 +1006,37 @@ const OrdersPage: React.FC = () => {
                       </div>
                       <div className="flex items-center space-x-1">
                         <Link
-                          to={`/orders/${order._id}`}
+                          to={viewType === "visits" ? `/orders/visits/${order._id}` : `/orders/${order._id}`}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                         >
                           <EyeIcon className="h-4 w-4" />
                         </Link>
                         <Link
-                          to={`/orders/${order._id}/edit`}
+                          to={viewType === "visits" ? `/orders/visits/${order._id}/edit` : `/orders/${order._id}/edit`}
                           className="p-1.5 text-gray-600 hover:bg-gray-50 rounded-md transition-colors"
                         >
                           <PencilIcon className="h-4 w-4" />
                         </Link>
+                        {viewType === "visits" && order.capturedImage && (
+                          <button
+                            onClick={() =>
+                              handleViewImage(
+                                order.capturedImage,
+                                `Visit Image - ${
+                                  order.customer?.businessName || "Unknown Customer"
+                                }`
+                              )
+                            }
+                            className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                            title="View Image"
+                          >
+                            <img
+                              src={formatImageSrc(order.capturedImage)}
+                              alt="Visit Image"
+                              className="w-4 h-4 object-cover rounded"
+                            />
+                          </button>
+                        )}
                       </div>
                     </div>
 

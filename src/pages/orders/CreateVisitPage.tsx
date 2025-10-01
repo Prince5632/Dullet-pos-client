@@ -49,11 +49,18 @@ const CreateVisitPage: React.FC = () => {
   const [addressLoading, setAddressLoading] = useState(false);
   const [manualAddress, setManualAddress] = useState<string>("");
   const [showCameraCapture, setShowCameraCapture] = useState(false);
+  
+  // Visit creation flow state
+  const [isCreatingVisit, setIsCreatingVisit] = useState(false);
+  const [visitCreationStep, setVisitCreationStep] = useState<'idle' | 'location' | 'camera' | 'submitting'>('idle');
+  const [storedFormData, setStoredFormData] = useState<CreateVisitForm | null>(null);
+  const [visitCompleted, setVisitCompleted] = useState(false);
   const {
     register,
     handleSubmit,
     formState: { errors },
     setValue,
+    watch,
   } = useForm<CreateVisitForm>({
     resolver: yupResolver(schema) as any,
   });
@@ -136,11 +143,27 @@ const CreateVisitPage: React.FC = () => {
       setCapturedImage(imageFile);
       setImagePreview(imageData);
       toast.success("Photo captured successfully");
+      
+      // If we're in the visit creation flow, automatically submit the visit
+      if (isCreatingVisit && visitCreationStep === 'camera') {
+        // Don't close the camera modal here - let submitVisitAfterCapture handle it
+        submitVisitAfterCapture(imageFile, storedFormData);
+      }
     }
   };
 
   const handleCameraClose = () => {
     setShowCameraCapture(false);
+    
+    // If we're in the visit creation flow and it wasn't completed successfully, reset the flow
+    if (isCreatingVisit && !visitCompleted) {
+      setIsCreatingVisit(false);
+      setVisitCreationStep('idle');
+      setStoredFormData(null);
+    }
+    
+    // Reset the completion flag
+    setVisitCompleted(false);
   };
 
   const removeImage = () => {
@@ -159,31 +182,121 @@ const CreateVisitPage: React.FC = () => {
   };
 
   const onSubmit = async (data: CreateVisitForm) => {
+    // Validate required fields first
+    const missingFields = [];
+    if (!data.customer) missingFields.push('Customer');
+    if (!data.scheduleDate) missingFields.push('Schedule Date');
+    
+    if (missingFields.length > 0) {
+      toast.error(`Please fill in: ${missingFields.join(', ')}`);
+      return;
+    }
+
+    // Store form data for use during visit creation flow
+    setStoredFormData(data);
+
+    // Start the visit creation flow
+    setIsCreatingVisit(true);
+    setVisitCreationStep('location');
+    setVisitCompleted(false);
+    
     try {
+      // Step 1: Automatically fetch location
+      await fetchLocationAutomatically();
+      
+      // Step 2: Open camera modal
+      setVisitCreationStep('camera');
+      setShowCameraCapture(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to start visit creation');
+      setIsCreatingVisit(false);
+      setVisitCreationStep('idle');
+      setStoredFormData(null);
+    }
+  };
+
+  const fetchLocationAutomatically = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      setLocationLoading(true);
+
+      if (!navigator.geolocation) {
+        reject(new Error("Geolocation is not supported by this browser"));
+        setLocationLoading(false);
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+
+            // Get address from coordinates
+            const address = await getAddressFromCoordinates(latitude, longitude);
+
+            const locationData: LocationData = {
+              latitude,
+              longitude,
+              accuracy: position.coords.accuracy,
+              timestamp: Date.now(),
+              address,
+            };
+
+            setLocation(locationData);
+            setManualAddress(address);
+            setLocationLoading(false);
+            toast.success("Location captured successfully");
+            resolve();
+          } catch (error) {
+            setLocationLoading(false);
+            reject(error);
+          }
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          setLocationLoading(false);
+          reject(new Error("Failed to get location. Please try again."));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000,
+        }
+      );
+    });
+  };
+
+  const submitVisitAfterCapture = async (capturedImageFile?: File | null, formData?: CreateVisitForm | null) => {
+    try {
+      setVisitCreationStep('submitting');
       setLoading(true);
 
-      if (!capturedImage) {
-        toast.error("Please capture or select an image");
-        return;
+      // Use the passed image file or fall back to state
+      const imageToUse = capturedImageFile || capturedImage;
+
+      // Use passed form data or fall back to stored form data
+      const dataToUse = formData || storedFormData;
+
+      if (!dataToUse) {
+        throw new Error("No form data available for visit creation");
       }
 
-      if (!location) {
-        toast.error("Please capture location");
-        return;
+      // Prepare form data for file upload
+      const submitFormData = new FormData();
+      submitFormData.append("customer", dataToUse.customer || selectedCustomerId);
+      submitFormData.append("scheduleDate", dataToUse.scheduleDate || '');
+      if (imageToUse) {
+        submitFormData.append("capturedImage", imageToUse);
       }
-
-      // Prepare form data
-      const formData = new FormData();
-      formData.append("customer", data.customer);
-      formData.append("scheduleDate", data.scheduleDate);
-      formData.append("capturedImage", capturedImage);
-      formData.append("captureLocation", JSON.stringify(location));
-      if (data.notes) {
-        formData.append("notes", data.notes);
+      submitFormData.append("captureLocation", JSON.stringify(location));
+      if (dataToUse.notes) {
+        submitFormData.append("notes", dataToUse.notes);
       }
 
       // Create visit using orderService
-      const result = await orderService.createVisit(formData);
+      const result = await orderService.createVisit(submitFormData);
+      setVisitCompleted(true);
+      setShowCameraCapture(false); // Close camera immediately after success
       toast.success("Visit created successfully!");
       navigate(`/orders?view=visits`);
     } catch (error) {
@@ -191,8 +304,12 @@ const CreateVisitPage: React.FC = () => {
       toast.error(
         error instanceof Error ? error.message : "Failed to create visit"
       );
+      setShowCameraCapture(false); // Close camera on error
     } finally {
       setLoading(false);
+      setIsCreatingVisit(false);
+      setVisitCreationStep('idle');
+      setStoredFormData(null);
     }
   };
 
@@ -288,140 +405,9 @@ const CreateVisitPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Image Capture */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
-                  <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
-                  Image Capture <span className="text-red-500 ml-1">*</span>
-                </h3>
 
-                {!imagePreview && (
-                  <div className="space-y-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowCameraCapture(true)}
-                      className="w-full inline-flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
-                    >
-                      <CameraIcon className="h-5 w-5 mr-2" />
-                      Capture Photo
-                    </button>
-                    <p className="text-xs text-gray-500 text-center">
-                      Live camera capture required for visit verification
-                    </p>
-                  </div>
-                )}
 
-                {imagePreview && (
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <img
-                        src={imagePreview}
-                        alt="Captured visit image"
-                        className="w-full rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={removeImage}
-                        className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                      >
-                        <XMarkIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        removeImage();
-                        setShowCameraCapture(true);
-                      }}
-                      className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
-                    >
-                      <CameraIcon className="h-4 w-4 mr-2" />
-                      Retake Photo
-                    </button>
-                  </div>
-                )}
-              </div>
 
-              {/* Location Capture */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
-                  <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
-                  Location
-                </h3>
-
-                {!location && (
-                  <button
-                    type="button"
-                    onClick={getCurrentLocation}
-                    disabled={locationLoading}
-                    className="w-full inline-flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors disabled:opacity-50"
-                  >
-                    <MapPinIcon className="h-5 w-5 mr-2" />
-                    {locationLoading
-                      ? "Getting Location..."
-                      : "Capture Location"}
-                  </button>
-                )}
-
-                {location && (
-                  <div className="space-y-4">
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-center text-green-800">
-                        <MapPinIcon className="h-5 w-5 mr-2" />
-                        <span className="text-sm font-medium">
-                          Location Captured
-                        </span>
-                      </div>
-                      <div className="mt-2 text-xs text-green-700">
-                        <div>Lat: {location.latitude.toFixed(6)}</div>
-                        <div>Lng: {location.longitude.toFixed(6)}</div>
-                        {location.accuracy && (
-                          <div>Accuracy: ±{Math.round(location.accuracy)}m</div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Address Field */}
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Address
-                      </label>
-                      <div className="relative">
-                        <textarea
-                          value={manualAddress}
-                          onChange={(e) => updateAddress(e.target.value)}
-                          placeholder="Address will be automatically populated or enter manually"
-                          rows={3}
-                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors resize-none"
-                          disabled={true}
-                        />
-                        {addressLoading && (
-                          <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg">
-                            <div className="flex items-center text-sm text-gray-600">
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-500 mr-2"></div>
-                              Getting address...
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-500">
-                        Address is automatically detected from coordinates but
-                        can be edited manually
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={getCurrentLocation}
-                      disabled={locationLoading || addressLoading}
-                      className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors disabled:opacity-50"
-                    >
-                      <MapPinIcon className="h-4 w-4 mr-2" />
-                      {locationLoading ? "Updating..." : "Update Location"}
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
 
             {/* Summary Sidebar */}
@@ -466,17 +452,46 @@ const CreateVisitPage: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Validation Messages */}
+                  {(!selectedCustomerId || !watch('scheduleDate')) && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="ml-3">
+                          <h3 className="text-sm font-medium text-yellow-800">
+                            Please complete the following:
+                          </h3>
+                          <div className="mt-2 text-sm text-yellow-700">
+                            <ul className="list-disc pl-5 space-y-1">
+                              {!selectedCustomerId && <li>Select a customer</li>}
+                              {!watch('scheduleDate') && <li>Set a schedule date</li>}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <button
                     type="submit"
-                    disabled={
-                      loading ||
-                      !selectedCustomer ||
-                      !capturedImage ||
-                      !location
-                    }
+                    disabled={isCreatingVisit || loading}
                     className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   >
-                    {loading ? (
+                    {isCreatingVisit && visitCreationStep === 'location' ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Getting Location...
+                      </>
+                    ) : isCreatingVisit && visitCreationStep === 'camera' ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Capture Image...
+                      </>
+                    ) : loading || (isCreatingVisit && visitCreationStep === 'submitting') ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                         Creating...

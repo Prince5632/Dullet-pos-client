@@ -70,6 +70,10 @@ const QuickOrderPage: React.FC = () => {
   const [creating, setCreating] = useState(false);
   const [paidAmount, setPaidAmount] = useState<number>(0);
   
+  // Order creation flow state
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  const [orderCreationStep, setOrderCreationStep] = useState<'idle' | 'location' | 'camera' | 'submitting'>('idle');
+  
   // Godown
   const { user } = useAuth();
   const [godowns, setGodowns] = useState<Godown[]>([]);
@@ -197,11 +201,24 @@ const QuickOrderPage: React.FC = () => {
       setCapturedImage(imageFile);
       setImagePreview(imageData);
       toast.success("Photo captured successfully");
+      
+      // If we're in the order creation flow, automatically submit the order
+      if (isCreatingOrder && orderCreationStep === 'camera') {
+        setShowCameraCapture(false);
+        submitOrderAfterCapture(imageFile);
+      }
     }
   };
 
   const handleCameraClose = () => {
     setShowCameraCapture(false);
+    
+    // If we're in the order creation flow and user cancels, reset the flow
+    if (isCreatingOrder) {
+      setIsCreatingOrder(false);
+      setOrderCreationStep('idle');
+      toast.info("Order creation cancelled");
+    }
   };
 
   const removeImage = () => {
@@ -265,29 +282,97 @@ const QuickOrderPage: React.FC = () => {
     return itemsArray.reduce((sum, it) => sum + computeItemKg(it) * it.product.pricePerKg, 0);
   }, [itemsArray]);
 
-  const canSubmit = selectedCustomerId && itemsArray.length > 0 && capturedImage && location && !creating;
+  const canSubmit = selectedCustomerId && itemsArray.length > 0 && !creating;
 
   const handleCreate = async () => {
+    // Validate required fields first
+    const missingFields = [];
+    if (!selectedCustomerId) missingFields.push('Customer');
+    if (itemsArray.length === 0) missingFields.push('Items');
+    
+    if (missingFields.length > 0) {
+      toast.error(`Please fill in: ${missingFields.join(', ')}`);
+      return;
+    }
+
+    // Start the order creation flow
+    setIsCreatingOrder(true);
+    setOrderCreationStep('location');
+    
     try {
-      if (!selectedCustomerId) {
-        toast.error('Select a customer');
+      // Step 1: Automatically fetch location
+      await fetchLocationAutomatically();
+      
+      // Step 2: Open camera modal
+      setOrderCreationStep('camera');
+      setShowCameraCapture(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to start order creation');
+      setIsCreatingOrder(false);
+      setOrderCreationStep('idle');
+    }
+  };
+
+  const fetchLocationAutomatically = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      setLocationLoading(true);
+
+      if (!navigator.geolocation) {
+        reject(new Error("Geolocation is not supported by this browser"));
+        setLocationLoading(false);
         return;
       }
-      if (itemsArray.length === 0) {
-        toast.error('Add at least one item');
-        return;
-      }
-      if (!capturedImage) {
-        toast.error('Please capture an image');
-        return;
-      }
-      if (!location) {
-        toast.error('Please capture location');
-        return;
-      }
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+
+            // Get address from coordinates
+            const address = await getAddressFromCoordinates(latitude, longitude);
+
+            const locationData: LocationData = {
+              latitude,
+              longitude,
+              accuracy: position.coords.accuracy,
+              timestamp: Date.now(),
+              address,
+            };
+
+            setLocation(locationData);
+            setManualAddress(address);
+            setLocationLoading(false);
+            toast.success("Location captured successfully");
+            resolve();
+          } catch (error) {
+            setLocationLoading(false);
+            reject(error);
+          }
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          setLocationLoading(false);
+          reject(new Error("Failed to get location. Please try again."));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000,
+        }
+      );
+    });
+  };
+
+  const submitOrderAfterCapture = async (capturedImageFile?: File | null) => {
+    try {
+      setOrderCreationStep('submitting');
       setCreating(true);
 
       const paymentStatus: 'pending' | 'partial' | 'paid' = paidAmount >= totalAmount ? 'paid' : (paidAmount > 0 ? 'partial' : 'pending');
+
+      // Use the passed image file or fall back to state
+      const imageToUse = capturedImageFile || capturedImage;
 
       // Prepare form data for file upload
       const formData = new FormData();
@@ -301,7 +386,9 @@ const QuickOrderPage: React.FC = () => {
       formData.append('priority', priority);
       formData.append('paidAmount', paidAmount.toString());
       formData.append('paymentStatus', paymentStatus);
-      formData.append('capturedImage', capturedImage);
+      if (imageToUse) {
+        formData.append('capturedImage', imageToUse);
+      }
       formData.append('captureLocation', JSON.stringify(location));
       if (selectedGodownId) {
         formData.append('godown', selectedGodownId);
@@ -321,6 +408,8 @@ const QuickOrderPage: React.FC = () => {
       toast.error(err instanceof Error ? err.message : 'Failed to create order');
     } finally {
       setCreating(false);
+      setIsCreatingOrder(false);
+      setOrderCreationStep('idle');
     }
   };
 
@@ -623,113 +712,33 @@ const QuickOrderPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Image Capture */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 mb-3">
-          <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
-            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
-            Image Capture <span className="text-red-500 ml-1">*</span>
-          </h3>
-          
-          {capturedImage ? (
-            <div className="space-y-3">
-              <div className="relative">
-                <img 
-                  src={imagePreview} 
-                  alt="Captured" 
-                  className="w-full h-48 object-cover rounded-lg border border-gray-200"
-                />
-                <button
-                  type="button"
-                  onClick={removeImage}
-                  className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                >
-                  <XMarkIcon className="h-4 w-4" />
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowCameraCapture(true)}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <CameraIcon className="h-4 w-4" />
-                Retake Photo
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowCameraCapture(true)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:border-emerald-400 hover:text-emerald-600 transition-colors"
-            >
-              <CameraIcon className="h-5 w-5" />
-              Capture Image
-            </button>
-          )}
-        </div>
 
-        {/* Location Capture */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 mb-3">
-          <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
-            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
-            Location <span className="text-red-500 ml-1">*</span>
-          </h3>
-          
-          {location ? (
-            <div className="space-y-3">
-              {/* <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="font-medium text-gray-600">Latitude:</span>
-                    <div className="text-gray-900">{location.latitude.toFixed(6)}</div>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-600">Longitude:</span>
-                    <div className="text-gray-900">{location.longitude.toFixed(6)}</div>
-                  </div>
-                  <div className="col-span-2">
-                     <span className="font-medium text-gray-600">Accuracy:</span>
-                     <div className="text-gray-900">{location.accuracy.toFixed(0)}m</div>
-                   </div>
-                </div>
-              </div> */}
-              
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Address</label>
-                <textarea
-                   value={manualAddress}
-                   onChange={(e) => setManualAddress(e.target.value)}
-                   onBlur={updateAddress}
-                   placeholder={addressLoading ? "Loading address..." : "Enter address manually or it will be auto-filled"}
-                   disabled={true}
 
-                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-50"
-                   rows={2}
-                 />
-              </div>
-              
-              <button
-                type="button"
-                onClick={getCurrentLocation}
-                disabled={locationLoading}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-              >
-                <MapPinIcon className="h-4 w-4" />
-                {locationLoading ? 'Updating Location...' : 'Update Location'}
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={getCurrentLocation}
-              disabled={locationLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:border-emerald-400 hover:text-emerald-600 transition-colors disabled:opacity-50"
-            >
-              <MapPinIcon className="h-5 w-5" />
-              {locationLoading ? 'Capturing Location...' : 'Capture Location'}
-            </button>
-          )}
-        </div>
+
       </div>
+
+      {/* Validation Messages */}
+      {(() => {
+        const missingFields = [];
+        if (!selectedCustomerId) missingFields.push('Customer');
+        if (itemsArray.length === 0) missingFields.push('Items');
+        
+        if (missingFields.length > 0) {
+          return (
+            <div className="fixed bottom-16 left-0 right-0 bg-amber-50 border-t border-amber-200 z-10">
+              <div className="px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-amber-500 rounded-full flex-shrink-0"></div>
+                  <p className="text-xs text-amber-700">
+                    Please fill in: <span className="font-medium">{missingFields.join(', ')}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        }
+        return null;
+      })()}
 
        {/* Mobile Bottom Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20 safe-area-inset-bottom shadow-lg">
@@ -744,14 +753,24 @@ const QuickOrderPage: React.FC = () => {
             <div className="flex-shrink-0">
               <button
                 onClick={handleCreate}
-                disabled={!canSubmit}
+                disabled={isCreatingOrder || creating}
                 className={`inline-flex items-center justify-center px-5 py-2 rounded-lg text-white text-xs font-medium shadow-sm transition-all duration-200 whitespace-nowrap active:scale-95 ${
-                  canSubmit 
-                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 focus:outline-none focus:ring-2 focus:ring-emerald-500' 
-                    : 'bg-gray-400 cursor-not-allowed'
+                  (isCreatingOrder || creating)
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 focus:outline-none focus:ring-2 focus:ring-emerald-500'
                 }`}
               >
-                {creating ? (
+                {orderCreationStep === 'location' ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin mr-1.5" />
+                    Getting Location...
+                  </>
+                ) : orderCreationStep === 'camera' ? (
+                  <>
+                    <CameraIcon className="h-3.5 w-3.5 mr-1.5" />
+                    Capture Image...
+                  </>
+                ) : creating ? (
                   <>
                     <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin mr-1.5" />
                     Creating...
