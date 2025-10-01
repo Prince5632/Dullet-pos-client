@@ -109,6 +109,42 @@ class OrderService {
     throw new Error(response.message || 'Failed to get order audit trail');
   }
 
+  // Get visit audit trail
+  async getVisitAuditTrail(id: string, params: { page?: number; limit?: number } = {}): Promise<{
+    activities: any[];
+    pagination: {
+      currentPage: number;
+      totalItems: number;
+      itemsPerPage: number;
+      totalPages: number;
+      hasMore: boolean;
+    };
+  }> {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const url = `${API_CONFIG.ENDPOINTS.ORDERS}/visits/${id}/audit-trail?${queryParams.toString()}`;
+    const response = await apiService.get<{
+      activities: any[];
+      pagination: {
+        currentPage: number;
+        totalItems: number;
+        itemsPerPage: number;
+        totalPages: number;
+        hasMore: boolean;
+      };
+    }>(url);
+    
+    if (response.success && response.data) {
+      return response.data?.data || {};
+    }
+    throw new Error(response.message || 'Failed to get visit audit trail');
+  }
+
   // Create new order
   async createOrder(orderData: CreateOrderForm): Promise<Order> {
     const response = await apiService.post<{ order: Order }>(

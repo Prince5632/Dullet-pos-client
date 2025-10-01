@@ -44,6 +44,7 @@ interface OrderActivityTimelineProps {
   totalCount?: number;
   // optional: clamp description lines on small screens
   clampDescriptionLines?: 0 | 2 | 3 | 4 | 5 | 6;
+  text?: string;
 }
 
 const OrderActivityTimeline: React.FC<OrderActivityTimelineProps> = ({
@@ -53,6 +54,7 @@ const OrderActivityTimeline: React.FC<OrderActivityTimelineProps> = ({
   onLoadMore = () => {},
   totalCount = 0,
   clampDescriptionLines = 0, // 0 = no clamp
+  text="order"
 }) => {
   const getActionIcon = (action: string) => {
     switch (action.toLowerCase()) {
@@ -168,7 +170,7 @@ const OrderActivityTimeline: React.FC<OrderActivityTimelineProps> = ({
           </h3>
         </div>
         <div className="p-4 text-center text-gray-500 text-sm">
-          No activities recorded for this order yet.
+          No activities recorded for this {text} yet.
         </div>
       </div>
     );
