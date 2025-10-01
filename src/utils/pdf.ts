@@ -1,12 +1,10 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import type { Order, OrderItem } from '../types';
-
-type AutoTable = (doc: jsPDF, data: any) => void;
 
 declare module 'jspdf' {
   interface jsPDF {
-    autoTable: AutoTable;
+    autoTable: typeof autoTable;
   }
 }
 
@@ -19,12 +17,11 @@ export interface DeliverySummaryOptions {
 }
 
 const formatIndianCurrency = (value: number): string => {
-  try {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value);
-  } catch {
-    return `₹${Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
-  }
+  const num = Number(value || 0);
+  if (isNaN(num)) return '₹0.00';
+  return `₹${num.toFixed(2)}`; // No locale formatting, just two decimals
 };
+
 
 const toDataUrlFromBase64 = (dataUrlOrBase64?: string): string | null => {
   if (!dataUrlOrBase64) return null;
@@ -35,11 +32,11 @@ const toDataUrlFromBase64 = (dataUrlOrBase64?: string): string | null => {
 
 const buildItemsRows = (items: OrderItem[]): Array<Array<string>> => {
   return (items || []).map((it, idx) => {
-    const qty = `${it.quantity} ${it.unit}`;
-    const rate = formatIndianCurrency(it.ratePerUnit);
-    const total = formatIndianCurrency(it.totalAmount);
-    const name = it.grade ? `${it.productName} (${it.grade})` : it.productName;
-    const pack = it.packaging || '';
+    const qty = `${Number(it.quantity || 0).toLocaleString('en-IN')} ${it.unit || 'KG'}`;
+    const rate = formatIndianCurrency(Number(it.ratePerUnit || 0));
+    const total = formatIndianCurrency(Number(it.totalAmount || 0));
+    const name = it.grade ? `${it.productName || ''} (${it.grade})` : (it.productName || '');
+    const pack = it.packaging || 'Loose';
     return [String(idx + 1), name, pack, qty, rate, total];
   });
 };
@@ -51,6 +48,9 @@ export const generateDeliverySummaryPdf = async (
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
 
   const marginX = 40;
+  const pageWidth = 595.28; // A4 width in points
+  const pageHeight = 841.89; // A4 height in points
+  const contentWidth = pageWidth - (marginX * 2);
   let cursorY = 50;
 
   const companyName = opts.companyName || 'Dullet Industries';
@@ -84,7 +84,7 @@ export const generateDeliverySummaryPdf = async (
 
   cursorY += 8;
   doc.setDrawColor(220);
-  doc.line(marginX, cursorY, 555, cursorY);
+  doc.line(marginX, cursorY, pageWidth - marginX, cursorY);
   cursorY += 20;
 
   // Title
@@ -95,29 +95,36 @@ export const generateDeliverySummaryPdf = async (
 
   // Order + Customer
   const leftX = marginX;
-  const rightX = 320;
+  const rightX = marginX + (contentWidth / 2) + 10;
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text('Order Details', leftX, cursorY);
   doc.text('Customer Details', rightX, cursorY);
   cursorY += 12;
   doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
 
   const orderDate = order.orderDate ? new Date(order.orderDate) : new Date();
   const deliveryAt = order.driverAssignment?.deliveryAt ? new Date(order.driverAssignment.deliveryAt) : undefined;
   const deliveryLocation = order.driverAssignment?.deliveryLocation?.address || '';
 
   const leftLines = [
-    `Order No: ${order.orderNumber}`,
-    `Order Date: ${orderDate.toLocaleString()}`,
-    `Status: ${order.status}`,
-    `Payment Terms: ${order.paymentTerms}`,
+    `Order No: ${order.orderNumber || 'N/A'}`,
+    `Order Date: ${orderDate.toLocaleDateString('en-IN')} ${orderDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`,
+    `Status: ${order.status || 'N/A'}`,
+    `Payment Terms: ${order.paymentTerms || 'N/A'}`,
   ];
+  
+  const customerAddress = [
+    order.customer?.address?.street || '',
+    order.customer?.address?.city || ''
+  ].filter(Boolean).join(', ');
+  
   const rightLines = [
-    `Business: ${order.customer?.businessName || ''}`,
-    `Contact: ${order.customer?.contactPersonName || ''}`,
-    `Phone: ${order.customer?.phone || ''}`,
-    `Address: ${order.customer?.address?.street || ''}, ${order.customer?.address?.city || ''}`,
+    `Business: ${order.customer?.businessName || 'N/A'}`,
+    `Contact: ${order.customer?.contactPersonName || 'N/A'}`,
+    `Phone: ${order.customer?.phone || 'N/A'}`,
+    `Address: ${customerAddress || 'N/A'}`,
   ];
 
   leftLines.forEach((t, i) => doc.text(t, leftX, cursorY + i * 14));
@@ -126,60 +133,102 @@ export const generateDeliverySummaryPdf = async (
 
   if (deliveryAt || deliveryLocation) {
     doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
     doc.text('Delivery Info', leftX, cursorY);
     doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
     cursorY += 12;
-    if (deliveryAt) doc.text(`Delivered At: ${deliveryAt.toLocaleString()}`, leftX, cursorY), cursorY += 14;
-    if (deliveryLocation) doc.text(`Location: ${deliveryLocation}`, leftX, cursorY), cursorY += 14;
+    if (deliveryAt) {
+      doc.text(`Delivered At: ${deliveryAt.toLocaleDateString('en-IN')} ${deliveryAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`, leftX, cursorY);
+      cursorY += 14;
+    }
+    if (deliveryLocation) {
+      const locationText = doc.splitTextToSize(`Location: ${deliveryLocation}`, contentWidth);
+      doc.text(locationText, leftX, cursorY);
+      cursorY += locationText.length * 12;
+    }
   }
 
   cursorY += 6;
   // Items table
   const tableBody = buildItemsRows(order.items || []);
-  (doc as any).autoTable({
+  const tableResult = autoTable(doc, {
     head: [["#", "Item", "Packaging", "Qty", "Rate", "Amount"]],
     body: tableBody,
     startY: cursorY,
-    styles: { font: 'helvetica', fontSize: 9 },
-    headStyles: { fillColor: [37, 99, 235], textColor: 255, halign: 'left' },
+     styles: { 
+    font: 'helvetica', 
+    fontSize: 9,
+    cellPadding: 4,
+    halign: 'left'
+  },
+    headStyles: { 
+      fillColor: [37, 99, 235], 
+      textColor: 255, 
+      halign: 'center',
+      fontStyle: 'bold'
+    },
     columnStyles: {
-      0: { cellWidth: 24, halign: 'right' },
-      3: { halign: 'right' },
-      4: { halign: 'right' },
-      5: { halign: 'right' },
+      0: { cellWidth: 30, halign: 'center' },  // # column
+      1: { cellWidth: 180, halign: 'left' },   // Item column
+      2: { cellWidth: 80, halign: 'center' },  // Packaging column
+      3: { cellWidth: 80, halign: 'right' },   // Qty column
+      4: { cellWidth: 80, halign: 'right' },   // Rate column
+      5: { cellWidth: 95, halign: 'right' },   // Amount column
     },
     margin: { left: marginX, right: marginX },
+    tableWidth: 'wrap',
+    theme: 'grid'
   });
 
-  const afterTableY = (doc as any).lastAutoTable.finalY || cursorY + 20;
+  const afterTableY = (doc as any).lastAutoTable?.finalY || cursorY + 20;
   cursorY = afterTableY + 16;
 
   // Totals
-  const totalsX = 360;
+  const totalsX = 350;
+  const totalsValueX = 520;
   doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
   doc.text('Totals', totalsX, cursorY);
   doc.setFont('helvetica', 'normal');
-  cursorY += 12;
+  doc.setFontSize(10);
+  cursorY += 16;
+  
+  const subtotal = Number(order.subtotal || 0);
+  const discount = Number(order.discount || 0);
+  const discountPercentage = Number(order.discountPercentage || 0);
+  const taxAmount = Number(order.taxAmount || 0);
+  const totalAmount = Number(order.totalAmount || 0);
+  
   const totals = [
-    ['Subtotal', formatIndianCurrency(order.subtotal || 0)],
-    ['Discount', `${order.discountPercentage ? `${order.discountPercentage}%` : ''} ${formatIndianCurrency(order.discount || 0)}`.trim()],
-    ['Tax', formatIndianCurrency(order.taxAmount || 0)],
-    ['Grand Total', formatIndianCurrency(order.totalAmount || 0)],
+    ['Subtotal', formatIndianCurrency(subtotal)],
+    ['Discount', discountPercentage > 0 ? `${discountPercentage}% - ${formatIndianCurrency(discount)}` : formatIndianCurrency(discount)],
+    ['Tax', formatIndianCurrency(taxAmount)],
   ];
+  
   totals.forEach(([label, value]) => {
     doc.text(label, totalsX, cursorY);
-    doc.text(value, 555, cursorY, { align: 'right' as any });
+    doc.text(value, totalsValueX, cursorY, { align: 'right' as any });
     cursorY += 14;
   });
+  
+  // Grand Total with emphasis
+  doc.setFont('helvetica', 'bold');
+  doc.text('Grand Total', totalsX, cursorY);
+  doc.text(formatIndianCurrency(totalAmount), totalsValueX, cursorY, { align: 'right' as any });
+  doc.setFont('helvetica', 'normal');
+  cursorY += 14;
 
   cursorY += 10;
   // Notes
-  if (order.notes) {
+  if (order.notes && order.notes.trim()) {
     doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
     doc.text('Order Notes', marginX, cursorY);
     doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
     cursorY += 12;
-    const split = doc.splitTextToSize(order.notes, 515 - marginX);
+    const split = doc.splitTextToSize(order.notes.trim(), contentWidth);
     doc.text(split, marginX, cursorY);
     cursorY += split.length * 12 + 6;
   }

@@ -441,14 +441,12 @@ const OrderStatusDropdown: React.FC<OrderStatusDropdownProps> = ({
         onOrderUpdate={onOrderUpdate}
       />
 
-      {deliveryModalOpen && (
-         <DeliveryRecordingModal
-          isOpen={deliveryModalOpen}
-          onClose={() => setDeliveryModalOpen(false)}
-          order={order}
-          onOrderUpdate={onOrderUpdate}
-        />
-      )}
+      <DeliveryRecordingModal
+        isOpen={deliveryModalOpen}
+        onClose={() => setDeliveryModalOpen(false)}
+        order={order}
+        onOrderUpdate={onOrderUpdate}
+      />
     </>
   );
 };

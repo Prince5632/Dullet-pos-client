@@ -10,6 +10,7 @@ interface ModalProps {
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   className?: string;
+  preventAutoClose?: boolean;
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -19,6 +20,7 @@ const Modal: React.FC<ModalProps> = ({
   children,
   size = 'md',
   className,
+  preventAutoClose = false,
 }) => {
   const sizeClasses = {
     sm: 'max-w-sm',
@@ -30,7 +32,7 @@ const Modal: React.FC<ModalProps> = ({
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={onClose}>
+      <Dialog as="div" className="relative z-50" onClose={preventAutoClose ? () => {} : onClose}>
         {/* Background Overlay - Clean light overlay instead of black */}
         <Transition.Child
           as={Fragment}
