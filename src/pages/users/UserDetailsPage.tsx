@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeftIcon,
@@ -22,6 +22,7 @@ import { formatDateTime, formatDate } from '../../utils';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
+import UserActivityTimeline from '../../components/users/UserActivityTimeline';
 import toast from 'react-hot-toast';
 import { resolveImageSrc } from '../../utils/image';
 
@@ -41,6 +42,12 @@ const UserDetailsPage: React.FC = () => {
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [showActivity, setShowActivity] = useState(false);
+  const [activitiesPagination, setActivitiesPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    hasMore: false,
+  });
 
   // Load user data
   useEffect(() => {
@@ -67,7 +74,7 @@ const UserDetailsPage: React.FC = () => {
   }, [id, navigate]);
 
   // Handle user actions
-  const handleToggleUserStatus = async () => {
+  const handleToggleUserStatus = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -89,7 +96,7 @@ const UserDetailsPage: React.FC = () => {
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [user]);
 
   const handleDeleteUser = async () => {
     if (!user) return;
@@ -137,26 +144,52 @@ const UserDetailsPage: React.FC = () => {
   };
 
   // Load user activity
-  const loadUserActivity = async () => {
+  const loadUserActivity = useCallback(async (page: number = 1, append: boolean = false) => {
     if (!user) return;
 
     try {
       setActivityLoading(true);
-      const activity = await userService.getUserActivity(user._id, { limit: 20 });
-      setActivityLogs(activity.data || []);
+      const response = await userService.getUserActivity(user._id, { 
+        page, 
+        limit: 20 
+      });
+      
+      // Handle paginated response
+      const { activities, pagination } = response;
+      
+      if (append) {
+        setActivityLogs(prev => [...prev, ...activities]);
+      } else {
+        setActivityLogs(activities);
+      }
+      
+      setActivitiesPagination(prev => ({
+        ...prev,
+        currentPage: pagination.currentPage,
+        totalPages: pagination.totalPages,
+        totalCount: pagination.totalItems,
+        hasMore: pagination.currentPage < pagination.totalPages,
+      }));
     } catch (error) {
       console.error('Failed to load activity:', error);
       toast.error('Failed to load user activity');
     } finally {
       setActivityLoading(false);
     }
-  };
+  }, [user]);
+
+  // Load more activities for infinite scroll
+  const loadMoreActivities = useCallback(() => {
+    if (activitiesPagination.hasMore && !activityLoading) {
+      loadUserActivity(activitiesPagination.currentPage + 1, true);
+    }
+  }, [activitiesPagination.hasMore, activitiesPagination.currentPage, activityLoading, loadUserActivity]);
 
   useEffect(() => {
-    if (showActivity && user) {
+    if (showActivity && user && activityLogs.length === 0) {
       loadUserActivity();
     }
-  }, [showActivity, user]);
+  }, [showActivity, user?._id]);
 
   if (loading) {
     return (
@@ -178,67 +211,76 @@ const UserDetailsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => navigate('/users')}
-            className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <ArrowLeftIcon className="h-5 w-5 mr-1" />
-            Back to Users
-          </button>
-          <div className="h-6 border-l border-gray-300"></div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {user.firstName} {user.lastName}
-            </h1>
-            <p className="text-gray-600">{user.position} • {user.department}</p>
-          </div>
-        </div>
+   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+  {/* Left: Back + User meta */}
+  <div className="flex flex-wrap items-center gap-3 sm:gap-4 min-w-0">
+    <button
+      onClick={() => navigate('/users')}
+      className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors shrink-0"
+    >
+      <ArrowLeftIcon className="h-5 w-5 mr-1" />
+      <span className="break-words [overflow-wrap:anywhere] text-wrap">Back to Users</span>
+    </button>
 
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={handleToggleUserStatus}
-            disabled={actionLoading}
-            className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium transition-colors ${
-              user.isActive
-                ? 'text-orange-700 bg-orange-100 hover:bg-orange-200'
-                : 'text-green-700 bg-green-100 hover:bg-green-200'
-            } disabled:opacity-50 disabled:cursor-not-allowed`}
-          >
-            {user.isActive ? (
-              <UserMinusIcon className="h-4 w-4 mr-2" />
-            ) : (
-              <UserPlusIcon className="h-4 w-4 mr-2" />
-            )}
-            {user.isActive ? 'Deactivate' : 'Activate'}
-          </button>
+    {/* Divider (hide on very small if wrapping gets tight) */}
+    <div className="hidden xs:block h-6 border-l border-gray-300" />
 
-          <button
-            onClick={() => setPasswordModalOpen(true)}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-          >
-            <KeyIcon className="h-4 w-4 mr-2" />
-            Reset Password
-          </button>
+    {/* User name + meta */}
+    <div className="min-w-0">
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words [overflow-wrap:anywhere] text-wrap truncate md:whitespace-normal md:truncate-none">
+        {user.firstName} {user.lastName}
+      </h1>
+      <p className="text-gray-600 text-sm sm:text-base break-words [overflow-wrap:anywhere] text-wrap min-w-0">
+        {user.position} • {user.department}
+      </p>
+    </div>
+  </div>
 
-          <Link
-            to={`/users/${user._id}/edit`}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-          >
-            <PencilIcon className="h-4 w-4 mr-2" />
-            Edit User
-          </Link>
+  {/* Right: Actions */}
+  <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto sm:overflow-visible py-1 -mx-1 px-1 min-w-0">
+    <button
+      onClick={handleToggleUserStatus}
+      disabled={actionLoading}
+      className={`inline-flex items-center px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium transition-colors whitespace-nowrap ${
+        user.isActive
+          ? 'text-orange-700 bg-orange-100 hover:bg-orange-200'
+          : 'text-green-700 bg-green-100 hover:bg-green-200'
+      } disabled:opacity-50 disabled:cursor-not-allowed`}
+    >
+      {user.isActive ? (
+        <UserMinusIcon className="h-4 w-4 mr-2 shrink-0" />
+      ) : (
+        <UserPlusIcon className="h-4 w-4 mr-2 shrink-0" />
+      )}
+      <span className="break-words [overflow-wrap:anywhere] text-wrap">{user.isActive ? 'Deactivate' : 'Activate'}</span>
+    </button>
 
-          <button
-            onClick={() => setDeleteModalOpen(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors"
-          >
-            <TrashIcon className="h-4 w-4 mr-2" />
-            Delete
-          </button>
-        </div>
-      </div>
+    <button
+      onClick={() => setPasswordModalOpen(true)}
+      className="inline-flex items-center px-3 sm:px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors whitespace-nowrap"
+    >
+      <KeyIcon className="h-4 w-4 mr-2 shrink-0" />
+      <span className="break-words [overflow-wrap:anywhere] text-wrap">Reset Password</span>
+    </button>
+
+    <Link
+      to={`/users/${user._id}/edit`}
+      className="inline-flex items-center px-3 sm:px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors whitespace-nowrap"
+    >
+      <PencilIcon className="h-4 w-4 mr-2 shrink-0" />
+      <span className="break-words [overflow-wrap:anywhere] text-wrap">Edit User</span>
+    </Link>
+
+    <button
+      onClick={() => setDeleteModalOpen(true)}
+      className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors whitespace-nowrap"
+    >
+      <TrashIcon className="h-4 w-4 mr-2 shrink-0" />
+      <span className="break-words [overflow-wrap:anywhere] text-wrap">Delete</span>
+    </button>
+  </div>
+</div>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profile Card */}
@@ -416,46 +458,62 @@ const UserDetailsPage: React.FC = () => {
           </div>
 
           {/* User Activity */}
-          <div className="bg-white shadow-sm rounded-lg border border-gray-200">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
+          {showActivity && (
+            <UserActivityTimeline 
+              activities={activityLogs} 
+              loading={activityLoading}
+              hasMore={activitiesPagination.hasMore}
+              onLoadMore={loadMoreActivities}
+              totalCount={activitiesPagination.totalCount}
+            />
+          )}
+          
+          {!showActivity && (
+            <div className="bg-white shadow-sm rounded-lg border border-gray-200">
+              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
+                <button
+                  onClick={() => {
+                    setShowActivity(!showActivity);
+                    if (!showActivity) {
+                      setActivityLogs([]);
+                      setActivitiesPagination({
+                        currentPage: 1,
+                        totalPages: 1,
+                        totalCount: 0,
+                        hasMore: false,
+                      });
+                    }
+                  }}
+                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                >
+                  <ClockIcon className="h-4 w-4 mr-1" />
+                  Show Activity
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {showActivity && (
+            <div className="flex justify-end">
               <button
-                onClick={() => setShowActivity(!showActivity)}
+                onClick={() => {
+                  setShowActivity(false);
+                  setActivityLogs([]);
+                  setActivitiesPagination({
+                    currentPage: 1,
+                    totalPages: 1,
+                    totalCount: 0,
+                    hasMore: false,
+                  });
+                }}
                 className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
               >
                 <ClockIcon className="h-4 w-4 mr-1" />
-                {showActivity ? 'Hide' : 'Show'} Activity
+                Hide Activity
               </button>
             </div>
-            {showActivity && (
-              <div className="p-6">
-                {activityLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                    <span className="ml-3 text-gray-600">Loading activity...</span>
-                  </div>
-                ) : activityLogs.length > 0 ? (
-                  <div className="space-y-4">
-                    {activityLogs.map((log, index) => (
-                      <div key={index} className="flex items-start space-x-3 py-3 border-b border-gray-100 last:border-b-0">
-                        <div className="flex-shrink-0">
-                          <DocumentTextIcon className="h-5 w-5 text-gray-400" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm text-gray-900">{log.description}</p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {formatDateTime(log.timestamp)} • {log.module}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 text-center py-8">No activity recorded</p>
-                )}
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
 

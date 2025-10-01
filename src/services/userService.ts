@@ -169,7 +169,16 @@ class UserService {
   }
 
   // Get user activity/audit logs
-  async getUserActivity(id: string, params: { page?: number; limit?: number } = {}): Promise<any> {
+  async getUserActivity(id: string, params: { page?: number; limit?: number } = {}): Promise<{
+    activities: any[];
+    pagination: {
+      currentPage: number;
+      totalItems: number;
+      itemsPerPage: number;
+      totalPages: number;
+      hasMore: boolean;
+    };
+  }> {
     const queryParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
@@ -178,7 +187,21 @@ class UserService {
     });
 
     const url = `${API_CONFIG.ENDPOINTS.USER_BY_ID(id)}/activity?${queryParams.toString()}`;
-    return await apiService.get(url);
+    const response = await apiService.get<{
+      activities: any[];
+      pagination: {
+        currentPage: number;
+        totalItems: number;
+        itemsPerPage: number;
+        totalPages: number;
+        hasMore: boolean;
+      };
+    }>(url);
+    
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error(response.message || 'Failed to get user activity');
   }
 
   // Export users to CSV

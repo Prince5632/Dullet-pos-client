@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import {
   ArrowLeftIcon,
@@ -42,6 +42,12 @@ const OrderDetailsPage: React.FC = () => {
   const [showImageModal, setShowImageModal] = useState(false);
   const [activities, setActivities] = useState<any[]>([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const [activitiesPagination, setActivitiesPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    hasMore: false
+  });
 
   useEffect(() => {
     if (!orderId) {
@@ -74,25 +80,47 @@ const OrderDetailsPage: React.FC = () => {
     }
   };
 
-  const fetchActivities = async () => {
+  const fetchActivities = useCallback(async (page: number = 1, append: boolean = false) => {
     if (!orderId) return;
     
     try {
       setActivitiesLoading(true);
-      const auditTrail = await orderService.getOrderAuditTrail(orderId);
-      setActivities(auditTrail);
+      const response = await orderService.getOrderAuditTrail(orderId, { 
+        page, 
+        limit: 5
+      });
+      
+      if (append) {
+        setActivities(prev => [...prev, ...response.activities]);
+      } else {
+        setActivities(response.activities);
+      }
+      
+      setActivitiesPagination(prev => ({
+        ...prev,
+        currentPage: response.pagination.currentPage,
+        totalPages: response.pagination.totalPages,
+        totalCount: response.pagination.totalItems,
+        hasMore: response.pagination.hasMore
+      }));
     } catch (err: any) {
       console.error("Error fetching activities:", err);
       // Don't show error toast for activities as it's not critical
     } finally {
       setActivitiesLoading(false);
     }
-  };
+  }, [orderId]);
+
+  const loadMoreActivities = useCallback(() => {
+    if (activitiesPagination.hasMore && !activitiesLoading) {
+      fetchActivities(activitiesPagination.currentPage + 1, true);
+    }
+  }, [activitiesPagination.hasMore, activitiesPagination.currentPage, activitiesLoading, fetchActivities]);
   console.log(activities)
-  const handleOrderUpdate = (updatedOrder: Order) => {
+  const handleOrderUpdate = useCallback((updatedOrder: Order) => {
     setOrder(updatedOrder);
     toast.success("Order updated successfully");
-  };
+  }, []);
 
   const handlePrint = () => {
     window.print();
@@ -828,7 +856,10 @@ const OrderDetailsPage: React.FC = () => {
               {/* Activity Timeline */}
               <OrderActivityTimeline 
                 activities={activities} 
-                loading={activitiesLoading} 
+                loading={activitiesLoading}
+                hasMore={activitiesPagination.hasMore}
+                onLoadMore={loadMoreActivities}
+                totalCount={activitiesPagination.totalCount}
               />
             </div>
           </div>
