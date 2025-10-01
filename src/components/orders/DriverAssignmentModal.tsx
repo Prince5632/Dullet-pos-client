@@ -173,7 +173,7 @@ const DriverAssignmentModal: React.FC<DriverAssignmentModalProps> = ({
                           {driver.profilePhoto ? (
                             <img
                               className="h-8 w-8 rounded-full"
-                              src={driver.profilePhoto}
+                              src={`data:image/jpeg;base64,${driver?.profilePhoto}`}
                               alt=""
                             />
                           ) : (
