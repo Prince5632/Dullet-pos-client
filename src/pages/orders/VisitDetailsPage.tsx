@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeftIcon,
@@ -23,6 +23,7 @@ import LoadingSpinner from "../../components/common/LoadingSpinner";
 import Badge from "../../components/ui/Badge";
 import Avatar from "../../components/ui/Avatar";
 import Modal from "../../components/ui/Modal";
+import OrderActivityTimeline from "../../components/orders/OrderActivityTimeline";
 import { toast } from "react-hot-toast";
 
 interface Visit {
@@ -97,6 +98,47 @@ const VisitDetailsPage: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showImageModal, setShowImageModal] = useState(false);
 
+  // Activity timeline state
+  const [activities, setActivities] = useState<any[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const [activitiesPagination, setActivitiesPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    hasMore: false,
+  });
+  const fetchActivities = useCallback(
+    async (page: number = 1, append: boolean = false) => {
+      if (!visitId) return;
+
+      try {
+        setActivitiesLoading(true);
+        const response = await orderService.getVisitAuditTrail(visitId, {
+          page,
+          limit: 5,
+        });
+        if (append) {
+          setActivities((prev) => [...prev, ...response.activities]);
+        } else {
+          setActivities(response.activities);
+        }
+
+        setActivitiesPagination({
+          currentPage: response.pagination.currentPage,
+          totalPages: response.pagination.totalPages,
+          totalCount: response.pagination.totalItems,
+          hasMore: response.pagination.hasMore,
+        });
+      } catch (err: any) {
+        console.error("Error fetching activities:", err);
+        // Don't show error toast for activities as it's not critical
+      } finally {
+        setActivitiesLoading(false);
+      }
+    },
+    [visitId]
+  );
+
   useEffect(() => {
     if (!visitId) {
       setError("Visit ID is required");
@@ -104,7 +146,8 @@ const VisitDetailsPage: React.FC = () => {
       return;
     }
     fetchVisit();
-  }, [visitId]);
+    fetchActivities();
+  }, [visitId, fetchActivities]);
 
   const fetchVisit = async () => {
     try {
@@ -124,6 +167,21 @@ const VisitDetailsPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const loadMoreActivities = useCallback(() => {
+    if (
+      activitiesPagination?.hasMore &&
+      !activitiesLoading &&
+      activitiesPagination?.currentPage
+    ) {
+      fetchActivities(activitiesPagination.currentPage + 1, true);
+    }
+  }, [
+    activitiesPagination?.hasMore,
+    activitiesPagination?.currentPage,
+    activitiesLoading,
+    fetchActivities,
+  ]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
@@ -148,7 +206,7 @@ const VisitDetailsPage: React.FC = () => {
     });
   };
 
- const formatImageSrc = (imageData: string | undefined): string => {
+  const formatImageSrc = (imageData: string | undefined): string => {
     if (!imageData) return "";
 
     // If it's already a complete URL, return as is
@@ -424,6 +482,17 @@ const VisitDetailsPage: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {/* Activity Timeline */}
+            <OrderActivityTimeline
+              activities={activities}
+              loading={activitiesLoading}
+              hasMore={activitiesPagination.hasMore}
+              onLoadMore={loadMoreActivities}
+              totalCount={activitiesPagination.totalCount}
+              clampDescriptionLines={3}
+              text="visit"
+            />
           </div>
 
           {/* Sidebar */}
