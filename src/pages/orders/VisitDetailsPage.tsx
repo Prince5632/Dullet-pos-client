@@ -294,7 +294,7 @@ const VisitDetailsPage: React.FC = () => {
               </button>
               <div className="flex-1 min-w-0">
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
-                  Visit Details
+                  {visit?.orderNumber || "Visit Details"}
                 </h1>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   <Badge
