@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { Link } from "react-router-dom";
 import {
   MagnifyingGlassIcon,
   PlusIcon,
@@ -15,19 +15,20 @@ import {
   ShieldCheckIcon,
   UsersIcon,
   XMarkIcon,
-} from '@heroicons/react/24/outline';
-import { useAuth } from '../../contexts/AuthContext';
-import { userService } from '../../services/userService';
-import { roleService } from '../../services/roleService';
-import type { User, Role, TableColumn } from '../../types';
-import { formatDate, debounce } from '../../utils';
-import Table from '../../components/ui/Table';
-import Pagination from '../../components/ui/Pagination';
-import Badge from '../../components/ui/Badge';
-import Avatar from '../../components/ui/Avatar';
-import Modal from '../../components/ui/Modal';
-import RoleAssignment from '../../components/permissions/RoleAssignment';
-import toast from 'react-hot-toast';
+} from "@heroicons/react/24/outline";
+import { useAuth } from "../../contexts/AuthContext";
+import { userService } from "../../services/userService";
+import { roleService } from "../../services/roleService";
+import type { User, Role, TableColumn } from "../../types";
+import { formatDate, debounce } from "../../utils";
+import { exportFilteredUsersToExcel } from "../../utils/excelExport";
+import Table from "../../components/ui/Table";
+import Pagination from "../../components/ui/Pagination";
+import Badge from "../../components/ui/Badge";
+import Avatar from "../../components/ui/Avatar";
+import Modal from "../../components/ui/Modal";
+import RoleAssignment from "../../components/permissions/RoleAssignment";
+import toast from "react-hot-toast";
 
 interface UserListFilters {
   search: string;
@@ -39,7 +40,7 @@ interface UserListFilters {
 const UsersPage: React.FC = () => {
   const { user: currentUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // State
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -48,8 +49,8 @@ const UsersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
-  const [sortBy, setSortBy] = useState<string>('');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortBy, setSortBy] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
@@ -61,14 +62,16 @@ const UsersPage: React.FC = () => {
   const [importLoading, setImportLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [bulkRoleModalOpen, setBulkRoleModalOpen] = useState(false);
-  const [selectedRoleForBulk, setSelectedRoleForBulk] = useState<Role | null>(null);
+  const [selectedRoleForBulk, setSelectedRoleForBulk] = useState<Role | null>(
+    null
+  );
 
   // Filters
   const [filters, setFilters] = useState<UserListFilters>({
-    search: '',
-    department: '',
-    role: '',
-    status: '',
+    search: "",
+    department: "",
+    role: "",
+    status: "",
   });
 
   // Departments list
@@ -77,10 +80,11 @@ const UsersPage: React.FC = () => {
 
   // Debounced search
   const debouncedSearch = useMemo(
-    () => debounce((searchTerm: string) => {
-      setFilters(prev => ({ ...prev, search: searchTerm }));
-      setCurrentPage(1);
-    }, 500),
+    () =>
+      debounce((searchTerm: string) => {
+        setFilters((prev) => ({ ...prev, search: searchTerm }));
+        setCurrentPage(1);
+      }, 500),
     []
   );
 
@@ -98,16 +102,16 @@ const UsersPage: React.FC = () => {
       };
 
       const response = await userService.getUsers(params);
-      
+
       if (response.success && response.data) {
         setUsers(response.data.users);
         setTotalUsers(response.pagination?.totalUsers || 0);
         setTotalPages(response.pagination?.totalPages || 1);
       }
     } catch (error: any) {
-      if (error.name !== 'CanceledError') {
-        console.error('Failed to load users:', error);
-        toast.error('Failed to load users');
+      if (error.name !== "CanceledError") {
+        console.error("Failed to load users:", error);
+        toast.error("Failed to load users");
       }
     } finally {
       setLoading(false);
@@ -119,7 +123,7 @@ const UsersPage: React.FC = () => {
       const allRoles = await roleService.getAllRoles();
       setRoles(allRoles);
     } catch (error) {
-      console.error('Failed to load roles:', error);
+      console.error("Failed to load roles:", error);
     }
   };
 
@@ -142,16 +146,16 @@ const UsersPage: React.FC = () => {
   };
 
   const handleFilterChange = (key: keyof UserListFilters, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({ ...prev, [key]: value }));
     setCurrentPage(1);
   };
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
-      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       setSortBy(column);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
     setCurrentPage(1);
   };
@@ -161,13 +165,13 @@ const UsersPage: React.FC = () => {
 
     try {
       await userService.deleteUser(userToDelete._id);
-      toast.success('User deleted successfully');
+      toast.success("User deleted successfully");
       setDeleteModalOpen(false);
       setUserToDelete(null);
       loadUsers();
     } catch (error) {
-      console.error('Failed to delete user:', error);
-      toast.error('Failed to delete user');
+      console.error("Failed to delete user:", error);
+      toast.error("Failed to delete user");
     }
   };
 
@@ -175,24 +179,24 @@ const UsersPage: React.FC = () => {
     try {
       if (user.isActive) {
         await userService.deactivateUser(user._id);
-        toast.success('User deactivated successfully');
+        toast.success("User deactivated successfully");
       } else {
         await userService.activateUser(user._id);
-        toast.success('User activated successfully');
+        toast.success("User activated successfully");
       }
       loadUsers();
     } catch (error) {
-      console.error('Failed to update user status:', error);
-      toast.error('Failed to update user status');
+      console.error("Failed to update user status:", error);
+      toast.error("Failed to update user status");
     }
   };
 
   const clearFilters = () => {
     setFilters({
-      search: '',
-      department: '',
-      role: '',
-      status: '',
+      search: "",
+      department: "",
+      role: "",
+      status: "",
     });
     setCurrentPage(1);
   };
@@ -212,7 +216,7 @@ const UsersPage: React.FC = () => {
     if (selectedUsers.size === users.length) {
       setSelectedUsers(new Set());
     } else {
-      setSelectedUsers(new Set(users.map(user => user._id)));
+      setSelectedUsers(new Set(users.map((user) => user._id)));
     }
   };
 
@@ -225,8 +229,8 @@ const UsersPage: React.FC = () => {
       setSelectedUsers(new Set());
       loadUsers();
     } catch (error) {
-      console.error('Failed to activate users:', error);
-      toast.error('Failed to activate users');
+      console.error("Failed to activate users:", error);
+      toast.error("Failed to activate users");
     } finally {
       setBulkActionLoading(false);
     }
@@ -240,8 +244,8 @@ const UsersPage: React.FC = () => {
       setSelectedUsers(new Set());
       loadUsers();
     } catch (error) {
-      console.error('Failed to deactivate users:', error);
-      toast.error('Failed to deactivate users');
+      console.error("Failed to deactivate users:", error);
+      toast.error("Failed to deactivate users");
     } finally {
       setBulkActionLoading(false);
     }
@@ -255,8 +259,8 @@ const UsersPage: React.FC = () => {
       setSelectedUsers(new Set());
       loadUsers();
     } catch (error) {
-      console.error('Failed to delete users:', error);
-      toast.error('Failed to delete users');
+      console.error("Failed to delete users:", error);
+      toast.error("Failed to delete users");
     } finally {
       setBulkActionLoading(false);
     }
@@ -266,19 +270,28 @@ const UsersPage: React.FC = () => {
   const handleExportUsers = async () => {
     try {
       setExportLoading(true);
-      const blob = await userService.exportUsers(filters);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `users_export_${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-      toast.success('Users exported successfully');
+      
+      // Get filtered users data
+      const params = {
+        page: 1,
+        limit: 10000, // Get all users for export
+        search: filters.search,
+        department: filters.department,
+        role: filters.role,
+        isActive: filters.status,
+      };
+
+      const response = await userService.getUsers(params);
+      
+      if (response.success && response.data) {
+        await exportFilteredUsersToExcel(response.data.users, filters);
+        toast.success("Users exported successfully");
+      } else {
+        throw new Error("Failed to fetch users data");
+      }
     } catch (error) {
-      console.error('Failed to export users:', error);
-      toast.error('Failed to export users');
+      console.error("Failed to export users:", error);
+      toast.error("Failed to export users");
     } finally {
       setExportLoading(false);
     }
@@ -287,8 +300,8 @@ const UsersPage: React.FC = () => {
   const handleImportFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
-        toast.error('Please select a CSV file');
+      if (file.type !== "text/csv" && !file.name.endsWith(".csv")) {
+        toast.error("Please select a CSV file");
         return;
       }
       setImportFile(file);
@@ -301,19 +314,21 @@ const UsersPage: React.FC = () => {
     try {
       setImportLoading(true);
       const result = await userService.importUsers(importFile);
-      toast.success(`Import completed: ${result.success} users imported, ${result.failed} failed`);
-      
+      toast.success(
+        `Import completed: ${result.success} users imported, ${result.failed} failed`
+      );
+
       if (result.errors.length > 0) {
-        console.error('Import errors:', result.errors);
+        console.error("Import errors:", result.errors);
         toast.error(`${result.errors.length} errors occurred during import`);
       }
-      
+
       setImportModalOpen(false);
       setImportFile(null);
       loadUsers();
     } catch (error) {
-      console.error('Failed to import users:', error);
-      toast.error('Failed to import users');
+      console.error("Failed to import users:", error);
+      toast.error("Failed to import users");
     } finally {
       setImportLoading(false);
     }
@@ -325,21 +340,23 @@ const UsersPage: React.FC = () => {
 
     try {
       setBulkActionLoading(true);
-      
-      const updatePromises = Array.from(selectedUsers).map(userId => 
+
+      const updatePromises = Array.from(selectedUsers).map((userId) =>
         userService.updateUser(userId, { roleId: selectedRoleForBulk._id })
       );
-      
+
       await Promise.all(updatePromises);
-      
-      toast.success(`Role "${selectedRoleForBulk.name}" assigned to ${selectedUsers.size} users successfully`);
+
+      toast.success(
+        `Role "${selectedRoleForBulk.name}" assigned to ${selectedUsers.size} users successfully`
+      );
       setBulkRoleModalOpen(false);
       setSelectedRoleForBulk(null);
       setSelectedUsers(new Set());
       loadUsers();
     } catch (error) {
-      console.error('Failed to assign roles:', error);
-      toast.error('Failed to assign roles to users');
+      console.error("Failed to assign roles:", error);
+      toast.error("Failed to assign roles to users");
     } finally {
       setBulkActionLoading(false);
     }
@@ -348,8 +365,8 @@ const UsersPage: React.FC = () => {
   // Table columns
   const columns: TableColumn<User>[] = [
     {
-      key: 'select',
-      label: '',
+      key: "select",
+      label: "",
       render: (_, user) => (
         <input
           type="checkbox"
@@ -360,60 +377,60 @@ const UsersPage: React.FC = () => {
       ),
     },
     {
-      key: 'user',
-      label: 'User',
+      key: "user",
+      label: "User",
       render: (_, user) => (
         <div className="flex items-center space-x-2">
-          <Avatar 
-            src={user.profilePhoto} 
-            name={`${user.firstName} ${user.lastName}`} 
-            size="sm" 
+          <Avatar
+            src={user.profilePhoto}
+            name={`${user.firstName} ${user.lastName}`}
+            size="sm"
           />
           <div className="min-w-0">
             <div className="text-xs font-medium text-gray-900 truncate">
               {user.firstName} {user.lastName}
             </div>
             <div className="text-xs text-gray-500 truncate">{user.email}</div>
+            <div className="text-xs text-gray-500 truncate">{user.phone}</div>
           </div>
         </div>
       ),
     },
     {
-      key: 'employeeId',
-      label: 'ID',
+      key: "employeeId",
+      label: "ID",
       sortable: true,
       render: (value) => <div className="text-xs text-gray-900">{value}</div>,
     },
     {
-      key: 'department',
-      label: 'Dept',
+      key: "department",
+      label: "Dept",
       sortable: true,
-      render: (value) => <div className="text-xs text-gray-900 truncate">{value}</div>,
+      render: (value) => (
+        <div className="text-xs text-gray-900 truncate">{value}</div>
+      ),
     },
     {
-      key: 'role',
-      label: 'Role',
+      key: "role",
+      label: "Role",
       render: (_, user) => (
         <Badge variant="info" size="sm">
-          {user.role?.name || 'No Role'}
+          {user.role?.name || "No Role"}
         </Badge>
       ),
     },
     {
-      key: 'isActive',
-      label: 'Status',
+      key: "isActive",
+      label: "Status",
       render: (_, user) => (
-        <Badge 
-          variant={user.isActive ? 'success' : 'error'} 
-          size="sm"
-        >
-          {user.isActive ? 'Active' : 'Inactive'}
+        <Badge variant={user.isActive ? "success" : "error"} size="sm">
+          {user.isActive ? "Active" : "Inactive"}
         </Badge>
       ),
     },
     {
-      key: 'actions',
-      label: '',
+      key: "actions",
+      label: "",
       render: (_, user) => (
         <div className="flex items-center space-x-1">
           <Link
@@ -433,11 +450,11 @@ const UsersPage: React.FC = () => {
           <button
             onClick={() => handleToggleUserStatus(user)}
             className={`p-1.5 rounded-md transition-colors ${
-              user.isActive 
-                ? 'text-orange-600 hover:bg-orange-50' 
-                : 'text-green-600 hover:bg-green-50'
+              user.isActive
+                ? "text-orange-600 hover:bg-orange-50"
+                : "text-green-600 hover:bg-green-50"
             }`}
-            title={user.isActive ? 'Deactivate' : 'Activate'}
+            title={user.isActive ? "Deactivate" : "Activate"}
           >
             {user.isActive ? (
               <UserMinusIcon className="h-3.5 w-3.5" />
@@ -462,7 +479,7 @@ const UsersPage: React.FC = () => {
     },
   ];
 
-  const hasActiveFilters = Object.values(filters).some(value => value !== '');
+  const hasActiveFilters = Object.values(filters).some((value) => value !== "");
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -476,10 +493,12 @@ const UsersPage: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-lg font-semibold text-gray-900">Users</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">Manage team members</p>
+                <p className="text-xs text-gray-500 hidden sm:block">
+                  Manage team members
+                </p>
               </div>
             </div>
-            
+
             <Link
               to="/users/create"
               className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
@@ -499,16 +518,17 @@ const UsersPage: React.FC = () => {
             onClick={handleExportUsers}
             disabled={exportLoading}
             className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            title="Export users to Excel file"
           >
             {exportLoading ? (
               <div className="animate-spin rounded-full h-3 w-3 border-b border-gray-600" />
             ) : (
               <DocumentArrowDownIcon className="h-3.5 w-3.5" />
             )}
-            Export
+            Export Excel
           </button>
 
-          <button
+          {/* <button
             onClick={() => setImportModalOpen(true)}
             className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors"
           >
@@ -526,7 +546,7 @@ const UsersPage: React.FC = () => {
           >
             <Squares2X2Icon className="h-3.5 w-3.5" />
             Bulk
-          </button>
+          </button> */}
         </div>
 
         {/* Compact Search & Filters */}
@@ -543,7 +563,7 @@ const UsersPage: React.FC = () => {
               />
               {filters.search && (
                 <button
-                  onClick={() => handleFilterChange('search', '')}
+                  onClick={() => handleFilterChange("search", "")}
                   className="absolute right-2.5 top-2.5"
                 >
                   <XMarkIcon className="h-4 w-4 text-gray-400" />
@@ -556,13 +576,15 @@ const UsersPage: React.FC = () => {
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
-                  showFilters ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-700'
+                  showFilters
+                    ? "bg-blue-50 text-blue-700"
+                    : "bg-gray-100 text-gray-700"
                 }`}
               >
                 <FunnelIcon className="h-3.5 w-3.5" />
                 Filters
               </button>
-              
+
               {hasActiveFilters && (
                 <button
                   onClick={clearFilters}
@@ -580,32 +602,40 @@ const UsersPage: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   <select
                     value={filters.department}
-                    onChange={(e) => handleFilterChange('department', e.target.value)}
+                    onChange={(e) =>
+                      handleFilterChange("department", e.target.value)
+                    }
                     className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="">All Departments</option>
-                    {departments.map(dept => (
-                      <option key={dept} value={dept}>{dept}</option>
+                    {departments.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
                     ))}
                   </select>
 
                   <select
                     value={filters.role}
-                    onChange={(e) => handleFilterChange('role', e.target.value)}
+                    onChange={(e) => handleFilterChange("role", e.target.value)}
                     className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="">All Roles</option>
-                    {roles.map(role => (
-                      <option key={role._id} value={role._id}>{role.name}</option>
+                    {roles.map((role) => (
+                      <option key={role._id} value={role._id}>
+                        {role.name}
+                      </option>
                     ))}
                   </select>
 
                   <select
                     value={filters.status}
-                    onChange={(e) => handleFilterChange('status', e.target.value)}
+                    onChange={(e) =>
+                      handleFilterChange("status", e.target.value)
+                    }
                     className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
-                    {statusOptions.map(option => (
+                    {statusOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
@@ -677,13 +707,13 @@ const UsersPage: React.FC = () => {
           <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
             <div className="text-xs text-gray-500">Active</div>
             <div className="text-sm font-semibold text-green-600">
-              {users.filter(u => u.isActive).length}
+              {users.filter((u) => u.isActive).length}
             </div>
           </div>
           <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
             <div className="text-xs text-gray-500">Inactive</div>
             <div className="text-sm font-semibold text-red-600">
-              {users.filter(u => !u.isActive).length}
+              {users.filter((u) => !u.isActive).length}
             </div>
           </div>
         </div>
@@ -700,9 +730,13 @@ const UsersPage: React.FC = () => {
           ) : users.length === 0 ? (
             <div className="text-center py-8">
               <UsersIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <h3 className="text-sm font-medium text-gray-900 mb-1">No Users Found</h3>
+              <h3 className="text-sm font-medium text-gray-900 mb-1">
+                No Users Found
+              </h3>
               <p className="text-xs text-gray-500 mb-4">
-                {hasActiveFilters ? 'Try adjusting your filters' : 'Get started by adding your first user'}
+                {hasActiveFilters
+                  ? "Try adjusting your filters"
+                  : "Get started by adding your first user"}
               </p>
               {!hasActiveFilters && (
                 <Link
@@ -723,7 +757,10 @@ const UsersPage: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
-                        checked={selectedUsers.size === users.length && users.length > 0}
+                        checked={
+                          selectedUsers.size === users.length &&
+                          users.length > 0
+                        }
                         onChange={handleSelectAll}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
@@ -731,9 +768,12 @@ const UsersPage: React.FC = () => {
                     </div>
                   </div>
                 )}
-                
+
                 {users.map((user) => (
-                  <div key={user._id} className="p-3 hover:bg-gray-50 transition-colors">
+                  <div
+                    key={user._id}
+                    className="p-3 hover:bg-gray-50 transition-colors"
+                  >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
                         {showBulkActions && (
@@ -744,17 +784,24 @@ const UsersPage: React.FC = () => {
                             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                           />
                         )}
-                        <Avatar 
-                          src={user.profilePhoto} 
-                          name={`${user.firstName} ${user.lastName}`} 
-                          size="sm" 
+                        <Avatar
+                          src={user.profilePhoto}
+                          name={`${user.firstName} ${user.lastName}`}
+                          size="sm"
                         />
                         <div className="min-w-0 flex-1">
                           <div className="text-sm font-medium text-gray-900 truncate">
                             {user.firstName} {user.lastName}
                           </div>
-                          <div className="text-xs text-gray-500 truncate">{user.email}</div>
-                          <div className="text-xs text-gray-400">ID: {user.employeeId}</div>
+                          <div className="text-xs text-gray-500 truncate">
+                            {user.email}
+                          </div> 
+                              <div className="text-xs text-gray-500 truncate">
+                            {user.phone}
+                          </div>   
+                          <div className="text-xs text-gray-400">
+                            ID: {user.employeeId}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-1">
@@ -772,17 +819,17 @@ const UsersPage: React.FC = () => {
                         </Link>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Badge variant="info" size="sm">
-                          {user.role?.name || 'No Role'}
+                          {user.role?.name || "No Role"}
                         </Badge>
-                        <Badge 
-                          variant={user.isActive ? 'success' : 'error'} 
+                        <Badge
+                          variant={user.isActive ? "success" : "error"}
                           size="sm"
                         >
-                          {user.isActive ? 'Active' : 'Inactive'}
+                          {user.isActive ? "Active" : "Inactive"}
                         </Badge>
                       </div>
                       <div className="text-xs text-gray-500 truncate">
@@ -800,7 +847,10 @@ const UsersPage: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
-                        checked={selectedUsers.size === users.length && users.length > 0}
+                        checked={
+                          selectedUsers.size === users.length &&
+                          users.length > 0
+                        }
                         onChange={handleSelectAll}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
@@ -848,13 +898,13 @@ const UsersPage: React.FC = () => {
       >
         <div className="space-y-4">
           <p className="text-gray-600">
-            Are you sure you want to delete{' '}
+            Are you sure you want to delete{" "}
             <span className="font-medium">
               {userToDelete?.firstName} {userToDelete?.lastName}
             </span>
             ? This action cannot be undone.
           </p>
-          
+
           <div className="flex justify-end space-x-3">
             <button
               type="button"
@@ -894,7 +944,8 @@ const UsersPage: React.FC = () => {
             </p>
             <div className="bg-gray-50 rounded-md p-3 mb-4">
               <code className="text-xs text-gray-800 break-all">
-                firstName, lastName, email, phone, password, roleId, department, position
+                firstName, lastName, email, phone, password, roleId, department,
+                position
               </code>
             </div>
           </div>
@@ -916,7 +967,7 @@ const UsersPage: React.FC = () => {
               </p>
             )}
           </div>
-          
+
           <div className="flex justify-end space-x-3">
             <button
               type="button"
@@ -940,7 +991,7 @@ const UsersPage: React.FC = () => {
                   Importing...
                 </>
               ) : (
-                'Import Users'
+                "Import Users"
               )}
             </button>
           </div>
@@ -960,10 +1011,11 @@ const UsersPage: React.FC = () => {
         <div className="space-y-4">
           <div>
             <p className="text-gray-600 mb-4 text-sm">
-              Assign a role to {selectedUsers.size} selected user{selectedUsers.size !== 1 ? 's' : ''}. 
-              This will replace their current roles.
+              Assign a role to {selectedUsers.size} selected user
+              {selectedUsers.size !== 1 ? "s" : ""}. This will replace their
+              current roles.
             </p>
-            
+
             <RoleAssignment
               selectedRoleId={selectedRoleForBulk?._id}
               onRoleChange={(_, role) => setSelectedRoleForBulk(role)}
@@ -972,7 +1024,7 @@ const UsersPage: React.FC = () => {
               showPermissions={true}
             />
           </div>
-          
+
           <div className="flex justify-end space-x-3">
             <button
               type="button"
@@ -996,7 +1048,7 @@ const UsersPage: React.FC = () => {
                   Assigning...
                 </>
               ) : (
-                'Assign Role'
+                "Assign Role"
               )}
             </button>
           </div>

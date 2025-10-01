@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { 
-  ArrowLeftIcon, 
-  CalendarDaysIcon, 
-  ClockIcon, 
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import {
+  ArrowLeftIcon,
+  CalendarDaysIcon,
+  ClockIcon,
   PhotoIcon,
   UserIcon,
   BuildingOfficeIcon,
@@ -12,50 +12,66 @@ import {
   ComputerDesktopIcon,
   PencilIcon,
   XMarkIcon,
-  CheckIcon
-} from '@heroicons/react/24/outline';
-import { useAuth } from '../../contexts/AuthContext';
-import { attendanceService } from '../../services/attendanceService';
-import type { Attendance } from '../../types';
-import Modal from '../../components/ui/Modal';
+  CheckIcon,
+} from "@heroicons/react/24/outline";
+import { useAuth } from "../../contexts/AuthContext";
+import { attendanceService } from "../../services/attendanceService";
+import { reverseGeocode } from "../../utils/geocoding";
+import type { Attendance } from "../../types";
+import Modal from "../../components/ui/Modal";
 
 const AttendanceDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   const [attendance, setAttendance] = useState<Attendance | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<{ src: string; title: string }>({ src: '', title: '' });
+  const [selectedImage, setSelectedImage] = useState<{
+    src: string;
+    title: string;
+  }>({ src: "", title: "" });
   const [showImageModal, setShowImageModal] = useState(false);
   const [editForm, setEditForm] = useState({
-    status: '',
-    notes: '',
-    checkInTime: '',
-    checkOutTime: ''
+    status: "",
+    notes: "",
+    checkInTime: "",
+    checkOutTime: "",
   });
+
+  // Address state management
+  const [addresses, setAddresses] = useState<{
+    checkIn?: string;
+    checkOut?: string;
+  }>({});
+  const [addressLoading, setAddressLoading] = useState<{
+    checkIn: boolean;
+    checkOut: boolean;
+  }>({ checkIn: false, checkOut: false });
 
   // Load attendance details
   useEffect(() => {
     const loadAttendance = async () => {
       if (!id) return;
-      
+
       try {
         setLoading(true);
         const data = await attendanceService.getAttendanceById(id);
         setAttendance(data);
         setEditForm({
           status: data.status,
-          notes: data.notes || '',
+          notes: data.notes || "",
           checkInTime: new Date(data.checkInTime).toISOString().slice(0, 16),
-          checkOutTime: data.checkOutTime ? new Date(data.checkOutTime).toISOString().slice(0, 16) : ''
+          checkOutTime: data.checkOutTime
+            ? new Date(data.checkOutTime).toISOString().slice(0, 16)
+            : "",
         });
       } catch (error: any) {
-        console.error('Failed to load attendance:', error);
-        toast.error(error.message || 'Failed to load attendance details');
-        navigate('/attendance');
+        console.error("Failed to load attendance:", error);
+        toast.error(error.message || "Failed to load attendance details");
+        navigate("/attendance");
       } finally {
         setLoading(false);
       }
@@ -64,32 +80,114 @@ const AttendanceDetailsPage: React.FC = () => {
     loadAttendance();
   }, [id, navigate]);
 
+  // Fetch addresses from coordinates when attendance is loaded
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      if (!attendance) return;
+
+      const fetchCheckInAddress = async () => {
+        if (
+          attendance.checkInLocation &&
+          !addresses.checkIn &&
+          !addressLoading.checkIn
+        ) {
+          setAddressLoading((prev) => ({ ...prev, checkIn: true }));
+          try {
+            const result = await reverseGeocode(
+              attendance.checkInLocation.latitude,
+              attendance.checkInLocation.longitude
+            );
+            if (result.success && result.address) {
+              setAddresses((prev) => ({ ...prev, checkIn: result.address }));
+            } else {
+              console.warn("Failed to get check-in address:", result.error);
+              // Still set a fallback message
+              setAddresses((prev) => ({
+                ...prev,
+                checkIn: "Address not available",
+              }));
+            }
+          } catch (error) {
+            console.error("Failed to fetch check-in address:", error);
+            setAddresses((prev) => ({
+              ...prev,
+              checkIn: "Address lookup failed",
+            }));
+          } finally {
+            setAddressLoading((prev) => ({ ...prev, checkIn: false }));
+          }
+        }
+      };
+
+      const fetchCheckOutAddress = async () => {
+        if (
+          attendance.checkOutLocation &&
+          !addresses.checkOut &&
+          !addressLoading.checkOut
+        ) {
+          setAddressLoading((prev) => ({ ...prev, checkOut: true }));
+          try {
+            const result = await reverseGeocode(
+              attendance.checkOutLocation.latitude,
+              attendance.checkOutLocation.longitude
+            );
+            if (result.success && result.address) {
+              setAddresses((prev) => ({ ...prev, checkOut: result.address }));
+            } else {
+              console.warn("Failed to get check-out address:", result.error);
+              // Still set a fallback message
+              setAddresses((prev) => ({
+                ...prev,
+                checkOut: "Address not available",
+              }));
+            }
+          } catch (error) {
+            console.error("Failed to fetch check-out address:", error);
+            setAddresses((prev) => ({
+              ...prev,
+              checkOut: "Address lookup failed",
+            }));
+          } finally {
+            setAddressLoading((prev) => ({ ...prev, checkOut: false }));
+          }
+        }
+      };
+
+      // Fetch addresses concurrently
+      await Promise.all([fetchCheckInAddress(), fetchCheckOutAddress()]);
+    };
+
+    fetchAddresses();
+  }, [attendance, addresses, addressLoading]);
   // Handle save changes
   const handleSave = async () => {
     if (!attendance) return;
-    
+
     try {
       setSaving(true);
       const updateData: any = {
         status: editForm.status,
-        notes: editForm.notes
+        notes: editForm.notes,
       };
-      
+
       if (editForm.checkInTime) {
         updateData.checkInTime = new Date(editForm.checkInTime).toISOString();
       }
-      
+
       if (editForm.checkOutTime) {
         updateData.checkOutTime = new Date(editForm.checkOutTime).toISOString();
       }
-      
-      const updatedAttendance = await attendanceService.updateAttendance(attendance._id, updateData);
+
+      const updatedAttendance = await attendanceService.updateAttendance(
+        attendance._id,
+        updateData
+      );
       setAttendance(updatedAttendance);
       setEditing(false);
-      toast.success('Attendance updated successfully');
+      toast.success("Attendance updated successfully");
     } catch (error: any) {
-      console.error('Failed to update attendance:', error);
-      toast.error(error.message || 'Failed to update attendance');
+      console.error("Failed to update attendance:", error);
+      toast.error(error.message || "Failed to update attendance");
     } finally {
       setSaving(false);
     }
@@ -101,9 +199,10 @@ const AttendanceDetailsPage: React.FC = () => {
   };
 
   const formatImageSrc = (imageData: string) => {
-    return imageData.startsWith('data:') ? imageData : `data:image/jpeg;base64,${imageData}`;
+    return imageData.startsWith("data:")
+      ? imageData
+      : `data:image/jpeg;base64,${imageData}`;
   };
-
   // Check permissions
   const canEdit = attendanceService.canManageAttendance(user);
 
@@ -123,10 +222,14 @@ const AttendanceDetailsPage: React.FC = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="text-center">
           <CalendarDaysIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Record Not Found</h3>
-          <p className="text-gray-500 mb-4">The attendance record could not be found.</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Record Not Found
+          </h3>
+          <p className="text-gray-500 mb-4">
+            The attendance record could not be found.
+          </p>
           <button
-            onClick={() => navigate('/attendance')}
+            onClick={() => navigate("/attendance")}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Back to Attendance
@@ -144,17 +247,21 @@ const AttendanceDetailsPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <button
-                onClick={() => navigate('/attendance')}
+                onClick={() => navigate("/attendance")}
                 className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <ArrowLeftIcon className="h-5 w-5" />
               </button>
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Attendance Details</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">View and manage record</p>
+                <h1 className="text-lg font-semibold text-gray-900">
+                  Attendance Details
+                </h1>
+                <p className="text-xs text-gray-500 hidden sm:block">
+                  View and manage record
+                </p>
               </div>
             </div>
-            
+
             {canEdit && (
               <div className="flex items-center gap-2">
                 {editing ? (
@@ -219,15 +326,21 @@ const AttendanceDetailsPage: React.FC = () => {
               <h3 className="text-sm font-medium text-gray-900 truncate">
                 {attendance.user.firstName} {attendance.user.lastName}
               </h3>
-              <p className="text-xs text-gray-500 truncate">{attendance.user.email}</p>
+              <p className="text-xs text-gray-500 truncate">
+                {attendance.user.email}
+              </p>
               {attendance.user.employeeId && (
-                <p className="text-xs text-gray-400">ID: {attendance.user.employeeId}</p>
+                <p className="text-xs text-gray-400">
+                  ID: {attendance.user.employeeId}
+                </p>
               )}
             </div>
             <div className="flex-shrink-0">
-              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                attendanceService.formatStatus(attendance.status).className
-              }`}>
+              <span
+                className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                  attendanceService.formatStatus(attendance.status).className
+                }`}
+              >
                 {attendanceService.formatStatus(attendance.status).label}
               </span>
             </div>
@@ -240,15 +353,19 @@ const AttendanceDetailsPage: React.FC = () => {
             <ClockIcon className="h-4 w-4 mr-1.5" />
             Time & Status
           </h3>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
             {/* Check In */}
             <div className="p-2 bg-gray-50 rounded-lg">
               <div className="flex items-center justify-between mb-1">
-                <div className="text-xs font-medium text-gray-700">Check In</div>
+                <div className="text-xs font-medium text-gray-700">
+                  Check In
+                </div>
                 {attendance.checkInImage && (
                   <button
-                    onClick={() => handleViewImage(attendance.checkInImage, 'Check In Photo')}
+                    onClick={() =>
+                      handleViewImage(attendance.checkInImage, "Check In Photo")
+                    }
                     className="w-6 h-6 rounded-full overflow-hidden hover:ring-2 hover:ring-blue-500 hover:ring-offset-1 transition-all group"
                   >
                     <img
@@ -263,7 +380,12 @@ const AttendanceDetailsPage: React.FC = () => {
                 <input
                   type="datetime-local"
                   value={editForm.checkInTime}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, checkInTime: e.target.value }))}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      checkInTime: e.target.value,
+                    }))
+                  }
                   className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               ) : (
@@ -276,10 +398,17 @@ const AttendanceDetailsPage: React.FC = () => {
             {/* Check Out */}
             <div className="p-2 bg-gray-50 rounded-lg">
               <div className="flex items-center justify-between mb-1">
-                <div className="text-xs font-medium text-gray-700">Check Out</div>
+                <div className="text-xs font-medium text-gray-700">
+                  Check Out
+                </div>
                 {attendance.checkOutImage && (
                   <button
-                    onClick={() => handleViewImage(attendance.checkOutImage!, 'Check Out Photo')}
+                    onClick={() =>
+                      handleViewImage(
+                        attendance.checkOutImage!,
+                        "Check Out Photo"
+                      )
+                    }
                     className="w-6 h-6 rounded-full overflow-hidden hover:ring-2 hover:ring-blue-500 hover:ring-offset-1 transition-all group"
                   >
                     <img
@@ -294,15 +423,19 @@ const AttendanceDetailsPage: React.FC = () => {
                 <input
                   type="datetime-local"
                   value={editForm.checkOutTime}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, checkOutTime: e.target.value }))}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      checkOutTime: e.target.value,
+                    }))
+                  }
                   className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               ) : (
                 <div className="text-xs text-gray-900">
-                  {attendance.checkOutTime 
+                  {attendance.checkOutTime
                     ? new Date(attendance.checkOutTime).toLocaleString()
-                    : 'Not checked out'
-                  }
+                    : "Not checked out"}
                 </div>
               )}
             </div>
@@ -317,7 +450,9 @@ const AttendanceDetailsPage: React.FC = () => {
 
             {/* Working Hours */}
             <div className="p-2 bg-gray-50 rounded-lg">
-              <div className="text-xs font-medium text-gray-700 mb-1">Working Hours</div>
+              <div className="text-xs font-medium text-gray-700 mb-1">
+                Working Hours
+              </div>
               <div className="text-xs text-gray-900">
                 {attendanceService.formatWorkingHours(attendance.workingHours)}
               </div>
@@ -327,11 +462,15 @@ const AttendanceDetailsPage: React.FC = () => {
           {/* Status & Notes */}
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Status
+              </label>
               {editing ? (
                 <select
                   value={editForm.status}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, status: e.target.value }))}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({ ...prev, status: e.target.value }))
+                  }
                   className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="present">Present</option>
@@ -340,27 +479,33 @@ const AttendanceDetailsPage: React.FC = () => {
                   <option value="absent">Absent</option>
                 </select>
               ) : (
-                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                  attendanceService.formatStatus(attendance.status).className
-                }`}>
+                <span
+                  className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                    attendanceService.formatStatus(attendance.status).className
+                  }`}
+                >
                   {attendanceService.formatStatus(attendance.status).label}
                 </span>
               )}
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Notes
+              </label>
               {editing ? (
                 <textarea
                   value={editForm.notes}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({ ...prev, notes: e.target.value }))
+                  }
                   rows={2}
                   className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                   placeholder="Add notes..."
                 />
               ) : (
                 <div className="text-xs text-gray-900 bg-gray-50 p-2 rounded">
-                  {attendance.notes || 'No notes'}
+                  {attendance.notes || "No notes"}
                 </div>
               )}
             </div>
@@ -373,14 +518,18 @@ const AttendanceDetailsPage: React.FC = () => {
             <PhotoIcon className="h-4 w-4 mr-1.5" />
             Photos
           </h3>
-          
+
           <div className="grid grid-cols-2 gap-3">
             {/* Check In Photo */}
             <div className="text-center">
-              <div className="text-xs font-medium text-gray-700 mb-2">Check In</div>
+              <div className="text-xs font-medium text-gray-700 mb-2">
+                Check In
+              </div>
               {attendance.checkInImage ? (
                 <button
-                  onClick={() => handleViewImage(attendance.checkInImage, 'Check In Photo')}
+                  onClick={() =>
+                    handleViewImage(attendance.checkInImage, "Check In Photo")
+                  }
                   className="mx-auto w-16 h-16 rounded-full overflow-hidden hover:ring-4 hover:ring-blue-500 hover:ring-offset-2 transition-all group shadow-md"
                 >
                   <img
@@ -398,10 +547,17 @@ const AttendanceDetailsPage: React.FC = () => {
 
             {/* Check Out Photo */}
             <div className="text-center">
-              <div className="text-xs font-medium text-gray-700 mb-2">Check Out</div>
+              <div className="text-xs font-medium text-gray-700 mb-2">
+                Check Out
+              </div>
               {attendance.checkOutImage ? (
                 <button
-                  onClick={() => handleViewImage(attendance.checkOutImage!, 'Check Out Photo')}
+                  onClick={() =>
+                    handleViewImage(
+                      attendance.checkOutImage!,
+                      "Check Out Photo"
+                    )
+                  }
                   className="mx-auto w-16 h-16 rounded-full overflow-hidden hover:ring-4 hover:ring-blue-500 hover:ring-offset-2 transition-all group shadow-md"
                 >
                   <img
@@ -413,7 +569,9 @@ const AttendanceDetailsPage: React.FC = () => {
               ) : (
                 <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
                   <PhotoIcon className="h-6 w-6 text-gray-400" />
-                  <div className="absolute -bottom-1 text-xs text-gray-500">No photo</div>
+                  <div className="absolute -bottom-1 text-xs text-gray-500">
+                    No photo
+                  </div>
                 </div>
               )}
             </div>
@@ -422,46 +580,71 @@ const AttendanceDetailsPage: React.FC = () => {
 
         {/* Additional Information */}
         <div className="bg-white rounded-lg border border-gray-200 p-3">
-          <h3 className="text-sm font-medium text-gray-900 mb-3">Additional Information</h3>
-          
+          <h3 className="text-sm font-medium text-gray-900 mb-3">
+            Additional Information
+          </h3>
+
           <div className="space-y-3">
             {attendance.godown && (
               <div className="flex items-start gap-2">
                 <BuildingOfficeIcon className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-medium text-gray-700">Godown</div>
-                  <div className="text-xs text-gray-900">{attendance.godown.name}</div>
+                  <div className="text-xs font-medium text-gray-700">
+                    Godown
+                  </div>
+                  <div className="text-xs text-gray-900">
+                    {attendance.godown.name}
+                  </div>
                   <div className="text-xs text-gray-500">
-                    {attendance.godown.location.city}{attendance.godown.location.area ? ` - ${attendance.godown.location.area}` : ''}
+                    {attendance.godown.location.city}
+                    {attendance.godown.location.area
+                      ? ` - ${attendance.godown.location.area}`
+                      : ""}
                   </div>
                 </div>
               </div>
             )}
 
-            {attendance.checkInLocation && (
+            {/* {attendance.checkInLocation && (
               <div className="flex items-start gap-2">
                 <MapPinIcon className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-medium text-gray-700">Check In Location</div>
-                  <div className="text-xs text-gray-900 break-all">
-                    {attendance.checkInLocation.address || 
-                     `${attendance.checkInLocation.latitude.toFixed(6)}, ${attendance.checkInLocation.longitude.toFixed(6)}`
-                    }
+                  <div className="text-xs font-medium text-gray-700">
+                    Check In Location
                   </div>
+                  {addressLoading.checkIn ? (
+                    <div className="text-xs text-blue-600 flex items-center gap-1">
+                      <div className="animate-spin h-3 w-3 border border-blue-600 border-t-transparent rounded-full"></div>
+                      Loading address...
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-900 break-all">
+                      {attendance.checkInLocation.address ||
+                        addresses.checkIn ||
+                        "Address not available"}
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
+            )} */}
 
-            {attendance.checkOutLocation && (
+            {addresses?.checkOut && (
               <div className="flex items-start gap-2">
                 <MapPinIcon className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-medium text-gray-700">Check Out Location</div>
-                  <div className="text-xs text-gray-900 break-all">
-                    {attendance.checkOutLocation.address || 
-                     `${attendance.checkOutLocation.latitude.toFixed(6)}, ${attendance.checkOutLocation.longitude.toFixed(6)}`
-                    }
+                  <div className="text-xs font-medium text-gray-700">
+                    Check Out Location
                   </div>
+                  {addressLoading.checkOut ? (
+                    <div className="text-xs text-blue-600 flex items-center gap-1">
+                      <div className="animate-spin h-3 w-3 border border-blue-600 border-t-transparent rounded-full"></div>
+                      Loading address...
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-900 break-all">
+                      {addresses?.checkOut || "Address not available"}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -469,20 +652,24 @@ const AttendanceDetailsPage: React.FC = () => {
             <div className="flex items-start gap-2">
               <UserIcon className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
               <div className="min-w-0 flex-1">
-                <div className="text-xs font-medium text-gray-700">Marked By</div>
+                <div className="text-xs font-medium text-gray-700">
+                  Marked By
+                </div>
                 <div className="text-xs text-gray-900">
                   {attendance.markedBy.firstName} {attendance.markedBy.lastName}
                 </div>
                 {attendance.isAutoMarked && (
                   <div className="flex items-center gap-1 mt-1">
                     <ComputerDesktopIcon className="h-3 w-3 text-blue-500" />
-                    <span className="text-xs text-blue-600">Auto-marked on login</span>
+                    <span className="text-xs text-blue-600">
+                      Auto-marked on login
+                    </span>
                   </div>
                 )}
               </div>
             </div>
 
-            {attendance.ipAddress && (
+            {/* {attendance.ipAddress && (
               <div className="flex items-start gap-2">
                 <ComputerDesktopIcon className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
                 <div className="min-w-0 flex-1">
@@ -490,17 +677,19 @@ const AttendanceDetailsPage: React.FC = () => {
                   <div className="text-xs text-gray-900 font-mono">{attendance.ipAddress}</div>
                 </div>
               </div>
-            )}
+            )} */}
 
             <div className="pt-2 border-t border-gray-200">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-500">
                 <div>
-                  <span className="font-medium">Created:</span><br />
+                  <span className="font-medium">Created:</span>
+                  <br />
                   {new Date(attendance.createdAt).toLocaleString()}
                 </div>
                 {attendance.updatedAt !== attendance.createdAt && (
                   <div>
-                    <span className="font-medium">Updated:</span><br />
+                    <span className="font-medium">Updated:</span>
+                    <br />
                     {new Date(attendance.updatedAt).toLocaleString()}
                   </div>
                 )}

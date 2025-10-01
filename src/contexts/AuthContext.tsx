@@ -169,7 +169,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } catch (error) {
         console.error('Auth initialization error:', error);
         authService.clearAuthData();
-        dispatch({ type: 'AUTH_FAILURE', payload: 'Authentication failed' });
+        // Don't show error message during initialization - just set to logged out state
+        dispatch({ type: 'LOGOUT' });
       }
     };
 
