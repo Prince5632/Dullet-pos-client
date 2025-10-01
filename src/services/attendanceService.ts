@@ -6,7 +6,8 @@ import type {
   AttendanceListParams,
   MarkAttendanceForm,
   CheckOutForm,
-  ApiResponse
+  ApiResponse,
+  User
 } from '../types';
 
 type AttendanceListPayload = {
@@ -360,6 +361,47 @@ class AttendanceService {
     return user?.role?.permissions?.some((permission: any) => 
       permission.name === 'attendance.manage' || permission.name === 'attendance.update'
     ) || false;
+  }
+
+  // Helpers for finer-grained UI permissions (must mirror backend rules)
+  isAdminOrSuperAdmin(user: User | any): boolean {
+    const name = user?.role?.name || '';
+    return name.includes('Super Admin') || name.includes('Admin');
+  }
+
+  isManager(user: User | any): boolean {
+    const name = user?.role?.name || '';
+    return name.includes('Manager');
+  }
+
+  private getUserGodownIds(user: User | any): string[] {
+    const ids: string[] = [];
+    const list = user?.accessibleGodowns || [];
+    for (const g of list) {
+      const id = (g && (g as any)._id) ? String((g as any)._id) : (typeof g === 'string' ? g : null);
+      if (id) ids.push(id);
+    }
+    const primary = user?.primaryGodown ? ((user.primaryGodown as any)._id ? String((user.primaryGodown as any)._id) : (typeof user.primaryGodown === 'string' ? user.primaryGodown : null)) : null;
+    if (primary) ids.push(primary);
+    return ids;
+  }
+
+  // Whether user can update status for the specific attendance record
+  canUpdateStatusFor(record: Attendance, user: User | any): boolean {
+    if (!this.canManageAttendance(user)) return false;
+    if (this.isAdminOrSuperAdmin(user)) return true;
+    if (this.isManager(user)) {
+      const recordGodownId = record.godown ? ((record.godown as any)._id ? String((record.godown as any)._id) : (record.godown as any)) : null;
+      if (!recordGodownId) return false;
+      const managerGodowns = this.getUserGodownIds(user);
+      return managerGodowns.includes(String(recordGodownId));
+    }
+    return false;
+  }
+
+  // Whether user can edit check-in/out times
+  canEditTimes(user: User | any): boolean {
+    return this.isAdminOrSuperAdmin(user);
   }
 }
 

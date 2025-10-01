@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { 
   CalendarDaysIcon, 
-  ClockIcon, 
-  PhotoIcon,
+  ClockIcon,
   UserIcon,
   BuildingOfficeIcon,
   FunnelIcon,
@@ -230,7 +229,6 @@ const AttendancePage: React.FC = () => {
   // Check permissions
   const canMarkAttendance = attendanceService.canMarkAttendance(user);
   const canManageAttendance = attendanceService.canManageAttendance(user);
-  const canUpdateStatus = canManageAttendance || attendanceService.canMarkAttendance(user);
 
   if (!attendanceService.canViewAttendance(user)) {
     return (
@@ -610,7 +608,7 @@ const AttendancePage: React.FC = () => {
                       </div>
                     </div>
 
-                    {canUpdateStatus && (
+                    {canManageAttendance && (
                       <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200">
                         <select
                           value={statusEdits[record._id] ?? record.status}
@@ -626,6 +624,7 @@ const AttendancePage: React.FC = () => {
                         <button
                           onClick={() => handleStatusUpdate(record)}
                           disabled={
+                            !attendanceService.canUpdateStatusFor(record, user) ||
                             (statusEdits[record._id] ?? record.status) === record.status ||
                             updatingStatusId === record._id
                           }
@@ -719,7 +718,7 @@ const AttendancePage: React.FC = () => {
                           {attendanceService.formatWorkingHours(record.workingHours)}
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap">
-                          {canUpdateStatus ? (
+                          {canManageAttendance ? (
                             <div className="flex items-center gap-1">
                               <select
                                 value={statusEdits[record._id] ?? record.status}
@@ -734,7 +733,11 @@ const AttendancePage: React.FC = () => {
                               </select>
                               <button
                                 onClick={() => handleStatusUpdate(record)}
-                                disabled={(statusEdits[record._id] ?? record.status) === record.status || updatingStatusId === record._id}
+                                disabled={
+                                  !attendanceService.canUpdateStatusFor(record, user) ||
+                                  (statusEdits[record._id] ?? record.status) === record.status ||
+                                  updatingStatusId === record._id
+                                }
                                 className="px-2 py-1 text-xs font-medium text-white bg-blue-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700"
                               >
                                 Update

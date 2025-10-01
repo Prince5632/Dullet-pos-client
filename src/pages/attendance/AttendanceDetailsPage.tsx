@@ -11,7 +11,6 @@ import {
   MapPinIcon,
   ComputerDesktopIcon,
   PencilIcon,
-  XMarkIcon,
   CheckIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../contexts/AuthContext";
@@ -171,10 +170,20 @@ const AttendanceDetailsPage: React.FC = () => {
       };
 
       if (editForm.checkInTime) {
+        if (!canEditTimes) {
+          toast.error('You do not have permission to edit check-in time');
+          setSaving(false);
+          return;
+        }
         updateData.checkInTime = new Date(editForm.checkInTime).toISOString();
       }
 
       if (editForm.checkOutTime) {
+        if (!canEditTimes) {
+          toast.error('You do not have permission to edit check-out time');
+          setSaving(false);
+          return;
+        }
         updateData.checkOutTime = new Date(editForm.checkOutTime).toISOString();
       }
 
@@ -205,6 +214,7 @@ const AttendanceDetailsPage: React.FC = () => {
   };
   // Check permissions
   const canEdit = attendanceService.canManageAttendance(user);
+  const canEditTimes = attendanceService.canEditTimes(user);
 
   if (loading) {
     return (
