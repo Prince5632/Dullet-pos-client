@@ -9,6 +9,7 @@ import {
   CogIcon,
   ClipboardDocumentListIcon,
   CalendarDaysIcon,
+  ChartBarIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import type { NavItem } from '../../types';
@@ -33,6 +34,12 @@ const navigationItems: NavItem[] = [
     href: '/attendance',
     icon: CalendarDaysIcon,
     permission: 'attendance.read',
+  },
+  {
+    name: 'Reports',
+    href: '/reports/sales-executives',
+    icon: ChartBarIcon,
+    permission: 'reports.read',
   },
   {
     name: 'User Management',

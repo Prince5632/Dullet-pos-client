@@ -22,6 +22,26 @@ export const formatRelativeTime = (date: string | Date): string => {
   return formatDistanceToNow(dateObj, { addSuffix: true });
 };
 
+// Currency utilities
+export const formatCurrency = (amount: number, currency: string = 'INR'): string => {
+  if (amount === null || amount === undefined) return '₹0.00';
+  
+  const formatter = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  
+  return formatter.format(amount);
+};
+
+export const formatNumber = (num: number): string => {
+  if (num === null || num === undefined) return '0';
+  
+  return new Intl.NumberFormat('en-IN').format(num);
+};
+
 // String utilities
 export const capitalize = (str: string): string => {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
@@ -119,7 +139,7 @@ export const unique = <T>(array: T[], key?: keyof T): T[] => {
 };
 
 // Object utilities
-export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
+export const pick = <T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
   const result = {} as Pick<T, K>;
   keys.forEach(key => {
     if (key in obj) {
@@ -129,7 +149,7 @@ export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
   return result;
 };
 
-export const omit = <T, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> => {
+export const omit = <T extends object, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> => {
   const result = { ...obj };
   keys.forEach(key => {
     delete result[key];
@@ -138,7 +158,7 @@ export const omit = <T, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> => {
 };
 
 // URL utilities
-export const buildQueryString = (params: Record<string, any>): string => {
+export const buildQueryString = (params: Record<string, string | number | boolean | null | undefined>): string => {
   const searchParams = new URLSearchParams();
   
   Object.entries(params).forEach(([key, value]) => {
@@ -202,7 +222,7 @@ export const debounce = <T extends (...args: any[]) => any>(
   func: T,
   wait: number
 ): ((...args: Parameters<T>) => void) => {
-  let timeout: NodeJS.Timeout;
+  let timeout: ReturnType<typeof setTimeout>;
   
   return (...args: Parameters<T>) => {
     clearTimeout(timeout);

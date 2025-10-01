@@ -11,6 +11,7 @@ interface TableProps<T = any> {
   sortDirection?: 'asc' | 'desc';
   onSort?: (column: string) => void;
   className?: string;
+  emptyMessage?: string;
 }
 
 const Table = <T extends Record<string, any>>({
@@ -21,6 +22,7 @@ const Table = <T extends Record<string, any>>({
   sortDirection,
   onSort,
   className,
+  emptyMessage,
 }: TableProps<T>) => {
   const handleSort = (column: TableColumn<T>) => {
     if (column.sortable && onSort) {
@@ -58,7 +60,7 @@ const Table = <T extends Record<string, any>>({
     return (
       <div className="bg-white shadow-sm rounded-lg border border-gray-200">
         <div className="px-6 py-12 text-center">
-          <p className="text-gray-500">No data available</p>
+          <p className="text-gray-500">{emptyMessage || 'No data available'}</p>
         </div>
       </div>
     );

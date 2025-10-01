@@ -37,6 +37,13 @@ const EditVisitPage = lazy(() => import('../pages/orders/EditVisitPage'));
 const AttendancePage = lazy(() => import('../pages/attendance/AttendancePage'));
 const AttendanceDetailsPage = lazy(() => import('../pages/attendance/AttendanceDetailsPage'));
 
+// Report Pages
+const SalesExecutiveReportsPage = lazy(() => import('../pages/reports/SalesExecutiveReportsPage'));
+const CustomerReportsPage = lazy(() => import('../pages/reports/CustomerReportsPage'));
+const GodownSalesReportsPage = lazy(() => import('../pages/reports/GodownSalesReportsPage'));
+const SalesExecutiveDetailPage = lazy(() => import('../pages/reports/SalesExecutiveDetailPage'));
+const CustomerDetailPage = lazy(() => import('../pages/reports/CustomerDetailPage'));
+
 // Settings Pages
 const SettingsPage = lazy(() => import('../pages/settings/SettingsPage'));
 
@@ -252,6 +259,53 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute requiredPermission="attendance.read">
                 <AttendanceDetailsPage />
+              </ProtectedRoute>
+            ),
+          },
+        ],
+      },
+
+      // Reports
+      {
+        path: 'reports',
+        children: [
+          {
+            path: 'sales-executives',
+            element: (
+              <ProtectedRoute requiredPermission="reports.read">
+                <SalesExecutiveReportsPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'godowns',
+            element: (
+              <ProtectedRoute requiredPermission="reports.read">
+                <GodownSalesReportsPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'sales-executives/:userId',
+            element: (
+              <ProtectedRoute requiredPermission="reports.read">
+                <SalesExecutiveDetailPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'customers',
+            element: (
+              <ProtectedRoute requiredPermission="reports.read">
+                <CustomerReportsPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'customers/:customerId',
+            element: (
+              <ProtectedRoute requiredPermission="reports.read">
+                <CustomerDetailPage />
               </ProtectedRoute>
             ),
           },
