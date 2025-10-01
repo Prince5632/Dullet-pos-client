@@ -38,6 +38,8 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
   const [receiverSigned, setReceiverSigned] = useState(false);
   const [driverSignature, setDriverSignature] = useState('');
   const [receiverSignature, setReceiverSignature] = useState('');
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [coordinates, setCoordinates] = useState<{latitude: number, longitude: number} | null>(null);
 
   const driverSignatureRef = useRef<SignaturePadRef>(null);
   const receiverSignatureRef = useRef<SignaturePadRef>(null);
@@ -83,6 +85,88 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
     setReceiverSigned(!!signature);
   }, []);
 
+  // Fetch current location using geolocation API
+  const fetchCurrentLocation = useCallback(async () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by this browser');
+      return;
+    }
+
+    setLocationLoading(true);
+    
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          resolve,
+          reject,
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 60000
+          }
+        );
+      });
+
+      const { latitude, longitude } = position.coords;
+      setCoordinates({ latitude, longitude });
+
+      // Reverse geocoding to get address using Nominatim (free service)
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+          {
+            headers: {
+              'User-Agent': 'Dullet-POS-App'
+            }
+          }
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.display_name) {
+            handleInputChange('location.address', data.display_name);
+            toast.success('Location fetched successfully');
+          } else {
+            // Fallback to coordinates if no address found
+            const coordsAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+            handleInputChange('location.address', coordsAddress);
+            toast.success('Location coordinates fetched');
+          }
+        } else {
+          // Fallback to coordinates if geocoding fails
+          const coordsAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+          handleInputChange('location.address', coordsAddress);
+          toast.success('Location coordinates fetched');
+        }
+      } catch (geocodingError) {
+        // Fallback to coordinates if geocoding fails
+        const coordsAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+        handleInputChange('location.address', coordsAddress);
+        toast.success('Location coordinates fetched');
+      }
+    } catch (error) {
+      let errorMessage = 'Failed to get location';
+      
+      if (error instanceof GeolocationPositionError) {
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Location access denied. Please enable location permissions.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location information is unavailable.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out.';
+            break;
+        }
+      }
+      
+      toast.error(errorMessage);
+    } finally {
+      setLocationLoading(false);
+    }
+  }, []);
+
   const validateCurrentStep = () => {
     switch (activeStep) {
       case 1:
@@ -119,8 +203,8 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
         notes: formData.notes,
         location: formData.location.address ? {
           address: formData.location.address,
-          latitude: 0, // Can be enhanced with geolocation
-          longitude: 0
+          latitude: coordinates?.latitude || 0,
+          longitude: coordinates?.longitude || 0
         } : undefined,
         signatures: {
           driver: driverSigToSend,
@@ -158,6 +242,8 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
     setReceiverSigned(false);
     setDriverSignature('');
     setReceiverSignature('');
+    setLocationLoading(false);
+    setCoordinates(null);
     onClose();
   };
 
@@ -261,19 +347,42 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
         <label htmlFor="delivery-location" className="block text-sm font-medium text-gray-700 mb-2">
           Delivery Location
         </label>
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <MapPinIcon className="h-4 w-4 text-gray-400" />
+        <div className="flex space-x-2">
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <MapPinIcon className="h-4 w-4 text-gray-400" />
+            </div>
+            <input
+              id="delivery-location"
+              type="text"
+              value={formData.location.address}
+              disabled
+              placeholder="Click 'Fetch Location' to get current location"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-500 cursor-not-allowed sm:text-sm"
+            />
           </div>
-          <input
-            id="delivery-location"
-            type="text"
-            value={formData.location.address}
-            onChange={(e) => handleInputChange('location.address', e.target.value)}
-            placeholder="Delivery address or landmark"
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          />
+          <button
+            type="button"
+            onClick={fetchCurrentLocation}
+            disabled={locationLoading}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+          >
+            {locationLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Fetching...</span>
+              </>
+            ) : (
+              <>
+                <MapPinIcon className="h-4 w-4" />
+                <span>Fetch Location</span>
+              </>
+            )}
+          </button>
         </div>
+        <p className="text-xs text-gray-500 mt-1">
+          Your current location will be automatically detected and filled
+        </p>
       </div>
 
       {/* General Notes */}
