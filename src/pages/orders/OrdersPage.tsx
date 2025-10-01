@@ -66,7 +66,7 @@ const OrdersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
-  const [limit] = useState(10);
+  const [limit, setLimit] = useState(10);
 
   // Sorting
   const [sortBy, setSortBy] = useState("orderDate");
@@ -139,7 +139,7 @@ const OrdersPage: React.FC = () => {
       if (response.success && response.data) {
         setOrders(response.data.orders || []);
         if (response?.data?.pagination) {
-          setCurrentPage(response?.data?.pagination?.currentPage || 1);
+          // Only update totalPages and totalOrders, not currentPage to avoid infinite loops
           setTotalPages(response?.data?.pagination?.totalPages || 1);
           setTotalOrders((response?.data?.pagination as any).totalOrders || 0);
         }
@@ -210,9 +210,7 @@ const OrdersPage: React.FC = () => {
 
   // Reset page when filters change
   useEffect(() => {
-    if (currentPage !== 1) {
-      setCurrentPage(1);
-    }
+    setCurrentPage(1);
   }, [
     debouncedSearchTerm,
     customerFilter,
@@ -230,7 +228,6 @@ const OrdersPage: React.FC = () => {
     visitStatusFilter,
     hasImageFilter,
     addressFilter,
-    currentPage,
   ]);
 
   // Reset filters when view type changes
@@ -301,6 +298,11 @@ const OrdersPage: React.FC = () => {
           : order
       )
     );
+  };
+
+  const handleItemsPerPageChange = (newLimit: number) => {
+    setLimit(newLimit);
+    setCurrentPage(1); // Reset to first page when changing page size
   };
 
   // Table columns
@@ -1076,7 +1078,7 @@ const OrdersPage: React.FC = () => {
                 onPageChange={setCurrentPage}
                 totalItems={totalOrders}
                 itemsPerPage={limit}
-                onItemsPerPageChange={() => {}}
+                onItemsPerPageChange={handleItemsPerPageChange}
               />
             </div>
           )}
