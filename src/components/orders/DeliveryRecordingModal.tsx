@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   MapPinIcon, 
   CurrencyRupeeIcon,
@@ -72,39 +72,25 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
     }
   };
 
-  // Polling fallback to keep "Next" enabled even if onChange doesn't fire on some devices
-  useEffect(() => {
-    let intervalId: number | undefined;
-    if (activeStep === 2) {
-      intervalId = window.setInterval(() => {
-        if (driverSignatureRef.current && !driverSignatureRef.current.isEmpty()) {
-          const sig = driverSignatureRef.current.getSignature();
-          setDriverSignature(sig);
-          setDriverSigned(true);
-        }
-      }, 200);
-    } else if (activeStep === 3) {
-      intervalId = window.setInterval(() => {
-        if (receiverSignatureRef.current && !receiverSignatureRef.current.isEmpty()) {
-          const sig = receiverSignatureRef.current.getSignature();
-          setReceiverSignature(sig);
-          setReceiverSigned(true);
-        }
-      }, 200);
-    }
-    return () => {
-      if (intervalId) window.clearInterval(intervalId);
-    };
-  }, [activeStep]);
+  // Handle signature changes with useCallback to prevent rerenders
+  const handleDriverSignatureChange = useCallback((signature: string) => {
+    setDriverSignature(signature);
+    setDriverSigned(!!signature);
+  }, []);
+
+  const handleReceiverSignatureChange = useCallback((signature: string) => {
+    setReceiverSignature(signature);
+    setReceiverSigned(!!signature);
+  }, []);
 
   const validateCurrentStep = () => {
     switch (activeStep) {
       case 1:
         return formData.amountCollected >= 0;
       case 2:
-        return !!driverSignature || driverSigned;
+        return !!driverSignature || (driverSignatureRef.current && !driverSignatureRef.current.isEmpty());
       case 3:
-        return !!receiverSignature || receiverSigned;
+        return !!receiverSignature || (receiverSignatureRef.current && !receiverSignatureRef.current.isEmpty());
       default:
         return true;
     }
@@ -320,18 +306,22 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
         </p>
         
         <div className="flex justify-center">
-          <SignaturePad
-            ref={driverSignatureRef}
-            width={400}
-            height={200}
-            backgroundColor="#ffffff"
-            penColor="#000000"
-            onChange={(data) => {
-              setDriverSignature(data);
-              setDriverSigned(!!data);
-            }}
-            className="border-2 border-dashed border-gray-300 rounded-lg"
-          />
+          <div 
+            className="touch-none select-none"
+            style={{ touchAction: 'none', userSelect: 'none' }}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <SignaturePad
+              ref={driverSignatureRef}
+              width={400}
+              height={200}
+              backgroundColor="#ffffff"
+              penColor="#000000"
+              penWidth={2}
+              onChange={handleDriverSignatureChange}
+              className="border-2 border-dashed border-gray-300 rounded-lg"
+            />
+          </div>
         </div>
         
         <p className="text-xs text-gray-500 mt-2">
@@ -354,18 +344,22 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
         </p>
         
         <div className="flex justify-center">
-          <SignaturePad
-            ref={receiverSignatureRef}
-            width={400}
-            height={200}
-            backgroundColor="#ffffff"
-            penColor="#000000"
-            onChange={(data) => {
-              setReceiverSignature(data);
-              setReceiverSigned(!!data);
-            }}
-            className="border-2 border-dashed border-gray-300 rounded-lg"
-          />
+          <div 
+            className="touch-none select-none"
+            style={{ touchAction: 'none', userSelect: 'none' }}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <SignaturePad
+              ref={receiverSignatureRef}
+              width={400}
+              height={200}
+              backgroundColor="#ffffff"
+              penColor="#000000"
+              penWidth={2}
+              onChange={handleReceiverSignatureChange}
+              className="border-2 border-dashed border-gray-300 rounded-lg"
+            />
+          </div>
         </div>
         
         <p className="text-xs text-gray-500 mt-2">

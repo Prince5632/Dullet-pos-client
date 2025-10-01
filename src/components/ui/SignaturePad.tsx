@@ -32,16 +32,22 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const signaturePadRef = useRef<SignaturePadLib | null>(null);
+  const onChangeRef = useRef(onChange);
   const [isPadEmpty, setIsPadEmpty] = useState(true);
+
+  // Update onChange ref when it changes
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useImperativeHandle(ref, () => ({
     clear: () => {
-      if (signaturePadRef.current) {
-        signaturePadRef.current.clear();
-        setIsPadEmpty(true);
-        onChange?.('');
-      }
-    },
+        if (signaturePadRef.current) {
+          signaturePadRef.current.clear();
+          setIsPadEmpty(true);
+          onChangeRef.current?.('');
+        }
+      },
     getSignature: () => {
       if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
         return signaturePadRef.current.toDataURL('image/png');
@@ -52,12 +58,12 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
       return signaturePadRef.current ? signaturePadRef.current.isEmpty() : true;
     },
     fromDataURL: (dataURL: string) => {
-      if (signaturePadRef.current) {
-        signaturePadRef.current.fromDataURL(dataURL);
-        setIsPadEmpty(false);
-        onChange?.(dataURL);
+        if (signaturePadRef.current) {
+          signaturePadRef.current.fromDataURL(dataURL);
+          setIsPadEmpty(false);
+          onChangeRef.current?.(dataURL);
+        }
       }
-    }
   }));
 
   useEffect(() => {
@@ -77,7 +83,7 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
         if (!signaturePadRef.current) return;
         const empty = signaturePadRef.current.isEmpty();
         setIsPadEmpty(empty);
-        onChange?.(empty ? '' : signaturePadRef.current.toDataURL('image/png'));
+        onChangeRef.current?.(empty ? '' : signaturePadRef.current.toDataURL('image/png'));
       };
 
       // signature_pad exposes onBegin/onEnd callbacks, not DOM events
@@ -128,7 +134,7 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
         canvasEl.removeEventListener('mousemove', fallbackMove);
       };
     }
-  }, [backgroundColor, penColor, penWidth, onChange]);
+  }, [backgroundColor, penColor, penWidth]);
 
   // Update signature pad options when props change
   useEffect(() => {
@@ -154,7 +160,7 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
     if (signaturePadRef.current) {
       signaturePadRef.current.clear();
       setIsPadEmpty(true);
-      onChange?.('');
+      onChangeRef.current?.('');
     }
   };
 
