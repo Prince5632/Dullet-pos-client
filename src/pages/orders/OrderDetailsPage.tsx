@@ -17,6 +17,7 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   CameraIcon,
+  PaperAirplaneIcon,
 } from "@heroicons/react/24/outline";
 import { orderService } from "../../services/orderService";
 import { useAuth } from "../../contexts/AuthContext";
@@ -29,6 +30,7 @@ import OrderActivityTimeline from "../../components/orders/OrderActivityTimeline
 import type { Order } from "../../types";
 import { toast } from "react-hot-toast";
 import Modal from "../../components/ui/Modal";
+import { resolveCapturedImageSrc } from "../../utils/image";
 
 const OrderDetailsPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -46,8 +48,13 @@ const OrderDetailsPage: React.FC = () => {
     currentPage: 1,
     totalPages: 1,
     totalCount: 0,
-    hasMore: false
+    hasMore: false,
   });
+
+  // Delivery summary sharing state
+  const [showDeliverySummaryModal, setShowDeliverySummaryModal] =
+    useState(false);
+  const [deliverySummaryLoading, setDeliverySummaryLoading] = useState(false);
 
   useEffect(() => {
     if (!orderId) {
@@ -58,6 +65,15 @@ const OrderDetailsPage: React.FC = () => {
 
     fetchOrder();
   }, [orderId]);
+
+  // Auto-open share modal if navigated from delivery recording
+  useEffect(() => {
+    if (location.state?.openShareModal && order) {
+      setShowDeliverySummaryModal(true);
+      // Clear the state to prevent reopening on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, order]);
 
   const fetchOrder = async () => {
     try {
@@ -80,73 +96,176 @@ const OrderDetailsPage: React.FC = () => {
     }
   };
 
-  const fetchActivities = useCallback(async (page: number = 1, append: boolean = false) => {
-    if (!orderId) return;
-    
-    try {
-      setActivitiesLoading(true);
-      const response = await orderService.getOrderAuditTrail(orderId, { 
-        page, 
-        limit: 5
-      });
-      
-      if (append) {
-        setActivities(prev => [...prev, ...response.activities]);
-      } else {
-        setActivities(response.activities);
+  const fetchActivities = useCallback(
+    async (page: number = 1, append: boolean = false) => {
+      if (!orderId) return;
+
+      try {
+        setActivitiesLoading(true);
+        const response = await orderService.getOrderAuditTrail(orderId, {
+          page,
+          limit: 5,
+        });
+
+        if (append) {
+          setActivities((prev) => [...prev, ...(response.activities || [])]);
+        } else {
+          setActivities(response.activities || []);
+        }
+
+        if (response.pagination) {
+          setActivitiesPagination((prev) => ({
+            ...prev,
+            currentPage: response.pagination.currentPage || 1,
+            totalPages: response.pagination.totalPages || 1,
+            totalCount: response.pagination.totalItems || 0,
+            hasMore: response.pagination.hasMore || false,
+          }));
+        }
+      } catch (err: any) {
+        console.error("Error fetching activities:", err);
+        // Don't show error toast for activities as it's not critical
+      } finally {
+        setActivitiesLoading(false);
       }
-      
-      setActivitiesPagination(prev => ({
-        ...prev,
-        currentPage: response.pagination.currentPage,
-        totalPages: response.pagination.totalPages,
-        totalCount: response.pagination.totalItems,
-        hasMore: response.pagination.hasMore
-      }));
-    } catch (err: any) {
-      console.error("Error fetching activities:", err);
-      // Don't show error toast for activities as it's not critical
-    } finally {
-      setActivitiesLoading(false);
-    }
-  }, [orderId]);
+    },
+    [orderId]
+  );
 
   const loadMoreActivities = useCallback(() => {
-    if (activitiesPagination.hasMore && !activitiesLoading) {
+    if (
+      activitiesPagination?.hasMore &&
+      !activitiesLoading &&
+      activitiesPagination?.currentPage
+    ) {
       fetchActivities(activitiesPagination.currentPage + 1, true);
     }
-  }, [activitiesPagination.hasMore, activitiesPagination.currentPage, activitiesLoading, fetchActivities]);
-  console.log(activities)
-  const handleOrderUpdate = useCallback((updatedOrder: Order) => {
-    setOrder(updatedOrder);
+  }, [
+    activitiesPagination?.hasMore,
+    activitiesPagination?.currentPage,
+    activitiesLoading,
+    fetchActivities,
+  ]);
+  const handleOrderUpdate = useCallback(async (updatedOrder: Order) => {
+    await fetchOrder();
     toast.success("Order updated successfully");
   }, []);
 
   const handlePrint = () => {
     window.print();
   };
-  const formatImageSrc = (imageData: string | undefined): string => {
-    if (!imageData) return "";
 
-    // If it's already a complete URL, return as is
-    if (imageData.startsWith("http://") || imageData.startsWith("https://")) {
-      return imageData;
+  // Create comprehensive text-based delivery summary (WhatsApp-safe)
+  const generateTextDeliverySummary = (order: Order): string => {
+    const deliveryDate = new Date().toLocaleDateString("en-IN", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    const deliveryTime = new Date().toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    // Format items list
+    const itemsList =
+      order.items
+        ?.map((item, index) => {
+          const quantity = Number(item.quantity) || 0;
+          const rate = Number(item.ratePerUnit) || 0;
+          const total = Number(item.totalAmount) || 0;
+
+          return `${index + 1}. ${item.productName || "N/A"}
+   Packaging: ${item.packaging || "N/A"}
+   Quantity: ${quantity} ${item.unit || ""}
+   Rate: ₹${rate.toFixed(2)}
+   Amount: ₹${total.toFixed(2)}`;
+        })
+        .join("\n\n") || "No items found";
+
+    // Calculate totals
+    const subtotal = Number(order.subtotal) || 0;
+    const discount = Number(order.discount) || 0;
+    const tax = Number(order.tax) || 0;
+    const totalAmount = Number(order.totalAmount) || 0;
+    const amountCollected =
+      Number(order.settlements?.[0]?.amountCollected) || totalAmount;
+
+    return `DELIVERY SUMMARY - DULLET INDUSTRIES
+Punjab, India
+
+=======================================
+
+ORDER DETAILS
+---------------------------------------
+Order No: ${order.orderNumber || "N/A"}
+Order Date: ${orderService.formatDate(order.orderDate)}
+Status: ${(order.status || "N/A").toUpperCase()}
+Payment Terms: ${order.paymentTerms || "Cash"}
+
+CUSTOMER DETAILS
+---------------------------------------
+Business: ${order.customer?.businessName || "N/A"}
+Contact: ${order.customer?.contactPersonName || "N/A"}
+Phone: ${order.customer?.phone || "N/A"}
+Address: ${
+      order.customer?.address
+        ? `${order.customer.address.street || ""}, ${
+            order.customer.address.city || ""
+          }, ${order.customer.address.state || ""} ${
+            order.customer.address.pincode || ""
+          }`
+            .replace(/^,\s*|,\s*$/g, "")
+            .replace(/,\s*,/g, ",")
+        : "N/A"
     }
 
-    // If it's a base64 string, return as is
-    if (imageData.startsWith("data:image/")) {
-      return imageData;
+DELIVERY INFO
+---------------------------------------
+Delivered At: ${deliveryDate}, ${deliveryTime}
+Location: ${
+      order.driverAssignment?.deliveryLocation?.address || "Location recorded"
     }
 
-    // Default case - assume it's a base64 string
-    return `data:image/jpeg;base64,${imageData}`;
+ITEMS DELIVERED
+---------------------------------------
+${itemsList}
+
+PAYMENT SUMMARY
+---------------------------------------
+Subtotal: ₹${subtotal.toFixed(2)}
+Discount: ₹${discount.toFixed(2)}
+Tax: ₹${tax.toFixed(2)}
+---------------------------------------
+Grand Total: ₹${totalAmount.toFixed(2)}
+Amount Collected: ₹${amountCollected.toFixed(2)}
+Payment Status: ${order.paymentStatus || "Completed"}
+
+NOTES
+---------------------------------------
+${order.notes?.trim() || "No additional notes"}
+
+${
+  order.driverAssignment?.driverNotes?.trim()
+    ? `Delivery Notes: ${order.driverAssignment.driverNotes}`
+    : ""
+}
+
+=======================================
+Thank you for your business!
+Dullet POS - Delivery Management System
+Generated on: ${new Date().toLocaleString("en-IN")}`;
   };
+
   const handleViewImage = (imageData: string | undefined, title: string) => {
     if (!imageData) return;
 
-    const formattedSrc = formatImageSrc(imageData);
-    setSelectedImage(formattedSrc);
-    setShowImageModal(true);
+    const formattedSrc = resolveCapturedImageSrc(imageData);
+    if (formattedSrc) {
+      setSelectedImage(formattedSrc);
+      setShowImageModal(true);
+    }
   };
   const handleShare = async () => {
     if (navigator.share) {
@@ -162,6 +281,146 @@ const OrderDetailsPage: React.FC = () => {
     } else {
       navigator.clipboard.writeText(window.location.href);
       toast.success("Link copied to clipboard");
+    }
+  };
+
+  // Delivery Summary Sharing Functions
+  const handleShareDeliverySummary = () => {
+    if (!order) return;
+    setShowDeliverySummaryModal(true);
+  };
+
+  const handleShareWhatsappSummary = async () => {
+    if (!order) return;
+
+    setDeliverySummaryLoading(true);
+    try {
+      const textSummary = generateTextDeliverySummary(order);
+      const encodedMessage = encodeURIComponent(textSummary);
+      const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+
+      window.open(whatsappUrl, "_blank");
+
+      toast.success("Opening WhatsApp with delivery summary!", {
+        duration: 3000,
+        icon: "✅",
+      });
+
+      setShowDeliverySummaryModal(false);
+    } catch (error) {
+      console.error("Error sharing to WhatsApp:", error);
+      toast.error("Failed to prepare WhatsApp sharing. Please try again.");
+    } finally {
+      setDeliverySummaryLoading(false);
+    }
+  };
+
+  const handleShareEmailSummary = async () => {
+    if (!order) return;
+
+    setDeliverySummaryLoading(true);
+    try {
+      const textSummary = generateTextDeliverySummary(order);
+      const subject = `Delivery Summary - Order ${order.orderNumber}`;
+      const body = `Dear ${order.customer?.businessName || "Customer"},
+
+Please find below the delivery summary for your order:
+
+${textSummary}
+
+Thank you for your business!
+
+Best regards,
+Dullet POS Team`;
+
+      const mailtoUrl = `mailto:${
+        order.customer?.email || ""
+      }?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
+        body
+      )}`;
+      window.open(mailtoUrl);
+
+      toast.success("Opening email client with delivery summary!", {
+        duration: 3000,
+        icon: "📧",
+      });
+
+      setShowDeliverySummaryModal(false);
+    } catch (error) {
+      console.error("Error preparing email:", error);
+      toast.error("Failed to prepare email sharing. Please try again.");
+    } finally {
+      setDeliverySummaryLoading(false);
+    }
+  };
+
+  const handleCopyTextSummary = async () => {
+    if (!order) return;
+
+    setDeliverySummaryLoading(true);
+    try {
+      const textSummary = generateTextDeliverySummary(order);
+      await navigator.clipboard.writeText(textSummary);
+
+      toast.success("Delivery summary copied to clipboard!", {
+        duration: 3000,
+        icon: "📋",
+      });
+
+      setShowDeliverySummaryModal(false);
+    } catch (error) {
+      console.error("Error copying to clipboard:", error);
+      toast.error("Failed to copy to clipboard. Please try again.");
+    } finally {
+      setDeliverySummaryLoading(false);
+    }
+  };
+
+  const handlePrintTextSummary = async () => {
+    if (!order) return;
+
+    setDeliverySummaryLoading(true);
+    try {
+      const textSummary = generateTextDeliverySummary(order);
+
+      // Create a new window for printing
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Delivery Summary - ${order.orderNumber}</title>
+              <style>
+                body {
+                  font-family: 'Courier New', monospace;
+                  font-size: 12px;
+                  line-height: 1.4;
+                  margin: 20px;
+                  white-space: pre-wrap;
+                }
+                @media print {
+                  body { margin: 0; }
+                }
+              </style>
+            </head>
+            <body>${textSummary}</body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+      }
+
+      toast.success("Opening print dialog...", {
+        duration: 2000,
+        icon: "🖨️",
+      });
+
+      setShowDeliverySummaryModal(false);
+    } catch (error) {
+      console.error("Error printing summary:", error);
+      toast.error("Failed to print summary. Please try again.");
+    } finally {
+      setDeliverySummaryLoading(false);
     }
   };
 
@@ -727,6 +986,38 @@ const OrderDetailsPage: React.FC = () => {
                           </div>
                         </div>
                       )}
+
+                      {/* Share Delivery Summary Button - Only show for delivered orders */}
+                      {(order.status === "delivered" ||
+                        order.status === "completed") && (
+                        <div className="bg-white rounded-lg p-4 border border-gray-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <PaperAirplaneIcon className="h-5 w-5 text-blue-600" />
+                              <div>
+                                <h4 className="text-sm font-semibold text-gray-900">
+                                  Delivery Summary
+                                </h4>
+                                <p className="text-xs text-gray-600">
+                                  Share or download the delivery summary PDF
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                console.log(
+                                  "Share Delivery Summary button clicked!"
+                                );
+                                handleShareDeliverySummary();
+                              }}
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                            >
+                              <ShareIcon className="h-4 w-4" />
+                              Share Summary
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -852,10 +1143,9 @@ const OrderDetailsPage: React.FC = () => {
                 </div>
               </div>
 
-        
               {/* Activity Timeline */}
-              <OrderActivityTimeline 
-                activities={activities} 
+              <OrderActivityTimeline
+                activities={activities}
                 loading={activitiesLoading}
                 hasMore={activitiesPagination.hasMore}
                 onLoadMore={loadMoreActivities}
@@ -884,6 +1174,141 @@ const OrderDetailsPage: React.FC = () => {
                   "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y3ZjdmNyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTk5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZSBub3QgZm91bmQ8L3RleHQ+PC9zdmc+";
               }}
             />
+          </div>
+        </Modal>
+      )}
+
+      {/* Delivery Summary Sharing Modal */}
+      {showDeliverySummaryModal && order && (
+        <Modal
+          isOpen={showDeliverySummaryModal}
+          onClose={() => setShowDeliverySummaryModal(false)}
+          title="Share Delivery Summary"
+        >
+          <div className="p-6">
+            {/* Order Summary */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                Order Summary
+              </h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Order Number:</span>
+                  <span className="font-medium">{order.orderNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Customer:</span>
+                  <span className="font-medium">
+                    {order.customer?.businessName || "N/A"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Amount:</span>
+                  <span className="font-medium text-green-600">
+                    ₹{order.totalAmount?.toLocaleString("en-IN") || "0"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Status:</span>
+                  <span className="font-medium text-blue-600 capitalize">
+                    {order.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* WhatsApp Sharing Section */}
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 mb-4 border border-green-200">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                  <svg
+                    className="w-5 h-5 text-white"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900">
+                    Share via WhatsApp
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Send formatted text delivery summary
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleShareWhatsappSummary}
+                disabled={deliverySummaryLoading}
+                className="w-full bg-green-600 text-white py-2.5 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {deliverySummaryLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488" />
+                    </svg>
+                    Share via WhatsApp
+                  </>
+                )}
+              </button>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                💡 Complete delivery summary will be formatted as text message
+              </p>
+            </div>
+
+            {/* Other Sharing Options */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <button
+                onClick={() => {
+                  handleShareEmailSummary();
+                }}
+                disabled={deliverySummaryLoading}
+                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <EnvelopeIcon className="h-4 w-4" />
+                Email
+              </button>
+
+              <button
+                onClick={() => {
+                  handleCopyTextSummary();
+                }}
+                disabled={deliverySummaryLoading}
+                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <DocumentTextIcon className="h-4 w-4" />
+                Copy
+              </button>
+
+              <button
+                onClick={handlePrintTextSummary}
+                disabled={deliverySummaryLoading}
+                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <PrinterIcon className="h-4 w-4" />
+                Print
+              </button>
+            </div>
+
+            {/* Cancel Button */}
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowDeliverySummaryModal(false)}
+                className="w-full py-2.5 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors duration-200"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </Modal>
       )}

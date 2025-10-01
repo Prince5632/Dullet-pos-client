@@ -20,7 +20,7 @@ import { godownService } from '../../services/godownService';
 import CameraCapture from '../../components/common/CameraCapture';
 import Modal from '../../components/ui/Modal';
 import type { Attendance, User, Godown, AttendanceListParams } from '../../types';
-import { resolveImageSrc } from '../../utils/image';
+import { resolveCapturedImageSrc } from '../../utils/image';
 
 const AttendancePage: React.FC = () => {
   const navigate = useNavigate();
@@ -58,10 +58,7 @@ const AttendancePage: React.FC = () => {
     hasPrev: false
   });
 
-  // Helper function to format image src
-  const formatImageSrc = (imageData: string) => {
-    return imageData.startsWith('data:') ? imageData : `data:image/jpeg;base64,${imageData}`;
-  };
+
 
   // Load initial data
   useEffect(() => {
@@ -311,7 +308,7 @@ const AttendancePage: React.FC = () => {
                     className="w-6 h-6 rounded-full overflow-hidden hover:ring-2 hover:ring-green-500 hover:ring-offset-1 transition-all group flex-shrink-0"
                   >
                     <img
-                      src={formatImageSrc(todaysAttendance.checkInImage)}
+                      src={resolveCapturedImageSrc(todaysAttendance.checkInImage)}
                       alt="Check In"
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                     />
@@ -336,7 +333,7 @@ const AttendancePage: React.FC = () => {
                     className="w-6 h-6 rounded-full overflow-hidden hover:ring-2 hover:ring-orange-500 hover:ring-offset-1 transition-all group flex-shrink-0"
                   >
                     <img
-                      src={formatImageSrc(todaysAttendance.checkOutImage)}
+                      src={resolveCapturedImageSrc(todaysAttendance.checkOutImage)}
                       alt="Check Out"
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                     />
@@ -518,7 +515,7 @@ const AttendancePage: React.FC = () => {
                           {record.user.profilePhoto ? (
                             <img
                               className="h-8 w-8 rounded-full object-cover"
-                              src={resolveImageSrc(record.user.profilePhoto)}
+                              src={resolveCapturedImageSrc(record.user.profilePhoto)}
                               alt=""
                             />
                           ) : (
@@ -555,7 +552,7 @@ const AttendancePage: React.FC = () => {
                             className="w-5 h-5 rounded-full overflow-hidden hover:ring-2 hover:ring-blue-500 hover:ring-offset-1 transition-all group flex-shrink-0"
                           >
                             <img
-                              src={formatImageSrc(record.checkInImage)}
+                              src={resolveCapturedImageSrc(record.checkInImage)}
                               alt="Check In"
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                             />
@@ -580,7 +577,7 @@ const AttendancePage: React.FC = () => {
                             className="w-5 h-5 rounded-full overflow-hidden hover:ring-2 hover:ring-blue-500 hover:ring-offset-1 transition-all group flex-shrink-0"
                           >
                             <img
-                              src={formatImageSrc(record.checkOutImage)}
+                              src={resolveCapturedImageSrc(record.checkOutImage)}
                               alt="Check Out"
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                             />
@@ -659,7 +656,7 @@ const AttendancePage: React.FC = () => {
                         <td className="px-4 py-2 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             {record.user.profilePhoto ? (
-                              <img className="h-8 w-8 rounded-full object-cover" src={resolveImageSrc(record.user.profilePhoto)} alt="" />
+                              <img className="h-8 w-8 rounded-full object-cover" src={resolveCapturedImageSrc(record.user.profilePhoto)} alt="" />
                             ) : (
                               <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
                                 <UserIcon className="h-4 w-4 text-gray-600" />
@@ -685,7 +682,7 @@ const AttendancePage: React.FC = () => {
                                 className="w-6 h-6 rounded-full overflow-hidden hover:ring-2 hover:ring-blue-500 hover:ring-offset-1 transition-all group"
                               >
                                 <img
-                                  src={formatImageSrc(record.checkInImage)}
+                                  src={resolveCapturedImageSrc(record.checkInImage)}
                                   alt="Check In"
                                   className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                                 />
@@ -703,7 +700,7 @@ const AttendancePage: React.FC = () => {
                                   className="w-6 h-6 rounded-full overflow-hidden hover:ring-2 hover:ring-blue-500 hover:ring-offset-1 transition-all group"
                                 >
                                   <img
-                                    src={formatImageSrc(record.checkOutImage)}
+                                    src={resolveCapturedImageSrc(record.checkOutImage)}
                                     alt="Check Out"
                                     className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                                   />
@@ -825,7 +822,7 @@ const AttendancePage: React.FC = () => {
       >
         <div className="flex justify-center">
           <img
-            src={formatImageSrc(selectedImage.src)}
+            src={resolveCapturedImageSrc(selectedImage.src)}
             alt={selectedImage.title}
             className="max-w-full max-h-96 rounded-lg shadow-lg"
           />

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeftIcon,
   PencilIcon,
@@ -15,16 +15,16 @@ import {
   KeyIcon,
   ClockIcon,
   DocumentTextIcon,
-} from '@heroicons/react/24/outline';
-import { userService } from '../../services/userService';
-import type { User } from '../../types';
-import { formatDateTime, formatDate } from '../../utils';
-import Avatar from '../../components/ui/Avatar';
-import Badge from '../../components/ui/Badge';
-import Modal from '../../components/ui/Modal';
-import UserActivityTimeline from '../../components/users/UserActivityTimeline';
-import toast from 'react-hot-toast';
-import { resolveImageSrc } from '../../utils/image';
+} from "@heroicons/react/24/outline";
+import { userService } from "../../services/userService";
+import type { User } from "../../types";
+import { formatDateTime, formatDate } from "../../utils";
+import Avatar from "../../components/ui/Avatar";
+import Badge from "../../components/ui/Badge";
+import Modal from "../../components/ui/Modal";
+import UserActivityTimeline from "../../components/users/UserActivityTimeline";
+import toast from "react-hot-toast";
+import { resolveCapturedImageSrc } from "../../utils/image";
 
 const UserDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -36,8 +36,8 @@ const UserDetailsPage: React.FC = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
@@ -53,7 +53,7 @@ const UserDetailsPage: React.FC = () => {
   useEffect(() => {
     const loadUser = async () => {
       if (!id) {
-        navigate('/users');
+        navigate("/users");
         return;
       }
 
@@ -62,9 +62,9 @@ const UserDetailsPage: React.FC = () => {
         const userData = await userService.getUserById(id);
         setUser(userData);
       } catch (error) {
-        console.error('Failed to load user:', error);
-        toast.error('Failed to load user details');
-        navigate('/users');
+        console.error("Failed to load user:", error);
+        toast.error("Failed to load user details");
+        navigate("/users");
       } finally {
         setLoading(false);
       }
@@ -81,18 +81,18 @@ const UserDetailsPage: React.FC = () => {
       setActionLoading(true);
       if (user.isActive) {
         // Deactivate logic would go here
-        toast.success('User deactivated successfully');
+        toast.success("User deactivated successfully");
       } else {
         await userService.activateUser(user._id);
-        toast.success('User activated successfully');
+        toast.success("User activated successfully");
       }
-      
+
       // Reload user data
       const updatedUser = await userService.getUserById(user._id);
       setUser(updatedUser);
     } catch (error) {
-      console.error('Failed to update user status:', error);
-      toast.error('Failed to update user status');
+      console.error("Failed to update user status:", error);
+      toast.error("Failed to update user status");
     } finally {
       setActionLoading(false);
     }
@@ -104,11 +104,11 @@ const UserDetailsPage: React.FC = () => {
     try {
       setActionLoading(true);
       await userService.deleteUser(user._id);
-      toast.success('User deleted successfully');
-      navigate('/users');
+      toast.success("User deleted successfully");
+      navigate("/users");
     } catch (error) {
-      console.error('Failed to delete user:', error);
-      toast.error('Failed to delete user');
+      console.error("Failed to delete user:", error);
+      toast.error("Failed to delete user");
     } finally {
       setActionLoading(false);
     }
@@ -119,71 +119,79 @@ const UserDetailsPage: React.FC = () => {
     if (!user) return;
 
     if (newPassword !== confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.error("Passwords do not match");
       return;
     }
 
     if (newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters long');
+      toast.error("Password must be at least 8 characters long");
       return;
     }
 
     try {
       setPasswordLoading(true);
       await userService.changeUserPassword(user._id, newPassword);
-      toast.success('Password changed successfully');
+      toast.success("Password changed successfully");
       setPasswordModalOpen(false);
-      setNewPassword('');
-      setConfirmPassword('');
+      setNewPassword("");
+      setConfirmPassword("");
     } catch (error) {
-      console.error('Failed to change password:', error);
-      toast.error('Failed to change password');
+      console.error("Failed to change password:", error);
+      toast.error("Failed to change password");
     } finally {
       setPasswordLoading(false);
     }
   };
 
   // Load user activity
-  const loadUserActivity = useCallback(async (page: number = 1, append: boolean = false) => {
-    if (!user) return;
+  const loadUserActivity = useCallback(
+    async (page: number = 1, append: boolean = false) => {
+      if (!user) return;
 
-    try {
-      setActivityLoading(true);
-      const response = await userService.getUserActivity(user._id, { 
-        page, 
-        limit: 20 
-      });
-      
-      // Handle paginated response
-      const { activities, pagination } = response;
-      
-      if (append) {
-        setActivityLogs(prev => [...prev, ...activities]);
-      } else {
-        setActivityLogs(activities);
+      try {
+        setActivityLoading(true);
+        const response = await userService.getUserActivity(user._id, {
+          page,
+          limit: 20,
+        });
+
+        // Handle paginated response
+        const { activities, pagination } = response;
+
+        if (append) {
+          setActivityLogs((prev) => [...prev, ...activities]);
+        } else {
+          setActivityLogs(activities);
+        }
+
+        setActivitiesPagination((prev) => ({
+          ...prev,
+          currentPage: pagination.currentPage,
+          totalPages: pagination.totalPages,
+          totalCount: pagination.totalItems,
+          hasMore: pagination.currentPage < pagination.totalPages,
+        }));
+      } catch (error) {
+        console.error("Failed to load activity:", error);
+        toast.error("Failed to load user activity");
+      } finally {
+        setActivityLoading(false);
       }
-      
-      setActivitiesPagination(prev => ({
-        ...prev,
-        currentPage: pagination.currentPage,
-        totalPages: pagination.totalPages,
-        totalCount: pagination.totalItems,
-        hasMore: pagination.currentPage < pagination.totalPages,
-      }));
-    } catch (error) {
-      console.error('Failed to load activity:', error);
-      toast.error('Failed to load user activity');
-    } finally {
-      setActivityLoading(false);
-    }
-  }, [user]);
+    },
+    [user]
+  );
 
   // Load more activities for infinite scroll
   const loadMoreActivities = useCallback(() => {
     if (activitiesPagination.hasMore && !activityLoading) {
       loadUserActivity(activitiesPagination.currentPage + 1, true);
     }
-  }, [activitiesPagination.hasMore, activitiesPagination.currentPage, activityLoading, loadUserActivity]);
+  }, [
+    activitiesPagination.hasMore,
+    activitiesPagination.currentPage,
+    activityLoading,
+    loadUserActivity,
+  ]);
 
   useEffect(() => {
     if (showActivity && user && activityLogs.length === 0) {
@@ -211,76 +219,85 @@ const UserDetailsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-  {/* Left: Back + User meta */}
-  <div className="flex flex-wrap items-center gap-3 sm:gap-4 min-w-0">
-    <button
-      onClick={() => navigate('/users')}
-      className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors shrink-0"
-    >
-      <ArrowLeftIcon className="h-5 w-5 mr-1" />
-      <span className="break-words [overflow-wrap:anywhere] text-wrap">Back to Users</span>
-    </button>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        {/* Left: Back + User meta */}
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 min-w-0">
+          <button
+            onClick={() => navigate("/users")}
+            className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors shrink-0"
+          >
+            <ArrowLeftIcon className="h-5 w-5 mr-1" />
+            <span className="break-words [overflow-wrap:anywhere] text-wrap">
+              Back to Users
+            </span>
+          </button>
 
-    {/* Divider (hide on very small if wrapping gets tight) */}
-    <div className="hidden xs:block h-6 border-l border-gray-300" />
+          {/* Divider (hide on very small if wrapping gets tight) */}
+          <div className="hidden xs:block h-6 border-l border-gray-300" />
 
-    {/* User name + meta */}
-    <div className="min-w-0">
-      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words [overflow-wrap:anywhere] text-wrap truncate md:whitespace-normal md:truncate-none">
-        {user.firstName} {user.lastName}
-      </h1>
-      <p className="text-gray-600 text-sm sm:text-base break-words [overflow-wrap:anywhere] text-wrap min-w-0">
-        {user.position} • {user.department}
-      </p>
-    </div>
-  </div>
+          {/* User name + meta */}
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words [overflow-wrap:anywhere] text-wrap truncate md:whitespace-normal md:truncate-none">
+              {user.firstName} {user.lastName}
+            </h1>
+            <p className="text-gray-600 text-sm sm:text-base break-words [overflow-wrap:anywhere] text-wrap min-w-0">
+              {user.position} • {user.department}
+            </p>
+          </div>
+        </div>
 
-  {/* Right: Actions */}
-  <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto sm:overflow-visible py-1 -mx-1 px-1 min-w-0">
-    <button
-      onClick={handleToggleUserStatus}
-      disabled={actionLoading}
-      className={`inline-flex items-center px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium transition-colors whitespace-nowrap ${
-        user.isActive
-          ? 'text-orange-700 bg-orange-100 hover:bg-orange-200'
-          : 'text-green-700 bg-green-100 hover:bg-green-200'
-      } disabled:opacity-50 disabled:cursor-not-allowed`}
-    >
-      {user.isActive ? (
-        <UserMinusIcon className="h-4 w-4 mr-2 shrink-0" />
-      ) : (
-        <UserPlusIcon className="h-4 w-4 mr-2 shrink-0" />
-      )}
-      <span className="break-words [overflow-wrap:anywhere] text-wrap">{user.isActive ? 'Deactivate' : 'Activate'}</span>
-    </button>
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto sm:overflow-visible py-1 -mx-1 px-1 min-w-0">
+          <button
+            onClick={handleToggleUserStatus}
+            disabled={actionLoading}
+            className={`inline-flex items-center px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium transition-colors whitespace-nowrap ${
+              user.isActive
+                ? "text-orange-700 bg-orange-100 hover:bg-orange-200"
+                : "text-green-700 bg-green-100 hover:bg-green-200"
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            {user.isActive ? (
+              <UserMinusIcon className="h-4 w-4 mr-2 shrink-0" />
+            ) : (
+              <UserPlusIcon className="h-4 w-4 mr-2 shrink-0" />
+            )}
+            <span className="break-words [overflow-wrap:anywhere] text-wrap">
+              {user.isActive ? "Deactivate" : "Activate"}
+            </span>
+          </button>
 
-    <button
-      onClick={() => setPasswordModalOpen(true)}
-      className="inline-flex items-center px-3 sm:px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors whitespace-nowrap"
-    >
-      <KeyIcon className="h-4 w-4 mr-2 shrink-0" />
-      <span className="break-words [overflow-wrap:anywhere] text-wrap">Reset Password</span>
-    </button>
+          <button
+            onClick={() => setPasswordModalOpen(true)}
+            className="inline-flex items-center px-3 sm:px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors whitespace-nowrap"
+          >
+            <KeyIcon className="h-4 w-4 mr-2 shrink-0" />
+            <span className="break-words [overflow-wrap:anywhere] text-wrap">
+              Reset Password
+            </span>
+          </button>
 
-    <Link
-      to={`/users/${user._id}/edit`}
-      className="inline-flex items-center px-3 sm:px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors whitespace-nowrap"
-    >
-      <PencilIcon className="h-4 w-4 mr-2 shrink-0" />
-      <span className="break-words [overflow-wrap:anywhere] text-wrap">Edit User</span>
-    </Link>
+          <Link
+            to={`/users/${user._id}/edit`}
+            className="inline-flex items-center px-3 sm:px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors whitespace-nowrap"
+          >
+            <PencilIcon className="h-4 w-4 mr-2 shrink-0" />
+            <span className="break-words [overflow-wrap:anywhere] text-wrap">
+              Edit User
+            </span>
+          </Link>
 
-    <button
-      onClick={() => setDeleteModalOpen(true)}
-      className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors whitespace-nowrap"
-    >
-      <TrashIcon className="h-4 w-4 mr-2 shrink-0" />
-      <span className="break-words [overflow-wrap:anywhere] text-wrap">Delete</span>
-    </button>
-  </div>
-</div>
-
+          <button
+            onClick={() => setDeleteModalOpen(true)}
+            className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors whitespace-nowrap"
+          >
+            <TrashIcon className="h-4 w-4 mr-2 shrink-0" />
+            <span className="break-words [overflow-wrap:anywhere] text-wrap">
+              Delete
+            </span>
+          </button>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profile Card */}
@@ -288,25 +305,20 @@ const UserDetailsPage: React.FC = () => {
           <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-6">
             <div className="flex flex-col items-center">
               <Avatar
-                src={resolveImageSrc(user.profilePhoto)}
+                src={resolveCapturedImageSrc(user.profilePhoto)}
                 name={`${user.firstName} ${user.lastName}`}
                 size="xl"
                 className="mb-4"
               />
-              
+
               <h2 className="text-xl font-semibold text-gray-900 text-center">
                 {user.firstName} {user.lastName}
               </h2>
-              
-              <p className="text-gray-600 text-center mb-4">
-                {user.position}
-              </p>
 
-              <Badge
-                variant={user.isActive ? 'success' : 'error'}
-                size="lg"
-              >
-                {user.isActive ? 'Active' : 'Inactive'}
+              <p className="text-gray-600 text-center mb-4">{user.position}</p>
+
+              <Badge variant={user.isActive ? "success" : "error"} size="lg">
+                {user.isActive ? "Active" : "Inactive"}
               </Badge>
 
               <div className="mt-6 w-full space-y-3">
@@ -314,17 +326,17 @@ const UserDetailsPage: React.FC = () => {
                   <EnvelopeIcon className="h-4 w-4 mr-3 text-gray-400" />
                   <span>{user.email}</span>
                 </div>
-                
+
                 <div className="flex items-center text-sm text-gray-600">
                   <PhoneIcon className="h-4 w-4 mr-3 text-gray-400" />
                   <span>{user.phone}</span>
                 </div>
-                
+
                 <div className="flex items-center text-sm text-gray-600">
                   <IdentificationIcon className="h-4 w-4 mr-3 text-gray-400" />
                   <span>ID: {user.employeeId}</span>
                 </div>
-                
+
                 <div className="flex items-center text-sm text-gray-600">
                   <BuildingOfficeIcon className="h-4 w-4 mr-3 text-gray-400" />
                   <span>{user.department}</span>
@@ -333,13 +345,20 @@ const UserDetailsPage: React.FC = () => {
                 {user.primaryGodown && (
                   <div className="flex items-center text-sm text-gray-600">
                     <BuildingOfficeIcon className="h-4 w-4 mr-3 text-gray-400" />
-                    <span>Primary: {user.primaryGodown.name} ({user.primaryGodown.location.city}{user.primaryGodown.location.area ? ` - ${user.primaryGodown.location.area}` : ''})</span>
+                    <span>
+                      Primary: {user.primaryGodown.name} (
+                      {user.primaryGodown.location.city}
+                      {user.primaryGodown.location.area
+                        ? ` - ${user.primaryGodown.location.area}`
+                        : ""}
+                      )
+                    </span>
                   </div>
                 )}
-                
+
                 <div className="flex items-center text-sm text-gray-600">
                   <ShieldCheckIcon className="h-4 w-4 mr-3 text-gray-400" />
-                  <span>{user.role?.name || 'No Role'}</span>
+                  <span>{user.role?.name || "No Role"}</span>
                 </div>
               </div>
             </div>
@@ -351,40 +370,50 @@ const UserDetailsPage: React.FC = () => {
           {/* Account Information */}
           <div className="bg-white shadow-sm rounded-lg border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Account Information</h3>
+              <h3 className="text-lg font-medium text-gray-900">
+                Account Information
+              </h3>
             </div>
             <div className="p-6">
               <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Employee ID</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{user.employeeId}</dd>
+                  <dt className="text-sm font-medium text-gray-500">
+                    Employee ID
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {user.employeeId}
+                  </dd>
                 </div>
-                
+
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Status</dt>
                   <dd className="mt-1">
-                    <Badge variant={user.isActive ? 'success' : 'error'}>
-                      {user.isActive ? 'Active' : 'Inactive'}
+                    <Badge variant={user.isActive ? "success" : "error"}>
+                      {user.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </dd>
                 </div>
-                
+
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Account Created</dt>
+                  <dt className="text-sm font-medium text-gray-500">
+                    Account Created
+                  </dt>
                   <dd className="mt-1 text-sm text-gray-900 flex items-center">
                     <CalendarIcon className="h-4 w-4 mr-2 text-gray-400" />
                     {formatDate(user.createdAt)}
                   </dd>
                 </div>
-                
+
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Last Login</dt>
+                  <dt className="text-sm font-medium text-gray-500">
+                    Last Login
+                  </dt>
                   <dd className="mt-1 text-sm text-gray-900 flex items-center">
                     <CalendarIcon className="h-4 w-4 mr-2 text-gray-400" />
-                    {user.lastLogin ? formatDateTime(user.lastLogin) : 'Never'}
+                    {user.lastLogin ? formatDateTime(user.lastLogin) : "Never"}
                   </dd>
                 </div>
-                
+
                 {/* <div>
                   <dt className="text-sm font-medium text-gray-500">Two-Factor Auth</dt>
                   <dd className="mt-1">
@@ -405,13 +434,17 @@ const UserDetailsPage: React.FC = () => {
           {/* Role & Permissions */}
           <div className="bg-white shadow-sm rounded-lg border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Role & Permissions</h3>
+              <h3 className="text-lg font-medium text-gray-900">
+                Role & Permissions
+              </h3>
             </div>
             <div className="p-6">
               {/* Accessible Godowns */}
               {user.accessibleGodowns && user.accessibleGodowns.length > 0 && (
                 <div className="mb-6">
-                  <dt className="text-sm font-medium text-gray-500 mb-2">Accessible Godowns</dt>
+                  <dt className="text-sm font-medium text-gray-500 mb-2">
+                    Accessible Godowns
+                  </dt>
                   <dd className="flex flex-wrap gap-2">
                     {user.accessibleGodowns.map((g) => (
                       <Badge key={g._id} variant="default" size="sm">
@@ -432,24 +465,35 @@ const UserDetailsPage: React.FC = () => {
                       </Badge>
                     </dd>
                   </div>
-                  
+
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Description</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{user.role.description}</dd>
+                    <dt className="text-sm font-medium text-gray-500">
+                      Description
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {user.role.description}
+                    </dd>
                   </div>
-                  
-                  {user.role.permissions && user.role.permissions.length > 0 && (
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500 mb-2">Permissions</dt>
-                      <dd className="flex flex-wrap gap-2">
-                        {user.role.permissions.map((permission) => (
-                          <Badge key={permission._id} variant="default" size="sm">
-                            {permission.name}
-                          </Badge>
-                        ))}
-                      </dd>
-                    </div>
-                  )}
+
+                  {user.role.permissions &&
+                    user.role.permissions.length > 0 && (
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500 mb-2">
+                          Permissions
+                        </dt>
+                        <dd className="flex flex-wrap gap-2">
+                          {user.role.permissions.map((permission) => (
+                            <Badge
+                              key={permission._id}
+                              variant="default"
+                              size="sm"
+                            >
+                              {permission.name}
+                            </Badge>
+                          ))}
+                        </dd>
+                      </div>
+                    )}
                 </div>
               ) : (
                 <p className="text-gray-500">No role assigned</p>
@@ -459,19 +503,21 @@ const UserDetailsPage: React.FC = () => {
 
           {/* User Activity */}
           {showActivity && (
-            <UserActivityTimeline 
-              activities={activityLogs} 
+            <UserActivityTimeline
+              activities={activityLogs}
               loading={activityLoading}
               hasMore={activitiesPagination.hasMore}
               onLoadMore={loadMoreActivities}
               totalCount={activitiesPagination.totalCount}
             />
           )}
-          
+
           {!showActivity && (
             <div className="bg-white shadow-sm rounded-lg border border-gray-200">
               <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Recent Activity
+                </h3>
                 <button
                   onClick={() => {
                     setShowActivity(!showActivity);
@@ -493,7 +539,7 @@ const UserDetailsPage: React.FC = () => {
               </div>
             </div>
           )}
-          
+
           {showActivity && (
             <div className="flex justify-end">
               <button
@@ -526,13 +572,13 @@ const UserDetailsPage: React.FC = () => {
       >
         <div className="space-y-4">
           <p className="text-gray-600">
-            Are you sure you want to delete{' '}
+            Are you sure you want to delete{" "}
             <span className="font-medium">
               {user.firstName} {user.lastName}
             </span>
             ? This action cannot be undone.
           </p>
-          
+
           <div className="flex justify-end space-x-3">
             <button
               type="button"
@@ -547,7 +593,7 @@ const UserDetailsPage: React.FC = () => {
               disabled={actionLoading}
               className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {actionLoading ? 'Deleting...' : 'Delete User'}
+              {actionLoading ? "Deleting..." : "Delete User"}
             </button>
           </div>
         </div>
@@ -558,15 +604,15 @@ const UserDetailsPage: React.FC = () => {
         isOpen={passwordModalOpen}
         onClose={() => {
           setPasswordModalOpen(false);
-          setNewPassword('');
-          setConfirmPassword('');
+          setNewPassword("");
+          setConfirmPassword("");
         }}
         title="Reset User Password"
         size="md"
       >
         <div className="space-y-4">
           <p className="text-gray-600">
-            Reset the password for{' '}
+            Reset the password for{" "}
             <span className="font-medium">
               {user?.firstName} {user?.lastName}
             </span>
@@ -574,7 +620,10 @@ const UserDetailsPage: React.FC = () => {
           </p>
 
           <div>
-            <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="newPassword"
+              className="block text-sm font-medium text-gray-700"
+            >
               New Password
             </label>
             <input
@@ -592,7 +641,10 @@ const UserDetailsPage: React.FC = () => {
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="confirmPassword"
+              className="block text-sm font-medium text-gray-700"
+            >
               Confirm Password
             </label>
             <input
@@ -604,14 +656,14 @@ const UserDetailsPage: React.FC = () => {
               placeholder="Confirm new password"
             />
           </div>
-          
+
           <div className="flex justify-end space-x-3">
             <button
               type="button"
               onClick={() => {
                 setPasswordModalOpen(false);
-                setNewPassword('');
-                setConfirmPassword('');
+                setNewPassword("");
+                setConfirmPassword("");
               }}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
             >
@@ -629,7 +681,7 @@ const UserDetailsPage: React.FC = () => {
                   Resetting...
                 </>
               ) : (
-                'Reset Password'
+                "Reset Password"
               )}
             </button>
           </div>

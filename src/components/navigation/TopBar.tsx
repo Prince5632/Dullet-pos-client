@@ -10,7 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn, getInitials, getAvatarColor } from '../../utils';
-import { resolveImageSrc } from '../../utils/image';
+import { resolveCapturedImageSrc } from '../../utils/image';
 
 interface TopBarProps {
   onMenuClick: () => void;
@@ -79,7 +79,7 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
               {user?.profilePhoto ? (
                 <img
                   className="h-8 w-8 rounded-full object-cover"
-                  src={resolveImageSrc(user.profilePhoto)}
+                  src={resolveCapturedImageSrc(user.profilePhoto)}
                   alt={user.fullName}
                 />
               ) : (

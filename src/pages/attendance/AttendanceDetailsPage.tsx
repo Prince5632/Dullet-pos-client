@@ -18,6 +18,7 @@ import { attendanceService } from "../../services/attendanceService";
 import { reverseGeocode } from "../../utils/geocoding";
 import type { Attendance } from "../../types";
 import Modal from "../../components/ui/Modal";
+import {  resolveCapturedImageSrc } from "../../utils/image";
 
 const AttendanceDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -203,14 +204,11 @@ const AttendanceDetailsPage: React.FC = () => {
   };
 
   const handleViewImage = (imageData: string, title: string) => {
-    setSelectedImage({ src: imageData, title });
-    setShowImageModal(true);
-  };
-
-  const formatImageSrc = (imageData: string) => {
-    return imageData.startsWith("data:")
-      ? imageData
-      : `data:image/jpeg;base64,${imageData}`;
+    const formattedSrc = resolveCapturedImageSrc(imageData);
+    if (formattedSrc) {
+      setSelectedImage({ src: formattedSrc, title });
+      setShowImageModal(true);
+    }
   };
   // Check permissions
   const canEdit = attendanceService.canManageAttendance(user);
@@ -323,7 +321,7 @@ const AttendanceDetailsPage: React.FC = () => {
               {attendance.user.profilePhoto ? (
                 <img
                   className="h-12 w-12 rounded-full object-cover"
-                  src={attendance.user.profilePhoto}
+                  src={resolveCapturedImageSrc(attendance.user.profilePhoto)}
                   alt=""
                 />
               ) : (
@@ -379,7 +377,9 @@ const AttendanceDetailsPage: React.FC = () => {
                     className="w-6 h-6 rounded-full overflow-hidden hover:ring-2 hover:ring-blue-500 hover:ring-offset-1 transition-all group"
                   >
                     <img
-                      src={formatImageSrc(attendance.checkInImage)}
+                      src={
+                        resolveCapturedImageSrc(attendance.checkInImage) || ""
+                      }
                       alt="Check In"
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                     />
@@ -422,7 +422,9 @@ const AttendanceDetailsPage: React.FC = () => {
                     className="w-6 h-6 rounded-full overflow-hidden hover:ring-2 hover:ring-blue-500 hover:ring-offset-1 transition-all group"
                   >
                     <img
-                      src={formatImageSrc(attendance.checkOutImage)}
+                      src={
+                        resolveCapturedImageSrc(attendance.checkOutImage) || ""
+                      }
                       alt="Check Out"
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                     />
@@ -543,7 +545,7 @@ const AttendanceDetailsPage: React.FC = () => {
                   className="mx-auto w-16 h-16 rounded-full overflow-hidden hover:ring-4 hover:ring-blue-500 hover:ring-offset-2 transition-all group shadow-md"
                 >
                   <img
-                    src={formatImageSrc(attendance.checkInImage)}
+                    src={resolveCapturedImageSrc(attendance.checkInImage)}
                     alt="Check In"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                   />
@@ -571,7 +573,7 @@ const AttendanceDetailsPage: React.FC = () => {
                   className="mx-auto w-16 h-16 rounded-full overflow-hidden hover:ring-4 hover:ring-blue-500 hover:ring-offset-2 transition-all group shadow-md"
                 >
                   <img
-                    src={formatImageSrc(attendance.checkOutImage)}
+                    src={resolveCapturedImageSrc(attendance.checkOutImage)}
                     alt="Check Out"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                   />
@@ -718,7 +720,7 @@ const AttendanceDetailsPage: React.FC = () => {
       >
         <div className="flex justify-center">
           <img
-            src={formatImageSrc(selectedImage.src)}
+            src={resolveCapturedImageSrc(selectedImage.src)}
             alt={selectedImage.title}
             className="max-w-full max-h-96 rounded-lg shadow-lg"
           />

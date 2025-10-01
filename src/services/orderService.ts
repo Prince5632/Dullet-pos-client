@@ -104,7 +104,7 @@ class OrderService {
     }>(url);
     
     if (response.success && response.data) {
-      return response.data;
+      return response.data.data;
     }
     throw new Error(response.message || 'Failed to get order audit trail');
   }
