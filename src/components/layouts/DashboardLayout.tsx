@@ -35,12 +35,12 @@ const navigationItems: NavItem[] = [
     icon: CalendarDaysIcon,
     permission: 'attendance.read',
   },
-  // {
-  //   name: 'Reports',
-  //   href: '/reports/sales-executives',
-  //   icon: ChartBarIcon,
-  //   permission: 'reports.read',
-  // },
+  {
+    name: 'Reports',
+    href: '/reports/sales-executives',
+    icon: ChartBarIcon,
+    permission: 'reports.read',
+  },
   {
     name: 'User Management',
     href: '/users',
