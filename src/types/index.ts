@@ -472,8 +472,10 @@ export interface QuickProduct {
     | "10kg Bags"
     | "25kg Bags"
     | "50kg Bags"
-    | "Loose";
+    | "Loose"
+    | "40kg Bags";
   category?: string;
+  cityTokens?: string[];
 }
 
 export interface QuickOrderItemInput {

@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeftIcon, XMarkIcon, CameraIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, XMarkIcon, CameraIcon } from '@heroicons/react/24/outline';
 import { orderService } from '../../services/orderService';
 import CustomerSelector from '../../components/customers/CustomerSelector';
 import CameraCapture from '../../components/common/CameraCapture';
-import type { QuickProduct, CreateQuickOrderForm, Customer, Godown } from '../../types';
+import type { QuickProduct, Customer, Godown } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiService } from '../../services/api';
 import { API_CONFIG } from '../../config/api';
@@ -56,6 +56,7 @@ const QuickOrderPage: React.FC = () => {
   const [products, setProducts] = useState<QuickProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
+  const [filteredProducts, setFilteredProducts] = useState<QuickProduct[]>([]);
 
   // Selections
   const [selectedItems, setSelectedItems] = useState<Record<string, SelectedItem>>({});
@@ -81,11 +82,7 @@ const QuickOrderPage: React.FC = () => {
 
   // Image and Location capture
   const [capturedImage, setCapturedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [location, setLocation] = useState<LocationData | null>(null);
-  const [locationLoading, setLocationLoading] = useState(false);
-  const [addressLoading, setAddressLoading] = useState(false);
-  const [manualAddress, setManualAddress] = useState<string>("");
   const [showCameraCapture, setShowCameraCapture] = useState(false);
 
   useEffect(() => {
@@ -119,6 +116,34 @@ const QuickOrderPage: React.FC = () => {
     })();
   }, [user]);
 
+  // Location-based product and pricing helpers
+  const normalizeCity = (raw?: string): string => (raw || '').toLowerCase().trim();
+  const canonicalCity = (raw?: string): string => {
+    const city = normalizeCity(raw);
+    switch (city) {
+      case 'ludhaina':
+        return 'ludhiana';
+      case 'fatehgarh':
+        return 'fatehgarh sahib';
+      default:
+        return city;
+    }
+  };
+  const getCurrentCity = (): string => {
+    const g = godowns.find(gd => gd._id === selectedGodownId);
+    return canonicalCity(g?.location?.city);
+  };
+
+  const currentProducts = useMemo(() => {
+    const city = getCurrentCity();
+    const area = godowns.find(g => g._id === selectedGodownId)?.location?.area?.toLowerCase();
+    const tokensToMatch = [city, area ? `${city}:${area}` : ''].filter(Boolean);
+    if (!tokensToMatch.length) return [] as QuickProduct[];
+    return products.filter(p =>
+      Array.isArray(p.cityTokens) && p.cityTokens.some(token => tokensToMatch.includes(token))
+    );
+  }, [products, selectedGodownId, godowns]);
+
   const handleCustomerChange = (customerId: string, _customer: Customer | null) => {
     setSelectedCustomerId(customerId);
   };
@@ -128,7 +153,6 @@ const QuickOrderPage: React.FC = () => {
     longitude: number
   ): Promise<string> => {
     try {
-      setAddressLoading(true);
       // Using OpenStreetMap Nominatim API for reverse geocoding (free service)
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
@@ -146,51 +170,8 @@ const QuickOrderPage: React.FC = () => {
       console.error("Error getting address:", error);
       return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
     } finally {
-      setAddressLoading(false);
+      // no-op
     }
-  };
-
-  const getCurrentLocation = () => {
-    setLocationLoading(true);
-
-    if (!navigator.geolocation) {
-      toast.error("Geolocation is not supported by this browser");
-      setLocationLoading(false);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const latitude = position.coords.latitude;
-        const longitude = position.coords.longitude;
-
-        // Get address from coordinates
-        const address = await getAddressFromCoordinates(latitude, longitude);
-
-        const locationData: LocationData = {
-          latitude,
-          longitude,
-          accuracy: position.coords.accuracy,
-          timestamp: Date.now(),
-          address,
-        };
-
-        setLocation(locationData);
-        setManualAddress(address);
-        setLocationLoading(false);
-        toast.success("Location and address captured successfully");
-      },
-      (error) => {
-        console.error("Error getting location:", error);
-        toast.error("Failed to get location. Please try again.");
-        setLocationLoading(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000,
-      }
-    );
   };
 
   const handleCameraCapture = (
@@ -199,7 +180,6 @@ const QuickOrderPage: React.FC = () => {
   ) => {
     if (imageData && imageFile) {
       setCapturedImage(imageFile);
-      setImagePreview(imageData);
       toast.success("Photo captured successfully");
       
       // If we're in the order creation flow, automatically submit the order
@@ -217,24 +197,11 @@ const QuickOrderPage: React.FC = () => {
     if (isCreatingOrder) {
       setIsCreatingOrder(false);
       setOrderCreationStep('idle');
-      toast.info("Order creation cancelled");
+      toast("Order creation cancelled");
     }
   };
 
-  const removeImage = () => {
-    setCapturedImage(null);
-    setImagePreview(null);
-  };
-
-  const updateAddress = (newAddress: string) => {
-    setManualAddress(newAddress);
-    if (location) {
-      setLocation({
-        ...location,
-        address: newAddress,
-      });
-    }
-  };
+  // removed unused helpers
 
   const openQtyModal = (product: QuickProduct) => {
     setActiveProduct(product);
@@ -279,7 +246,7 @@ const QuickOrderPage: React.FC = () => {
 
   const itemsArray = useMemo(() => Object.values(selectedItems), [selectedItems]);
   const totalAmount = useMemo(() => {
-    return itemsArray.reduce((sum, it) => sum + computeItemKg(it) * it.product.pricePerKg, 0);
+    return itemsArray.reduce((sum, it) => sum + computeItemKg(it) * (it.product.pricePerKg || 0), 0);
   }, [itemsArray]);
 
   const canSubmit = selectedCustomerId && itemsArray.length > 0 && !creating;
@@ -315,11 +282,10 @@ const QuickOrderPage: React.FC = () => {
 
   const fetchLocationAutomatically = (): Promise<void> => {
     return new Promise((resolve, reject) => {
-      setLocationLoading(true);
+      // no-op
 
       if (!navigator.geolocation) {
         reject(new Error("Geolocation is not supported by this browser"));
-        setLocationLoading(false);
         return;
       }
 
@@ -341,18 +307,14 @@ const QuickOrderPage: React.FC = () => {
             };
 
             setLocation(locationData);
-            setManualAddress(address);
-            setLocationLoading(false);
             toast.success("Location captured successfully");
             resolve();
           } catch (error) {
-            setLocationLoading(false);
             reject(error);
           }
         },
         (error) => {
           console.error("Error getting location:", error);
-          setLocationLoading(false);
           reject(new Error("Failed to get location. Please try again."));
         },
         {
@@ -397,7 +359,7 @@ const QuickOrderPage: React.FC = () => {
       const created = await orderService.createQuickOrder(formData);
       try {
         if (paidAmount > 0) {
-          await orderService.updateOrder(created._id, { paidAmount, paymentStatus });
+          await orderService.updateOrder(created._id, { paidAmount, paymentStatus, items: (created as any).items || [] } as any);
         }
       } catch {
         // ignore, navigation will still proceed
@@ -481,122 +443,67 @@ const QuickOrderPage: React.FC = () => {
             {productsError && <span className="text-xs text-red-600">{productsError}</span>}
           </div>
 
+          {/* Show message if no godown */}
+          {!selectedGodownId && (
+            <div className="text-xs text-gray-600">Please select a godown to view available products for that location.</div>
+          )}
+
+          {/* If godown selected but no products match */}
+          {selectedGodownId && currentProducts.length === 0 && (
+            <div className="text-xs text-amber-600">
+              No products available for the selected godown. Please confirm that this location has assigned catalog items.
+            </div>
+          )}
+
           {/* Compact grouped products */}
-          {(() => {
-            // Group products by their base name (removing size info)
-            const baseProductGroups = products.reduce((groups, product) => {
-              let baseName = product.name
-                .replace(/\d+\s*kg\s*/gi, '')
-                .replace(/\s+/g, ' ')
-                .trim();
-              
+          {selectedGodownId && currentProducts.length > 0 && (() => {
+            const baseProductGroups = currentProducts.reduce((groups, product) => {
+              const baseName = product.name;
               if (!groups[baseName]) {
                 groups[baseName] = [];
               }
               groups[baseName].push(product);
               return groups;
-            }, {} as Record<string, typeof products>);
+            }, {} as Record<string, QuickProduct[]>);
 
-            // Categorize the base products
-            const categorizedProducts = Object.entries(baseProductGroups).reduce((categories, [baseName, variants]) => {
-              let category = 'Other';
-              
-              if (baseName.toLowerCase().includes('chakki') && baseName.toLowerCase().includes('atta')) {
-                category = 'Chakki Fresh Atta';
-              } else if (baseName.toLowerCase().includes('wheat') && !baseName.toLowerCase().includes('chakki')) {
-                category = 'Wheat Products';
-              } else if (baseName.toLowerCase().includes('flour')) {
-                category = 'Flour Products';
-              }
-              
-              if (!categories[category]) {
-                categories[category] = [];
-              }
-              categories[category].push({ baseName, variants });
-              return categories;
-            }, {} as Record<string, Array<{ baseName: string; variants: typeof products }>>);
-
-            return Object.entries(categorizedProducts).map(([category, baseProducts]) => (
-              <div key={category} className="mb-3 last:mb-0">
-                {/* Compact category header */}
+            return Object.entries(baseProductGroups).map(([baseName, variants]) => (
+              <div key={baseName} className="mb-3 last:mb-0">
                 <div className="flex items-center mb-2">
                   <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                    {category}
+                    {baseName}
                   </span>
                   <div className="h-px bg-gray-200 flex-1 ml-2"></div>
                 </div>
-                
-                {/* Compact product list */}
+
                 <div className="space-y-1.5">
-                  {baseProducts.map(({ baseName, variants }) => {
-                    const hasSelectedVariant = variants.some(v => !!selectedItems[v.key]);
-                    const selectedCount = variants.filter(v => !!selectedItems[v.key]).length;
-                    
+                  {variants.map(variant => {
+                    const isSelected = !!selectedItems[variant.key];
                     return (
-                      <div
-                        key={baseName}
-                        className={`p-2.5 rounded-lg border transition-all duration-200 ${
-                          hasSelectedVariant 
-                            ? 'bg-emerald-50 border-emerald-300' 
-                            : 'bg-white border-gray-200 hover:border-gray-300 active:scale-[0.98]'
+                      <button
+                        key={variant.key}
+                        onClick={() => openQtyModal(variant)}
+                        className={`w-full text-left p-2.5 rounded-lg border transition-all duration-200 ${
+                          isSelected
+                            ? 'bg-emerald-50 border-emerald-300'
+                            : 'bg-white border-gray-200 hover:border-gray-300 active:scale-[0.99]'
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
                               <h4 className="text-xs font-semibold text-gray-900 truncate">
-                                {baseName}
+                                {variant.name}
                               </h4>
                               <span className="text-[10px] text-gray-500 flex-shrink-0">
-                                ₹{formatNumber(variants[0].pricePerKg)}/kg
+                                ₹{formatNumber(variant.pricePerKg)}/kg
                               </span>
-                              {hasSelectedVariant && (
-                                <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded-full flex-shrink-0">
-                                  {selectedCount}
-                                </span>
-                              )}
                             </div>
                           </div>
-                          
-                          {/* Package size buttons */}
-                          <div className="flex gap-1 ml-2">
-                            {variants.map(variant => {
-                              const isSelected = !!selectedItems[variant.key];
-                              return (
-                                <button
-                                  key={variant.key}
-                                  onClick={() => openQtyModal(variant)}
-                                  className={`px-2 py-1 rounded text-[10px] font-medium transition-all duration-200 ${
-                                    isSelected
-                                      ? 'bg-emerald-600 text-white'
-                                      : 'bg-gray-100 text-gray-700 hover:bg-emerald-100 hover:text-emerald-700 active:scale-95'
-                                  }`}
-                                >
-                                  {variant.bagSizeKg ? `${variant.bagSizeKg}kg` : 'Loose'}
-                                </button>
-                              );
-                            })}
-                          </div>
+                          {/* <span className="text-[10px] font-medium text-gray-600">
+                            {variant.bagSizeKg ? `${variant.bagSizeKg}kg${variant.bagSizeKg === 40 ? ' bagsss' : ''}` : 'Loose'}
+                          </span> */}
                         </div>
-                        
-                        {/* Show selected quantities inline */}
-                        {hasSelectedVariant && (
-                          <div className="mt-1.5 pt-1.5 border-t border-emerald-200">
-                            <div className="flex flex-wrap gap-1">
-                              {variants.filter(v => !!selectedItems[v.key]).map(variant => {
-                                const item = selectedItems[variant.key];
-                                const kg = item.quantityKg || 0;
-                                
-                                return (
-                                  <span key={variant.key} className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">
-                                    {kg}kg
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -615,13 +522,14 @@ const QuickOrderPage: React.FC = () => {
             <div className="space-y-2">
               {itemsArray.map(it => {
                 const kg = computeItemKg(it);
-                const lineTotal = kg * it.product.pricePerKg;
+                const price = it.product.pricePerKg ?? 0;
+                const lineTotal = kg * price;
                 return (
                   <div key={it.product.key} className="flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-gray-50">
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-medium text-gray-900 truncate">{it.product.name}</div>
                       <div className="text-[10px] text-gray-500">
-                        {kg}kg • ₹{formatNumber(it.product.pricePerKg)}/kg
+                        {kg}kg • ₹{formatNumber(price)}/kg
                       </div>
                     </div>
 
@@ -806,7 +714,7 @@ const QuickOrderPage: React.FC = () => {
                 <XMarkIcon className="h-5 w-5 text-gray-500" />
               </button>
             </div>
-            <div className="text-[10px] text-gray-500 mb-3">₹{formatNumber(activeProduct.pricePerKg)}/kg{activeProduct.bagSizeKg ? ` • ${activeProduct.bagSizeKg}kg bag` : ''}</div>
+            <div className="text-[10px] text-gray-500 mb-3">₹{formatNumber(activeProduct.pricePerKg || 0)}/kg</div>
 
             {/* Inputs */}
             <div className="mb-3">
@@ -814,14 +722,15 @@ const QuickOrderPage: React.FC = () => {
               <div className="flex items-center">
                 <button
                   type="button"
-                  onClick={() => setKg(Math.max(0, kg - 1))}
+                  onClick={() => setKg(prev => Math.max(0, (Number(prev) || 0) - 0.5))}
                   disabled={kg <= 0}
-                  className="px-3 py-2 border border-gray-300 rounded-l-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-medium active:scale-95"
+                  className="px-4 py-2 border border-gray-300 rounded-l-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-medium active:scale-95"
                 >
                   -
                 </button>
                 <input
                   type="number"
+                  inputMode="decimal"
                   value={kg === 0 ? '' : kg}
                   onChange={(e) => {
                     const value = e.target.value;
@@ -844,24 +753,41 @@ const QuickOrderPage: React.FC = () => {
                 />
                 <button
                   type="button"
-                  onClick={() => setKg(kg + 1)}
-                  className="px-3 py-2 border border-gray-300 rounded-r-lg bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-medium active:scale-95"
+                  onClick={() => setKg(prev => (Number(prev) || 0) + 0.5)}
+                  className="px-4 py-2 border border-gray-300 rounded-r-lg bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-medium active:scale-95"
                 >
                   +
                 </button>
               </div>
-              <div className="mt-2 flex gap-1.5">
-                {[5, 10, 25, 50].map(preset => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => setKg(preset)}
-                    className="flex-1 px-2 py-1 text-[10px] border border-gray-200 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-600 active:scale-95"
-                  >
-                    {preset}kg
-                  </button>
-                ))}
-              </div>
+               <div className="mt-2 flex gap-1.5">
+                 {(() => {
+                   const presetOptions: { label: string; value: number }[] = [
+                     { label: '5kg', value: 5 },
+                     { label: '10kg', value: 10 },
+                     { label: '25kg', value: 25 },
+                     { label: '40kg', value: 40 },
+                     { label: '50kg', value: 50 }
+                   ];
+
+                   if (activeProduct.bagSizeKg) {
+                     presetOptions.push({
+                       label: `${activeProduct.bagSizeKg}kg (bag)`,
+                       value: activeProduct.bagSizeKg
+                     });
+                   }
+
+                   return presetOptions.map(preset => (
+                     <button
+                       key={`${preset.label}-${preset.value}`}
+                       type="button"
+                       onClick={() => setKg(preset.value)}
+                       className="flex-1 px-2 py-1 text-[10px] border border-gray-200 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-600 active:scale-95"
+                     >
+                       {preset.label}
+                     </button>
+                   ));
+                 })()}
+               </div>
             </div>
 
             <div className="flex items-center justify-end gap-2">
