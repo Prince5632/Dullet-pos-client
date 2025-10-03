@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeftIcon, XMarkIcon, CameraIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, XMarkIcon, CameraIcon } from '@heroicons/react/24/outline';
 import { orderService } from '../../services/orderService';
 import CustomerSelector from '../../components/customers/CustomerSelector';
 import CameraCapture from '../../components/common/CameraCapture';
-import type { QuickProduct, CreateQuickOrderForm, Customer, Godown } from '../../types';
+import type { QuickProduct, Customer, Godown } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiService } from '../../services/api';
 import { API_CONFIG } from '../../config/api';
@@ -17,6 +17,7 @@ type SelectedItem = {
   mode: ItemMode;
   bags?: number;
   quantityKg?: number;
+  ratePerKg?: number;
   packaging?: 'Standard' | 'Custom' | '5kg Bags' | '10kg Bags' | '25kg Bags' | '50kg Bags' | 'Loose';
 };
 
@@ -63,6 +64,7 @@ const QuickOrderPage: React.FC = () => {
   // Modal state for quantity entry
   const [activeProduct, setActiveProduct] = useState<QuickProduct | null>(null);
   const [kg, setKg] = useState<number>(0);
+  const [rate, setRate] = useState<number>(0);
 
   // Other minimal fields
   const [paymentTerms, setPaymentTerms] = useState<'Cash' | 'Credit' | 'Advance'>('Cash');
@@ -217,7 +219,6 @@ const QuickOrderPage: React.FC = () => {
     if (isCreatingOrder) {
       setIsCreatingOrder(false);
       setOrderCreationStep('idle');
-      toast.info("Order creation cancelled");
     }
   };
 
@@ -241,8 +242,10 @@ const QuickOrderPage: React.FC = () => {
     const existing = selectedItems[product.key];
     if (existing) {
       setKg(existing.quantityKg || 0);
+      setRate((existing as any).ratePerKg || (existing.product as any).pricePerKg || 0);
     } else {
       setKg(0);
+      setRate((product as any).pricePerKg || 0);
     }
   };
 
@@ -261,6 +264,7 @@ const QuickOrderPage: React.FC = () => {
       product: activeProduct,
       mode: 'kg',
       quantityKg: kg,
+      ratePerKg: rate,
       packaging: 'Loose',
     };
     setSelectedItems(prev => ({ ...prev, [activeProduct.key]: item }));
@@ -278,8 +282,9 @@ const QuickOrderPage: React.FC = () => {
   const computeItemKg = (it: SelectedItem) => it.quantityKg || 0;
 
   const itemsArray = useMemo(() => Object.values(selectedItems), [selectedItems]);
+  const computeItemRate = (it: SelectedItem) => (typeof it.ratePerKg === 'number' ? it.ratePerKg : (it.product as any).pricePerKg);
   const totalAmount = useMemo(() => {
-    return itemsArray.reduce((sum, it) => sum + computeItemKg(it) * it.product.pricePerKg, 0);
+    return itemsArray.reduce((sum, it) => sum + computeItemKg(it) * computeItemRate(it), 0);
   }, [itemsArray]);
 
   const canSubmit = selectedCustomerId && itemsArray.length > 0 && !creating;
@@ -380,7 +385,8 @@ const QuickOrderPage: React.FC = () => {
       formData.append('items', JSON.stringify(itemsArray.map(it => ({
         productKey: it.product.key,
         packaging: it.packaging,
-        quantityKg: it.quantityKg
+        quantityKg: it.quantityKg,
+        ratePerKg: computeItemRate(it),
       }))));
       formData.append('paymentTerms', paymentTerms);
       formData.append('priority', priority);
@@ -397,7 +403,7 @@ const QuickOrderPage: React.FC = () => {
       const created = await orderService.createQuickOrder(formData);
       try {
         if (paidAmount > 0) {
-          await orderService.updateOrder(created._id, { paidAmount, paymentStatus });
+          await orderService.updateOrder(created._id, { paidAmount, paymentStatus } as any);
         }
       } catch {
         // ignore, navigation will still proceed
@@ -806,7 +812,8 @@ const QuickOrderPage: React.FC = () => {
                 <XMarkIcon className="h-5 w-5 text-gray-500" />
               </button>
             </div>
-            <div className="text-[10px] text-gray-500 mb-3">₹{formatNumber(activeProduct.pricePerKg)}/kg{activeProduct.bagSizeKg ? ` • ${activeProduct.bagSizeKg}kg bag` : ''}</div>
+            {/* Pricing hidden in header; salesperson will input rate below */}
+            <div className="text-[10px] text-gray-500 mb-3">{activeProduct.bagSizeKg ? `${activeProduct.bagSizeKg}kg bag` : 'Loose'}</div>
 
             {/* Inputs */}
             <div className="mb-3">
@@ -822,6 +829,8 @@ const QuickOrderPage: React.FC = () => {
                 </button>
                 <input
                   type="number"
+                  inputMode="decimal"
+                  pattern="[0-9]*"
                   value={kg === 0 ? '' : kg}
                   onChange={(e) => {
                     const value = e.target.value;
@@ -844,7 +853,7 @@ const QuickOrderPage: React.FC = () => {
                 />
                 <button
                   type="button"
-                  onClick={() => setKg(kg + 1)}
+                  onClick={() => setKg(Math.max(0, Number((kg || 0) + 1)))}
                   className="px-3 py-2 border border-gray-300 rounded-r-lg bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-medium active:scale-95"
                 >
                   +
@@ -861,6 +870,52 @@ const QuickOrderPage: React.FC = () => {
                     {preset}kg
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Rate per KG */}
+            <div className="mb-3">
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Rate per KG</label>
+              <div className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setRate(Math.max(0, (Number(rate) || 0) - 1))}
+                  disabled={(Number(rate) || 0) <= 0}
+                  className="px-3 py-2 border border-gray-300 rounded-l-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-medium active:scale-95"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  pattern="[0-9]*"
+                  value={rate === 0 ? '' : rate}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '') {
+                      setRate(0);
+                    } else {
+                      const num = Math.max(0, Number(value));
+                      setRate(num);
+                    }
+                  }}
+                  onFocus={(e) => {
+                    if (e.target.value === '0') {
+                      e.target.select();
+                    }
+                  }}
+                  min={0}
+                  step={0.5}
+                  placeholder="0"
+                  className="flex-1 px-3 py-2 border-t border-b border-gray-300 text-center text-base font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setRate(Math.max(0, (Number(rate) || 0) + 1))}
+                  className="px-3 py-2 border border-gray-300 rounded-r-lg bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-medium active:scale-95"
+                >
+                  +
+                </button>
               </div>
             </div>
 
