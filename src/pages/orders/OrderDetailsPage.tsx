@@ -18,6 +18,7 @@ import {
   ExclamationTriangleIcon,
   CameraIcon,
   PaperAirplaneIcon,
+  ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
 import { orderService } from "../../services/orderService";
 import { useAuth } from "../../contexts/AuthContext";
@@ -31,6 +32,7 @@ import type { Order } from "../../types";
 import { toast } from "react-hot-toast";
 import Modal from "../../components/ui/Modal";
 import { resolveCapturedImageSrc } from "../../utils/image";
+import { generateDeliveryNotePDF } from "../../utils/deliveryNotePdf";
 
 const OrderDetailsPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -55,6 +57,7 @@ const OrderDetailsPage: React.FC = () => {
   const [showDeliverySummaryModal, setShowDeliverySummaryModal] =
     useState(false);
   const [deliverySummaryLoading, setDeliverySummaryLoading] = useState(false);
+  const [isAutoOpenedModal, setIsAutoOpenedModal] = useState(false);
 
   useEffect(() => {
     if (!orderId) {
@@ -69,6 +72,7 @@ const OrderDetailsPage: React.FC = () => {
   // Auto-open share modal if navigated from delivery recording
   useEffect(() => {
     if (location.state?.openShareModal && order) {
+      setIsAutoOpenedModal(true);
       setShowDeliverySummaryModal(true);
       // Clear the state to prevent reopening on refresh
       window.history.replaceState({}, document.title);
@@ -147,12 +151,32 @@ const OrderDetailsPage: React.FC = () => {
     fetchActivities,
   ]);
   const handleOrderUpdate = useCallback(async (updatedOrder: Order) => {
+    const wasDelivered = order?.status !== 'delivered' && updatedOrder.status === 'delivered';
     await fetchOrder();
     toast.success("Order updated successfully");
-  }, []);
+    
+    // Auto-open delivery share modal when order is marked as delivered
+    if (wasDelivered) {
+      setTimeout(() => {
+        setIsAutoOpenedModal(true);
+        setShowDeliverySummaryModal(true);
+      }, 500);
+    }
+  }, [order?.status]);
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadPDF = () => {
+    if (!order) return;
+    try {
+      generateDeliveryNotePDF(order);
+      toast.success("Delivery note PDF downloaded successfully!");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error("Failed to generate PDF");
+    }
   };
 
   // Create comprehensive text-based delivery summary (WhatsApp-safe)
@@ -291,6 +315,7 @@ Generated on: ${new Date().toLocaleString("en-IN")}`;
   // Delivery Summary Sharing Functions
   const handleShareDeliverySummary = () => {
     if (!order) return;
+    setIsAutoOpenedModal(false);
     setShowDeliverySummaryModal(true);
   };
 
@@ -563,6 +588,15 @@ Dullet POS Team`;
                   <PrinterIcon className="h-3.5 w-3.5 sm:mr-1" />
                   <span className="hidden sm:inline">Print</span>
                 </button>
+                {(order.status === "delivered" || order.status === "completed") && (
+                  <button
+                    onClick={handleDownloadPDF}
+                    className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors flex-shrink-0"
+                  >
+                    <ArrowDownTrayIcon className="h-3.5 w-3.5 sm:mr-1" />
+                    <span className="hidden sm:inline">Download PDF</span>
+                  </button>
+                )}
                 {hasPermission("orders.update") && (
                   <Link
                     to={`/orders/${order._id}/edit`}
@@ -1201,8 +1235,11 @@ Dullet POS Team`;
       {showDeliverySummaryModal && order && (
         <Modal
           isOpen={showDeliverySummaryModal}
-          onClose={() => setShowDeliverySummaryModal(false)}
-          title="Share Delivery Summary"
+          onClose={() => {
+            setShowDeliverySummaryModal(false);
+            setIsAutoOpenedModal(false);
+          }}
+          title={isAutoOpenedModal ? "🎉 Order Delivered - Share Details" : "Share Delivery Summary"}
         >
           <div className="p-6">
             {/* Order Summary */}
@@ -1285,8 +1322,32 @@ Dullet POS Team`;
               </p>
             </div>
 
+            {/* Download PDF - Prominent */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-4 border border-blue-200">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                  <ArrowDownTrayIcon className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900">
+                    Download Delivery Note PDF
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Professional PDF with signatures and vehicle details
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleDownloadPDF}
+                className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4" />
+                Download PDF
+              </button>
+            </div>
+
             {/* Other Sharing Options */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => {
                   handleShareEmailSummary();
@@ -1312,10 +1373,10 @@ Dullet POS Team`;
               <button
                 onClick={handlePrintTextSummary}
                 disabled={deliverySummaryLoading}
-                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed col-span-2"
               >
                 <PrinterIcon className="h-4 w-4" />
-                Print
+                Print Text Summary
               </button>
             </div>
 
