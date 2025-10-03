@@ -9,8 +9,8 @@ const CreateCustomerPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<CreateCustomerForm>({
     businessName: '',
-    contactPersonName: '',
     phone: '',
+    location: '',
     address: { street: '', city: '', state: 'Punjab', pincode: '', country: 'India' },
     customerType: 'Retailer',
     notes: '',
@@ -55,7 +55,7 @@ const CreateCustomerPage: React.FC = () => {
       <form onSubmit={submit} className="px-3 sm:px-4 py-3 space-y-3">
         <div className="bg-white rounded-lg border border-gray-200 p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <input className="px-3 py-2 border rounded" placeholder="Business Name" value={form.businessName} onChange={e => update('businessName', e.target.value)} />
-          <input className="px-3 py-2 border rounded" placeholder="Contact Person Name" value={form.contactPersonName} onChange={e => update('contactPersonName', e.target.value)} />
+          <input className="px-3 py-2 border rounded" placeholder="Google Maps Link" value={form.location || ''} onChange={e => update('location', e.target.value)} />
           <input className="px-3 py-2 border rounded" placeholder="Phone" value={form.phone} onChange={e => update('phone', e.target.value)} />
           <select className="px-3 py-2 border rounded" value={form.customerType} onChange={e => update('customerType', e.target.value)}>
             <option value="Retailer">Retailer</option>

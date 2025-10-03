@@ -187,7 +187,7 @@ const OrderDetailsPage: React.FC = () => {
     // Calculate totals
     const subtotal = Number(order.subtotal) || 0;
     const discount = Number(order.discount) || 0;
-    const tax = Number(order.tax) || 0;
+    const tax = Number(order.taxAmount) || 0;
     const totalAmount = Number(order.totalAmount) || 0;
     const amountCollected =
       Number(order.settlements?.[0]?.amountCollected) || totalAmount;
@@ -207,7 +207,7 @@ Payment Terms: ${order.paymentTerms || "Cash"}
 CUSTOMER DETAILS
 ---------------------------------------
 Business: ${order.customer?.businessName || "N/A"}
-Contact: ${order.customer?.contactPersonName || "N/A"}
+Contact Location: ${order.customer?.location || "No location provided"}
 Phone: ${order.customer?.phone || "N/A"}
 Address: ${
       order.customer?.address
@@ -597,7 +597,18 @@ Dullet POS Team`;
                         {order.customer?.businessName || "N/A"}
                       </h4>
                       <p className="text-xs text-gray-600 mb-2">
-                        {order.customer?.contactPersonName || "N/A"}
+                        {order.customer?.location ? (
+                          <a
+                            href={order.customer.location}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            View Location
+                          </a>
+                        ) : (
+                          "No location provided"
+                        )}
                       </p>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -971,7 +982,7 @@ Dullet POS Team`;
                                   />
                                 </div>
                                 <p className="text-[10px] text-gray-500 text-center">
-                                  {order.customer?.contactPersonName ||
+                                  {order.customer?.businessName ||
                                     "Customer"}
                                 </p>
                               </div>

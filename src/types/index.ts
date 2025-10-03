@@ -261,10 +261,10 @@ export interface Customer {
   _id: string;
   customerId: string;
   businessName: string;
-  contactPersonName: string;
   email?: string;
   phone: string;
   alternatePhone?: string;
+  location?: string;
   address: {
     street: string;
     city: string;
@@ -294,10 +294,10 @@ export interface Customer {
 
 export interface CreateCustomerForm {
   businessName: string;
-  contactPersonName: string;
   email?: string;
   phone: string;
   alternatePhone?: string;
+  location?: string;
   address: {
     street: string;
     city: string;
@@ -331,6 +331,7 @@ export interface OrderItem {
     | "10kg Bags"
     | "25kg Bags"
     | "50kg Bags"
+    | "40kg Bag"
     | "Loose";
 }
 
@@ -473,7 +474,8 @@ export interface QuickProduct {
     | "25kg Bags"
     | "50kg Bags"
     | "Loose"
-    | "40kg Bags";
+    | "40kg Bags"
+    | "40kg Bag";
   category?: string;
   cityTokens?: string[];
 }
@@ -482,6 +484,7 @@ export interface QuickOrderItemInput {
   productKey: string;
   quantityKg?: number;
   bags?: number;
+  bagPieces?: number;
   packaging?: OrderItem["packaging"];
 }
 

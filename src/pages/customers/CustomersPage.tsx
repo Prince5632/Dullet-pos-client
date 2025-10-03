@@ -62,7 +62,15 @@ const CustomersPage: React.FC = () => {
           <Avatar name={customer.businessName} size="sm" />
           <div className="min-w-0">
             <div className="text-xs font-medium text-gray-900 truncate">{customer.businessName}</div>
-            <div className="text-xs text-gray-500 truncate">{customer.contactPersonName} • {customer.phone}</div>
+            <div className="text-xs text-gray-500 truncate">
+              {customer.location ? (
+                <a href={customer.location} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                  View Location
+                </a>
+              ) : (
+                customer.phone
+              )}
+            </div>
           </div>
         </div>
       ),

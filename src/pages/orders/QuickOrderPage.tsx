@@ -17,7 +17,9 @@ type SelectedItem = {
   mode: ItemMode;
   bags?: number;
   quantityKg?: number;
-  packaging?: 'Standard' | 'Custom' | '5kg Bags' | '10kg Bags' | '25kg Bags' | '50kg Bags' | 'Loose';
+  packaging?: 'Standard' | 'Custom' | '5kg Bags' | '10kg Bags' | '25kg Bags' | '50kg Bags' | 'Loose' | '40kg Bag';
+  isBagSelection?: boolean;
+  bagPieces?: number;
 };
 
 interface LocationData {
@@ -64,6 +66,8 @@ const QuickOrderPage: React.FC = () => {
   // Modal state for quantity entry
   const [activeProduct, setActiveProduct] = useState<QuickProduct | null>(null);
   const [kg, setKg] = useState<number>(0);
+  const [isBagSelection, setIsBagSelection] = useState(false);
+const [bagPieces, setBagPieces] = useState<number>(1);
 
   // Other minimal fields
   const [paymentTerms, setPaymentTerms] = useState<'Cash' | 'Credit' | 'Advance'>('Cash');
@@ -208,30 +212,83 @@ const QuickOrderPage: React.FC = () => {
     const existing = selectedItems[product.key];
     if (existing) {
       setKg(existing.quantityKg || 0);
+      setIsBagSelection(!!existing.isBagSelection);
+      setBagPieces(existing.bagPieces || existing.bags || 1);
     } else {
-      setKg(0);
+      if (product.bagSizeKg === 40) {
+        setIsBagSelection(true);
+        setBagPieces(1);
+        setKg(product.bagSizeKg || 0);
+      } else {
+        setKg(0);
+        setIsBagSelection(false);
+        setBagPieces(1);
+      }
     }
   };
 
   const closeQtyModal = () => {
     setActiveProduct(null);
+    setIsBagSelection(false);
+    setBagPieces(1);
   };
 
   const confirmQty = () => {
     if (!activeProduct) return;
-    if (!kg || kg <= 0) {
-      toast.error('Enter valid kilograms');
+
+    const bagSize = activeProduct.bagSizeKg;
+    const is40kgBagProduct = bagSize === 40;
+    const isBag = isBagSelection && Boolean(bagSize);
+
+    let totalKg = kg;
+    let pieceCount: number | undefined = undefined;
+    let bagsCount: number | undefined = undefined;
+
+    if (isBagSelection && bagSize) {
+      if (is40kgBagProduct) {
+        const pieces = Number.isFinite(bagPieces) ? bagPieces : 0;
+        if (!pieces || pieces <= 0) {
+          toast.error('Enter valid bag pieces');
+          return;
+        }
+        pieceCount = pieces;
+        totalKg = pieces * bagSize;
+        bagsCount = pieces;
+      } else {
+        totalKg = bagSize;
+        bagsCount = 1;
+      }
+    }
+
+    if (!totalKg || totalKg <= 0) {
+      toast.error('Enter valid quantity');
       return;
+    }
+
+    let packaging: SelectedItem['packaging'] = 'Loose';
+    if (isBag) {
+      if (activeProduct.bagSizeKg === 40) {
+        packaging = '40kg Bag';
+      } else if (activeProduct.defaultPackaging && activeProduct.defaultPackaging !== 'Loose') {
+        packaging = activeProduct.defaultPackaging as typeof packaging;
+      } else {
+        packaging = 'Custom';
+      }
     }
 
     const item: SelectedItem = {
       product: activeProduct,
       mode: 'kg',
-      quantityKg: kg,
-      packaging: 'Loose',
+      quantityKg: totalKg,
+      packaging,
+      bags: bagsCount,
+      isBagSelection: isBag,
+      bagPieces: pieceCount,
     };
     setSelectedItems(prev => ({ ...prev, [activeProduct.key]: item }));
     setActiveProduct(null);
+    setIsBagSelection(false);
+    setBagPieces(1);
   };
 
   const removeItem = (key: string) => {
@@ -244,10 +301,38 @@ const QuickOrderPage: React.FC = () => {
 
   const computeItemKg = (it: SelectedItem) => it.quantityKg || 0;
 
+  const formatItemQuantity = (it: SelectedItem) => {
+    const kgValue = computeItemKg(it);
+    const normalizedKg = Number.isFinite(kgValue) ? kgValue : 0;
+    if (it.isBagSelection) {
+      const bagSize = it.product?.bagSizeKg || (it.bagPieces ? normalizedKg / it.bagPieces : undefined);
+      if (it.bagPieces && it.bagPieces > 0 && bagSize) {
+        const displayBagSize = Math.round(bagSize * 100) / 100;
+        return `${it.bagPieces} × ${displayBagSize}kg (${normalizedKg}kg)`;
+      }
+      if (it.bags && it.bags > 0 && bagSize) {
+        const displayBagSize = Math.round(bagSize * 100) / 100;
+        return `${it.bags} × ${displayBagSize}kg (${normalizedKg}kg)`;
+      }
+      if (it.bagPieces && it.bagPieces > 0) {
+        return `${it.bagPieces} bag${it.bagPieces > 1 ? 's' : ''} (${normalizedKg}kg)`;
+      }
+      return `${normalizedKg}kg (bag)`;
+    }
+    return `${normalizedKg}kg`;
+  };
+
   const itemsArray = useMemo(() => Object.values(selectedItems), [selectedItems]);
   const totalAmount = useMemo(() => {
     return itemsArray.reduce((sum, it) => sum + computeItemKg(it) * (it.product.pricePerKg || 0), 0);
   }, [itemsArray]);
+
+  const displayedKgValue = useMemo(() => {
+    if (isBagSelection && activeProduct?.bagSizeKg) {
+      return activeProduct.bagSizeKg;
+    }
+    return kg;
+  }, [isBagSelection, activeProduct, kg]);
 
   const canSubmit = selectedCustomerId && itemsArray.length > 0 && !creating;
 
@@ -342,7 +427,10 @@ const QuickOrderPage: React.FC = () => {
       formData.append('items', JSON.stringify(itemsArray.map(it => ({
         productKey: it.product.key,
         packaging: it.packaging,
-        quantityKg: it.quantityKg
+        quantityKg: it.quantityKg,
+        bags: it.bags,
+        bagPieces: it.bagPieces,
+        isBagSelection: it.isBagSelection
       }))));
       formData.append('paymentTerms', paymentTerms);
       formData.append('priority', priority);
@@ -499,9 +587,6 @@ const QuickOrderPage: React.FC = () => {
                               </span>
                             </div>
                           </div>
-                          {/* <span className="text-[10px] font-medium text-gray-600">
-                            {variant.bagSizeKg ? `${variant.bagSizeKg}kg${variant.bagSizeKg === 40 ? ' bagsss' : ''}` : 'Loose'}
-                          </span> */}
                         </div>
                       </button>
                     );
@@ -529,7 +614,7 @@ const QuickOrderPage: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-medium text-gray-900 truncate">{it.product.name}</div>
                       <div className="text-[10px] text-gray-500">
-                        {kg}kg • ₹{formatNumber(price)}/kg
+                        {formatItemQuantity(it)} • ₹{formatNumber(price)}/kg
                       </div>
                     </div>
 
@@ -720,9 +805,18 @@ const QuickOrderPage: React.FC = () => {
             <div className="mb-3">
               <label className="block text-xs font-medium text-gray-700 mb-1.5">Kilograms</label>
               <div className="flex items-center">
-                <button
-                  type="button"
-                  onClick={() => setKg(prev => Math.max(0, (Number(prev) || 0) - 0.5))}
+                 <button
+                   type="button"
+                   onClick={() => {
+                     if (isBagSelection && activeProduct?.bagSizeKg) {
+                       const newPieces = Math.max(0, (Number(bagPieces) || 0) - 1);
+                       setBagPieces(newPieces);
+                       setKg(newPieces * activeProduct.bagSizeKg);
+                     } else {
+                       setIsBagSelection(false);
+                       setKg(prev => Math.max(0, (Number(prev) || 0) - 0.5));
+                     }
+                   }}
                   disabled={kg <= 0}
                   className="px-4 py-2 border border-gray-300 rounded-l-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-medium active:scale-95"
                 >
@@ -731,14 +825,21 @@ const QuickOrderPage: React.FC = () => {
                 <input
                   type="number"
                   inputMode="decimal"
-                  value={kg === 0 ? '' : kg}
+                  value={displayedKgValue === 0 ? '' : displayedKgValue}
                   onChange={(e) => {
                     const value = e.target.value;
                     if (value === '') {
                       setKg(0);
                     } else {
                       const num = Math.max(0, Number(value));
-                      setKg(num);
+                      if (isBagSelection && activeProduct?.bagSizeKg) {
+                        const pieces = Math.ceil(num / activeProduct.bagSizeKg);
+                        setBagPieces(pieces);
+                        setKg(pieces * activeProduct.bagSizeKg);
+                      } else {
+                        setKg(num);
+                        setIsBagSelection(false);
+                      }
                     }
                   }}
                   onFocus={(e) => {
@@ -751,9 +852,18 @@ const QuickOrderPage: React.FC = () => {
                   placeholder="0"
                   className="flex-1 px-3 py-2 border-t border-b border-gray-300 text-center text-base font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                 />
-                <button
-                  type="button"
-                  onClick={() => setKg(prev => (Number(prev) || 0) + 0.5)}
+                 <button
+                   type="button"
+                   onClick={() => {
+                     if (isBagSelection && activeProduct?.bagSizeKg) {
+                       const newPieces = (Number(bagPieces) || 0) + 1;
+                       setBagPieces(newPieces);
+                       setKg(newPieces * activeProduct.bagSizeKg);
+                     } else {
+                       setIsBagSelection(false);
+                       setKg(prev => (Number(prev) || 0) + 0.5);
+                     }
+                   }}
                   className="px-4 py-2 border border-gray-300 rounded-r-lg bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-medium active:scale-95"
                 >
                   +
@@ -761,7 +871,7 @@ const QuickOrderPage: React.FC = () => {
               </div>
                <div className="mt-2 flex gap-1.5">
                  {(() => {
-                   const presetOptions: { label: string; value: number }[] = [
+                   const presetOptions: { label: string; value: number; isBag?: boolean }[] = [
                      { label: '5kg', value: 5 },
                      { label: '10kg', value: 10 },
                      { label: '25kg', value: 25 },
@@ -771,8 +881,9 @@ const QuickOrderPage: React.FC = () => {
 
                    if (activeProduct.bagSizeKg) {
                      presetOptions.push({
-                       label: `${activeProduct.bagSizeKg}kg (bag)`,
-                       value: activeProduct.bagSizeKg
+                       label: `${activeProduct.bagSizeKg}kg (bag)` ,
+                       value: activeProduct.bagSizeKg,
+                       isBag: true
                      });
                    }
 
@@ -780,7 +891,16 @@ const QuickOrderPage: React.FC = () => {
                      <button
                        key={`${preset.label}-${preset.value}`}
                        type="button"
-                       onClick={() => setKg(preset.value)}
+                       onClick={() => {
+                         setKg(preset.value);
+                         setIsBagSelection(!!preset.isBag);
+                         if (preset.isBag && activeProduct.bagSizeKg) {
+                           const count = preset.value / activeProduct.bagSizeKg;
+                           setBagPieces(!Number.isNaN(count) ? Math.max(1, Math.round(count)) : 1);
+                         } else {
+                           setBagPieces(1);
+                         }
+                       }}
                        className="flex-1 px-2 py-1 text-[10px] border border-gray-200 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-600 active:scale-95"
                      >
                        {preset.label}
@@ -789,6 +909,35 @@ const QuickOrderPage: React.FC = () => {
                  })()}
                </div>
             </div>
+            {isBagSelection && activeProduct?.bagSizeKg === 40 && (
+              <div className="mt-3">
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">Bag Pieces</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={bagPieces || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '') {
+            setBagPieces(0);
+            setKg(0);
+                        return;
+                      }
+          const count = Math.max(0, Math.floor(Number(value)));
+                      setBagPieces(count);
+                      if (activeProduct?.bagSizeKg) {
+                        setKg(count * activeProduct.bagSizeKg);
+                      }
+                    }}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    placeholder="Number of bags"
+                  />
+                  <span className="text-xs text-gray-500">x {activeProduct.bagSizeKg}kg</span>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center justify-end gap-2">
               <button onClick={closeQtyModal} className="px-3 py-1.5 rounded-lg border text-xs active:scale-95">Cancel</button>

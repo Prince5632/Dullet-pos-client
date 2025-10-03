@@ -35,8 +35,8 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createFormData, setCreateFormData] = useState<CreateCustomerForm>({
     businessName: '',
-    contactPersonName: '',
     phone: '',
+    location: '',
     address: {
       street: '',
       city: '',
@@ -72,9 +72,9 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
     } else {
       const filtered = customers.filter(customer =>
         customer.businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.contactPersonName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         customer.customerId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.phone.includes(searchTerm)
+        (customer.phone && customer.phone.includes(searchTerm)) ||
+        (customer.location && customer.location.toLowerCase().includes(searchTerm.toLowerCase()))
       );
       setFilteredCustomers(filtered);
     }
@@ -131,7 +131,7 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
       setCreateLoading(true);
       
       // Basic validation
-      if (!createFormData.businessName.trim() || !createFormData.contactPersonName.trim() || !createFormData.phone.trim()) {
+      if (!createFormData.businessName.trim() || !createFormData.phone.trim()) {
         toast.error('Please fill in all required fields');
         return;
       }
@@ -150,8 +150,8 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
       // Reset form and close
       setCreateFormData({
         businessName: '',
-        contactPersonName: '',
         phone: '',
+        location: '',
         address: {
           street: '',
           city: '',
@@ -195,8 +195,8 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
     // Reset form
     setCreateFormData({
       businessName: '',
-      contactPersonName: '',
       phone: '',
+      location: '',
       address: {
         street: '',
         city: '',
@@ -241,7 +241,7 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
                   </div>
                   {showDetails && (
                     <div className="text-xs text-gray-500 truncate">
-                      {selectedCustomer.customerId} • {selectedCustomer.contactPersonName}
+                      {selectedCustomer.customerId} • {selectedCustomer.location ? 'Location available' : selectedCustomer.phone}
                     </div>
                   )}
                 </div>
@@ -346,7 +346,7 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
                           )}
                         </div>
                         <p className="text-sm text-gray-600 truncate">
-                          {customer.customerId} • {customer.contactPersonName}
+                          {customer.customerId} • {customer.location ? 'Location available' : customer.phone}
                         </p>
                         <p className="text-xs text-gray-500 truncate">
                           {customer.phone} • {customer.customerType}
@@ -406,14 +406,14 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Contact Person Name <span className="text-red-500">*</span>
+              Google Maps Link
             </label>
             <input
-              type="text"
-              value={createFormData.contactPersonName}
-              onChange={(e) => handleCreateFormChange('contactPersonName', e.target.value)}
+              type="url"
+              value={createFormData.location || ''}
+              onChange={(e) => handleCreateFormChange('location', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter contact person name"
+              placeholder="Paste Google Maps share link"
             />
           </div>
 

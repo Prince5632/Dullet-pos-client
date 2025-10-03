@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { CameraIcon, XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { CameraIcon, XMarkIcon, ArrowPathIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
 
 interface CameraCaptureProps {
   onCapture: (imageData: string | null, imageFile: File | null) => void;
@@ -29,6 +29,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
   const [error, setError] = useState<string>('');
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [usingFrontCamera, setUsingFrontCamera] = useState(true);
 
   // Stabilized playback indicators
   const [stablePlaying, setStablePlaying] = useState(false);
@@ -111,7 +112,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
           width: { ideal: 640, max: 1280 },
           height: { ideal: 480, max: 720 },
           frameRate: { ideal: 24, max: 30 },
-          facingMode: 'user',
+          facingMode: usingFrontCamera ? 'user' : 'environment',
         },
         audio: false,
       });
@@ -135,7 +136,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
       setIsLoading(false);
       startedRef.current = false;
     }
-  }, [skipCapture]);
+  }, [skipCapture, usingFrontCamera]);
 
   const stopCamera = useCallback(() => {
     // Cleanup event listeners
@@ -282,6 +283,12 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     startCamera();
   }, [startCamera, stopCamera]);
 
+  const toggleCamera = useCallback(() => {
+    setUsingFrontCamera((prev) => !prev);
+    stopCamera();
+    startedRef.current = false;
+  }, [stopCamera]);
+
   const capturePhoto = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) {
       setError('Camera is not ready yet. Please wait a moment and try again.');
@@ -337,12 +344,21 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
       <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-          <button
-            onClick={() => { stopCamera(); onClose(); }}
-            className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <XMarkIcon className="h-6 w-6" />
-          </button>
+          <div className="flex items-center gap-2">
+                <button
+                  onClick={toggleCamera}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Switch camera"
+                >
+                  <ArrowUturnLeftIcon className="h-6 w-6" />
+                </button>
+            <button
+              onClick={() => { stopCamera(); onClose(); }}
+              className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <XMarkIcon className="h-6 w-6" />
+            </button>
+          </div>
         </div>
 
         <p className="text-sm text-gray-600 mb-4 text-center">{instructions}</p>
