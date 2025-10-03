@@ -32,7 +32,7 @@ import type { Order } from "../../types";
 import { toast } from "react-hot-toast";
 import Modal from "../../components/ui/Modal";
 import { resolveCapturedImageSrc } from "../../utils/image";
-import { generateDeliveryNotePDF } from "../../utils/deliveryNotePdf";
+import { generateDeliveryNotePDF, getDeliveryNotePDFFileName } from "../../utils/deliveryNotePdf";
 
 const OrderDetailsPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -324,21 +324,61 @@ Generated on: ${new Date().toLocaleString("en-IN")}`;
 
     setDeliverySummaryLoading(true);
     try {
-      const textSummary = generateTextDeliverySummary(order);
-      const encodedMessage = encodeURIComponent(textSummary);
-      const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+      // Generate PDF as blob
+      const pdfBlob = generateDeliveryNotePDF(order, false);
+      
+      if (!pdfBlob) {
+        throw new Error("Failed to generate PDF");
+      }
 
-      window.open(whatsappUrl, "_blank");
+      const fileName = getDeliveryNotePDFFileName(order);
+      const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-      toast.success("Opening WhatsApp with delivery summary!", {
-        duration: 3000,
-        icon: "✅",
-      });
-
-      setShowDeliverySummaryModal(false);
+      // Check if Web Share API is available and supports files
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        await navigator.share({
+          title: `Delivery Note - ${order.orderNumber}`,
+          text: `Delivery note for order ${order.orderNumber}`,
+          files: [pdfFile],
+        });
+        toast.success("PDF shared successfully!", {
+          duration: 3000,
+          icon: "✅",
+        });
+        setShowDeliverySummaryModal(false);
+      } else if (navigator.share) {
+        // Fallback: Share text if files not supported
+        const textSummary = generateTextDeliverySummary(order);
+        await navigator.share({
+          text: textSummary,
+        });
+        toast.success("Shared successfully!", {
+          duration: 3000,
+          icon: "✅",
+        });
+        setShowDeliverySummaryModal(false);
+      } else {
+        // Final fallback for desktop: Download PDF and open WhatsApp Web
+        generateDeliveryNotePDF(order, true);
+        toast.success("PDF downloaded! Opening WhatsApp...", {
+          duration: 3000,
+          icon: "📥",
+        });
+        
+        // Open WhatsApp Web
+        setTimeout(() => {
+          const message = `📄 Delivery Note for Order ${order.orderNumber}\n\nPlease find the attached PDF document.`;
+          const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+          window.open(whatsappUrl, "_blank");
+        }, 1000);
+        
+        setShowDeliverySummaryModal(false);
+      }
     } catch (error) {
-      console.error("Error sharing to WhatsApp:", error);
-      toast.error("Failed to prepare WhatsApp sharing. Please try again.");
+      if ((error as Error).name !== "AbortError") {
+        console.error("Error sharing to WhatsApp:", error);
+        toast.error("Failed to share PDF. Please try again.");
+      }
     } finally {
       setDeliverySummaryLoading(false);
     }
@@ -1290,7 +1330,7 @@ Dullet POS Team`;
                     Share via WhatsApp
                   </h4>
                   <p className="text-xs text-gray-600">
-                    Send formatted text delivery summary
+                    Send delivery note PDF with signatures
                   </p>
                 </div>
               </div>
@@ -1318,7 +1358,7 @@ Dullet POS Team`;
                 )}
               </button>
               <p className="text-xs text-gray-500 mt-2 text-center">
-                💡 Complete delivery summary will be formatted as text message
+                📄 Professional PDF with signatures, vehicle details, and complete order information
               </p>
             </div>
 

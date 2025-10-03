@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Order } from '../types';
 
-export const generateDeliveryNotePDF = (order: Order): void => {
+export const generateDeliveryNotePDF = (order: Order, downloadDirectly: boolean = true): Blob | void => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -43,7 +43,7 @@ export const generateDeliveryNotePDF = (order: Order): void => {
     ['Order Date:', new Date(order.orderDate).toLocaleDateString('en-IN')],
     ['Status:', (order.status || 'N/A').toUpperCase()],
     ['Payment Terms:', order.paymentTerms || 'Cash'],
-    ['Priority:', (order.priority || 'Normal').toUpperCase()],
+    // ['Priority:', (order.priority || 'Normal').toUpperCase()],
   ];
 
   orderDetails.forEach(([label, value]) => {
@@ -302,8 +302,18 @@ export const generateDeliveryNotePDF = (order: Order): void => {
   );
   doc.text('Dullet POS - Delivery Management System', pageWidth / 2, footerY + 10, { align: 'center' });
 
-  // Save the PDF
+  // Save or return the PDF
   const fileName = `Delivery_Note_${order.orderNumber}_${new Date().toLocaleDateString('en-IN').replace(/\//g, '-')}.pdf`;
-  doc.save(fileName);
+  
+  if (downloadDirectly) {
+    doc.save(fileName);
+  } else {
+    // Return as blob for sharing
+    return doc.output('blob');
+  }
+};
+
+export const getDeliveryNotePDFFileName = (order: Order): string => {
+  return `Delivery_Note_${order.orderNumber}_${new Date().toLocaleDateString('en-IN').replace(/\//g, '-')}.pdf`;
 };
 
