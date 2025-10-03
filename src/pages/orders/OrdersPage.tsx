@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   PlusIcon,
   FunnelIcon,
   EyeIcon,
   PencilIcon,
-  CalendarIcon,
-  CurrencyRupeeIcon,
   ClockIcon,
   XMarkIcon,
   ClipboardDocumentListIcon,
@@ -27,6 +25,8 @@ import OrderStatusDropdown from "../../components/orders/OrderStatusDropdown";
 import { resolveCapturedImageSrc } from "../../utils/image";
 
 const OrdersPage: React.FC = () => {
+  const location = useLocation();
+  const isVisitsRoute = location.pathname.startsWith('/visits');
   const { hasPermission } = useAuth();
 
   // State
@@ -36,12 +36,7 @@ const OrdersPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [godowns, setGodowns] = useState<Godown[]>([]);
   const [godownFilter, setGodownFilter] = useState("");
-  const [viewType, setViewType] = useState<"orders" | "visits">(() => {
-    const savedViewType = localStorage.getItem("ordersPage_viewType");
-    return savedViewType === "visits" || savedViewType === "orders"
-      ? savedViewType
-      : "orders";
-  });
+  const [viewType, setViewType] = useState<"orders" | "visits">(() => (isVisitsRoute ? "visits" : "orders"));
 
   // Common Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -83,8 +78,9 @@ const OrdersPage: React.FC = () => {
   }>({ src: "", title: "" });
   const [showImageModal, setShowImageModal] = useState(false);
 
-  const handleViewImage = (imageData: string, title: string) => {
-    const formattedSrc = resolveCapturedImageSrc(imageData);
+  const handleViewImage = (imageData: string | undefined, title: string) => {
+    if (!imageData) return;
+    const formattedSrc = resolveCapturedImageSrc(imageData || '');
     if (formattedSrc) {
       setSelectedImage({ src: formattedSrc, title });
       setShowImageModal(true);
@@ -135,10 +131,13 @@ const OrdersPage: React.FC = () => {
 
       if (response.success && response.data) {
         setOrders(response.data.orders || []);
-        if (response?.data?.pagination) {
-          // Only update totalPages and totalOrders, not currentPage to avoid infinite loops
-          setTotalPages(response?.data?.pagination?.totalPages || 1);
-          setTotalOrders((response?.data?.pagination as any).totalOrders || 0);
+        const pagination = (response as any)?.data?.pagination;
+        if (pagination) {
+          setTotalPages(pagination.totalPages || 1);
+          setTotalOrders(pagination.totalOrders || 0);
+        } else {
+          setTotalPages(1);
+          setTotalOrders(response.data.orders?.length || 0);
         }
       }
     } catch (err) {
@@ -200,10 +199,10 @@ const OrdersPage: React.FC = () => {
     })();
   }, []);
 
-  // Persist viewType selection to localStorage
+  // Sync viewType with the current route
   useEffect(() => {
-    localStorage.setItem("ordersPage_viewType", viewType);
-  }, [viewType]);
+    setViewType(isVisitsRoute ? "visits" : "orders");
+  }, [isVisitsRoute]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -303,7 +302,7 @@ const OrdersPage: React.FC = () => {
   };
 
   // Table columns
-  const getColumns = (): TableColumn<Order>[] => {
+  const getColumns = (): TableColumn<any>[] => {
     if (viewType === "visits") {
       return [
         {
@@ -405,14 +404,14 @@ const OrdersPage: React.FC = () => {
           render: (_value, visit) => (
             <div className="flex items-center justify-end space-x-1 py-1">
               <Link
-                to={`/orders/visits/${visit._id}`}
+                to={`/visits/${visit._id}`}
                 className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-all duration-200"
                 title="View Visit Details"
               >
                 <EyeIcon className="h-4 w-4" />
               </Link>
               <Link
-                to={`/orders/visits/${visit._id}/edit`}
+                to={`/visits/${visit._id}/edit`}
                 className="inline-flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-all duration-200"
                 title="Edit Visit"
               >
@@ -596,29 +595,7 @@ const OrdersPage: React.FC = () => {
                       : "Manage visits with scheduled tasks"}
                   </p>
                 </div>
-                {/* View Type Switch */}
-                <div className="flex bg-gray-100 rounded-lg p-1">
-                  <button
-                    onClick={() => setViewType("orders")}
-                    className={`px-2 py-1 text-xs font-medium rounded-md transition-all duration-200 ${
-                      viewType === "orders"
-                        ? "bg-white text-blue-600 shadow-sm"
-                        : "text-gray-600 hover:text-gray-900"
-                    }`}
-                  >
-                    Orders
-                  </button>
-                  <button
-                    onClick={() => setViewType("visits")}
-                    className={`px-2 py-1 text-xs font-medium rounded-md transition-all duration-200 ${
-                      viewType === "visits"
-                        ? "bg-white text-blue-600 shadow-sm"
-                        : "text-gray-600 hover:text-gray-900"
-                    }`}
-                  >
-                    Visits
-                  </button>
-                </div>
+                {/* View switch removed; visits has its own tab */}
               </div>
             </div>
 
@@ -639,9 +616,7 @@ const OrdersPage: React.FC = () => {
                 </Link>
               )}
               <Link
-                to={
-                  viewType === "orders" ? "/orders/new" : "/orders/visits/new"
-                }
+                to={viewType === "orders" ? "/orders/new" : "/visits/new"}
                 className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
               >
                 <PlusIcon className="h-4 w-4 mr-1" />
@@ -950,16 +925,26 @@ const OrdersPage: React.FC = () => {
               <p className="text-xs text-gray-500 mb-4">
                 {statusFilter || searchTerm
                   ? "Try adjusting filters"
-                  : "Create your first order"}
+                  : viewType === "orders" ? "Create your first order" : "Create your first visit"}
               </p>
               {!statusFilter && !searchTerm ? (
-                <Link
-                  to="/orders/new"
-                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-                >
-                  <PlusIcon className="h-4 w-4 mr-1" />
-                  Create Order
-                </Link>
+                viewType === "orders" ? (
+                  <Link
+                    to="/orders/new"
+                    className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                  >
+                    <PlusIcon className="h-4 w-4 mr-1" />
+                    Create Order
+                  </Link>
+                ) : (
+                  <Link
+                    to="/visits/new"
+                    className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                  >
+                    <PlusIcon className="h-4 w-4 mr-1" />
+                    Create Visit
+                  </Link>
+                )
               ) : (
                 <button
                   onClick={clearFilters}
@@ -1003,13 +988,13 @@ const OrdersPage: React.FC = () => {
                       </div>
                       <div className="flex items-center space-x-1">
                         <Link
-                          to={viewType === "visits" ? `/orders/visits/${order._id}` : `/orders/${order._id}`}
+                          to={viewType === "visits" ? `/visits/${order._id}` : `/orders/${order._id}`}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                         >
                           <EyeIcon className="h-4 w-4" />
                         </Link>
                         <Link
-                          to={viewType === "visits" ? `/orders/visits/${order._id}/edit` : `/orders/${order._id}/edit`}
+                          to={viewType === "visits" ? `/visits/${order._id}/edit` : `/orders/${order._id}/edit`}
                           className="p-1.5 text-gray-600 hover:bg-gray-50 rounded-md transition-colors"
                         >
                           <PencilIcon className="h-4 w-4" />

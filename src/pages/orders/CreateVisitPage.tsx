@@ -298,7 +298,7 @@ const CreateVisitPage: React.FC = () => {
       setVisitCompleted(true);
       setShowCameraCapture(false); // Close camera immediately after success
       toast.success("Visit created successfully!");
-      navigate(`/orders?view=visits`);
+      navigate(`/visits`);
     } catch (error) {
       console.error("Failed to create visit:", error);
       toast.error(
@@ -320,7 +320,7 @@ const CreateVisitPage: React.FC = () => {
         <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 max-w-screen-2xl mx-auto">
           <div className="flex items-center gap-3 sm:gap-4">
             <button
-              onClick={() => navigate("/orders")}
+              onClick={() => navigate("/visits")}
               className="inline-flex items-center p-2 rounded-lg text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors"
             >
               <ArrowLeftIcon className="h-5 w-5" />
@@ -503,7 +503,7 @@ const CreateVisitPage: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={() => navigate("/orders")}
+                    onClick={() => navigate("/visits")}
                     className="w-full py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200"
                   >
                     Cancel

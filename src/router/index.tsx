@@ -45,7 +45,6 @@ const SalesExecutiveDetailPage = lazy(() => import('../pages/reports/SalesExecut
 const CustomerDetailPage = lazy(() => import('../pages/reports/CustomerDetailPage'));
 
 // Settings Pages
-const SettingsPage = lazy(() => import('../pages/settings/SettingsPage'));
 
 // Error Pages
 const NotFoundPage = lazy(() => import('../pages/errors/NotFoundPage'));
@@ -200,30 +199,6 @@ export const router = createBrowserRouter([
             ),
           },
           {
-            path: 'visits/new',
-            element: (
-              <ProtectedRoute requiredPermission="orders.create">
-                <CreateVisitPage />
-              </ProtectedRoute>
-            ),
-          },
-          {
-            path: 'visits/:visitId',
-            element: (
-              <ProtectedRoute requiredPermission="orders.read">
-                <VisitDetailsPage />
-              </ProtectedRoute>
-            ),
-          },
-          {
-            path: 'visits/:visitId/edit',
-            element: (
-              <ProtectedRoute requiredPermission="orders.update">
-                <EditVisitPage />
-              </ProtectedRoute>
-            ),
-          },
-          {
             path: ':orderId/edit',
             element: (
               <ProtectedRoute requiredPermission="orders.update">
@@ -236,6 +211,45 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute requiredPermission="orders.read">
                 <OrderDetailsPage />
+              </ProtectedRoute>
+            ),
+          },
+        ],
+      },
+
+      // Visits Management (separate from Orders)
+      {
+        path: 'visits',
+        children: [
+          {
+            index: true,
+            element: (
+              <ProtectedRoute requiredPermission="orders.read">
+                <OrdersPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'new',
+            element: (
+              <ProtectedRoute requiredPermission="orders.create">
+                <CreateVisitPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: ':visitId',
+            element: (
+              <ProtectedRoute requiredPermission="orders.read">
+                <VisitDetailsPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: ':visitId/edit',
+            element: (
+              <ProtectedRoute requiredPermission="orders.update">
+                <EditVisitPage />
               </ProtectedRoute>
             ),
           },

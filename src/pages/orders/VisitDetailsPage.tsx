@@ -258,7 +258,7 @@ const VisitDetailsPage: React.FC = () => {
             {error || "The visit you're looking for doesn't exist."}
           </p>
           <button
-            onClick={() => navigate("/orders")}
+            onClick={() => navigate("/visits")}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
           >
             <ArrowLeftIcon className="h-4 w-4 mr-2" />
@@ -287,7 +287,7 @@ const VisitDetailsPage: React.FC = () => {
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <button
-                onClick={() => navigate("/orders")}
+                onClick={() => navigate("/visits")}
                 className="p-1.5 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
               >
                 <ArrowLeftIcon className="h-5 w-5" />
@@ -331,7 +331,7 @@ const VisitDetailsPage: React.FC = () => {
                 <span className="hidden sm:inline">Print</span>
               </button>
               <Link
-                to={`/orders/visits/${visit._id}/edit`}
+                to={`/visits/${visit._id}/edit`}
                 className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors flex-shrink-0"
               >
                 <PencilIcon className="h-3.5 w-3.5 sm:mr-1" />

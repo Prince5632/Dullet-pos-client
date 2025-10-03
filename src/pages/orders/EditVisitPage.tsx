@@ -223,7 +223,7 @@ const EditVisitPage: React.FC = () => {
             {error || "Failed to load visit details"}
           </p>
           <button
-            onClick={() => navigate("/orders")}
+            onClick={() => navigate("/visits")}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
           >
             <ArrowLeftIcon className="h-4 w-4 mr-2" />
@@ -251,7 +251,7 @@ const EditVisitPage: React.FC = () => {
         <div className="px-3 sm:px-4 py-2.5 sm:py-3">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => navigate(`/orders/visits/${visitId}`)}
+              onClick={() => navigate(`/visits/${visitId}`)}
               className="p-1.5 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
             >
               <ArrowLeftIcon className="h-5 w-5" />
@@ -529,7 +529,7 @@ const EditVisitPage: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={() => navigate(`/orders/visits/${visitId}`)}
+                    onClick={() => navigate(`/visits/${visitId}`)}
                     className="w-full py-2.5 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
                   >
                     Cancel

@@ -345,6 +345,9 @@ export interface Order {
   status:
     | "pending"
     | "approved"
+    | "processing"
+    | "ready"
+    | "dispatched"
     | "driver_assigned"
     | "out_for_delivery"
     | "delivered"

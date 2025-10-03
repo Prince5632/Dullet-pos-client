@@ -30,6 +30,12 @@ const navigationItems: NavItem[] = [
     permission: 'orders.read',
   },
   {
+    name: 'Visits',
+    href: '/visits',
+    icon: ClipboardDocumentListIcon,
+    permission: 'orders.read',
+  },
+  {
     name: 'Attendance',
     href: '/attendance',
     icon: CalendarDaysIcon,
