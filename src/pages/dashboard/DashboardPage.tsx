@@ -84,9 +84,7 @@ const DashboardPage: React.FC = () => {
         promises.push(orderService.getOrderStats({ godownId: selectedGodownId }));
         promises.push(orderService.getOrders({ limit: 5, sortBy: 'orderDate', sortOrder: 'desc', godownId: selectedGodownId }));
       }
-      if (hasPermission('users.read')) {
-        promises.push(userService.getUserStats());
-      }
+      // Removed user stats endpoint (not available); we'll compute via list fallback below
 
       const results = await Promise.allSettled(promises);
       
@@ -107,10 +105,28 @@ const DashboardPage: React.FC = () => {
         }
         idx += 1;
       }
+      // No direct user stats in results
+
+      // Fallback: compute user counts from paginated list if stats unavailable
       if (hasPermission('users.read')) {
-        if (results[idx]?.status === 'fulfilled') {
-          userStats = (results[idx] as PromiseFulfilledResult<any>).value;
-        }
+        try {
+          const [allUsersRes, activeUsersRes] = await Promise.all([
+            userService.getUsers({ limit: 1 }),
+            userService.getUsers({ limit: 1, isActive: 'true' as any }),
+          ]);
+          const totalUsers = (allUsersRes as any)?.pagination?.totalUsers
+            || (allUsersRes as any)?.pagination?.totalRecords
+            || 0;
+          const activeUsers = (activeUsersRes as any)?.pagination?.totalUsers
+            || (activeUsersRes as any)?.pagination?.totalRecords
+            || 0;
+          userStats = {
+            totalUsers,
+            activeUsers,
+            todayLogins: 0,
+            inactiveUsers: Math.max(totalUsers - activeUsers, 0),
+          };
+        } catch {}
       }
 
       setStats({
@@ -124,9 +140,9 @@ const DashboardPage: React.FC = () => {
           pendingApproval: orderStats?.pendingOrders || 0,
         },
         users: {
-          total: userStats?.totalUsers || 0,
-          active: userStats?.activeUsers || 0,
-          todayLogins: userStats?.todayLogins || 0,
+          total: userStats?.totalUsers ?? 0,
+          active: userStats?.activeUsers ?? 0,
+          todayLogins: userStats?.todayLogins ?? 0,
         },
         revenue: {
           today: orderStats?.monthlyRevenue || 0,
@@ -190,7 +206,7 @@ const DashboardPage: React.FC = () => {
             </div>
             
             {/* Today's Quick Stats */}
-            <div className="flex items-center gap-3 sm:gap-4">
+            {/* <div className="flex items-center gap-3 sm:gap-4">
               <div className="text-right">
                 <p className="text-lg sm:text-xl font-bold text-white">{stats?.orders.todayOrders || 0}</p>
                 <p className="text-[10px] sm:text-xs text-emerald-100">Today</p>
@@ -202,7 +218,7 @@ const DashboardPage: React.FC = () => {
                 </p>
                 <p className="text-[10px] sm:text-xs text-emerald-100">Revenue</p>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
@@ -453,13 +469,13 @@ const DashboardPage: React.FC = () => {
                 icon: CalendarIcon,
                 bgColor: 'bg-green-500',
               },
-              {
-                label: 'Rate',
-                value: '87%',
-                subtitle: 'Convert',
-                icon: ArrowTrendingUpIcon,
-                bgColor: 'bg-emerald-500',
-              },
+              // {
+              //   label: 'Rate',
+              //   value: '87%',
+              //   subtitle: 'Convert',
+              //   icon: ArrowTrendingUpIcon,
+              //   bgColor: 'bg-emerald-500',
+              // },
             ].map((stat) => (
               <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
                 <div className={`${stat.bgColor} rounded-lg p-2 w-fit mb-2`}>
