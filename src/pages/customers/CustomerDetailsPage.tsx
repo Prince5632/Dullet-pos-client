@@ -71,6 +71,21 @@ const CustomerDetailsPage: React.FC = () => {
               <div className="text-gray-500">Type</div>
               <div className="text-gray-900">{customer.customerType}</div>
             </div>
+            {customer.location && (
+              <div className="col-span-2">
+                <div className="text-gray-500">Location</div>
+                <div className="text-gray-900">
+                  <a
+                    href={customer.location}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    View on Google Maps
+                  </a>
+                </div>
+              </div>
+            )}
             <div className="col-span-2">
               <div className="text-gray-500">Address</div>
               <div className="text-gray-900">

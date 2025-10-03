@@ -326,6 +326,23 @@ const EditVisitPage: React.FC = () => {
                         {visit.customer?.customerId || "N/A"}
                       </p>
                     </div>
+                    {visit.customer?.location && (
+                      <div className="sm:col-span-2">
+                        <label className="text-xs font-medium text-gray-600 block mb-1">
+                          Location
+                        </label>
+                        <p className="text-sm">
+                          <a
+                            href={visit.customer.location}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            View on Google Maps
+                          </a>
+                        </p>
+                      </div>
+                    )}
                     <div className="sm:col-span-2">
                       <label className="text-xs font-medium text-gray-600 block mb-1">
                         Address

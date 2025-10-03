@@ -382,6 +382,19 @@ const VisitDetailsPage: React.FC = () => {
                           {visit.customer.email}
                         </div>
                       )}
+                      {visit.customer?.location && (
+                        <div className="flex items-center text-xs text-gray-600 sm:col-span-2">
+                          <MapPinIcon className="h-3.5 w-3.5 mr-1.5 text-gray-400 flex-shrink-0" />
+                          <a
+                            href={visit.customer.location}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            View on Google Maps
+                          </a>
+                        </div>
+                      )}
                       {visit.customer?.address && (
                         <div className="flex items-start text-xs text-gray-600 sm:col-span-2">
                           <MapPinIcon className="h-3.5 w-3.5 mr-1.5 text-gray-400 mt-0.5 flex-shrink-0" />

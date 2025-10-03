@@ -593,23 +593,9 @@ Dullet POS Team`;
                       size="md"
                     />
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-medium text-gray-900">
+                      <h4 className="text-sm font-medium text-gray-900 mb-2">
                         {order.customer?.businessName || "N/A"}
                       </h4>
-                      <p className="text-xs text-gray-600 mb-2">
-                        {order.customer?.location ? (
-                          <a
-                            href={order.customer.location}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline"
-                          >
-                            View Location
-                          </a>
-                        ) : (
-                          "No location provided"
-                        )}
-                      </p>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {order.customer?.phone && (
@@ -622,6 +608,19 @@ Dullet POS Team`;
                           <div className="flex items-center text-xs text-gray-600">
                             <EnvelopeIcon className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
                             {order.customer.email}
+                          </div>
+                        )}
+                        {order.customer?.location && (
+                          <div className="flex items-center text-xs text-gray-600 sm:col-span-2">
+                            <MapPinIcon className="h-3.5 w-3.5 mr-1.5 text-gray-400 flex-shrink-0" />
+                            <a
+                              href={order.customer.location}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline"
+                            >
+                              View on Google Maps
+                            </a>
                           </div>
                         )}
                         {order.customer?.address && (

@@ -486,6 +486,39 @@ const EditOrderPage: React.FC = () => {
                         </p>
                         <p className="text-gray-600">{order.customer?.phone}</p>
                       </div>
+                      {order.customer?.location && (
+                        <div className="sm:col-span-2">
+                          <span className="font-medium text-gray-700">
+                            Location:
+                          </span>
+                          <p>
+                            <a
+                              href={order.customer.location}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline"
+                            >
+                              View on Google Maps
+                            </a>
+                          </p>
+                        </div>
+                      )}
+                      {order.customer?.address && (
+                        <div className="sm:col-span-2">
+                          <span className="font-medium text-gray-700">
+                            Address:
+                          </span>
+                          <p className="text-gray-900">
+                            {[
+                              order.customer.address.street,
+                              `${order.customer.address.city}, ${order.customer.address.state}`,
+                              order.customer.address.pincode,
+                            ]
+                              .filter(Boolean)
+                              .join(" • ")}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <p className="mt-1.5 text-[10px] text-gray-500">
