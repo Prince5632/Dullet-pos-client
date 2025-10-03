@@ -488,7 +488,7 @@ const EditUserPage: React.FC = () => {
         }));
       }
 
-      if (existingOtherDocuments.length) {
+      if (existingOtherDocuments.length ) {
         userData.otherDocumentsMeta = [
           ...(userData.otherDocumentsMeta || []),
           ...existingOtherDocuments.map((doc) => ({

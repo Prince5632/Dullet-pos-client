@@ -7,7 +7,11 @@ class AuthService {
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
       const formData = new FormData();
-      formData.append('email', credentials.email);
+      if (credentials.identifier) {
+        formData.append('identifier', credentials.identifier);
+      } else if (credentials.email) {
+        formData.append('email', credentials.email);
+      }
       formData.append('password', credentials.password);
       
       if (credentials.faceImage) {

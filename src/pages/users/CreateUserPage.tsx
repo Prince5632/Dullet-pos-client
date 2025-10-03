@@ -36,8 +36,13 @@ const createUserSchema = yup.object({
     .max(50, "Last name must be less than 50 characters"),
   email: yup
     .string()
-    .required("Email is required")
-    .test("valid-email", "Please enter a valid email address", isValidEmail),
+    .nullable()
+    .transform((value) => (value ? value : undefined))
+    .test("valid-email", "Please enter a valid email address", (val) => !val || isValidEmail(val)),
+  username: yup
+    .string()
+    .nullable()
+    .transform((value) => (value ? value.trim() : undefined)),
   phone: yup
     .string()
     .required("Phone number is required")
@@ -81,7 +86,14 @@ const createUserSchema = yup.object({
       message: "Invalid PAN format",
       excludeEmptyString: true,
     }),
-});
+}).test(
+  "email-or-username",
+  "Either email or username is required",
+  (obj) => {
+    const o = obj as any;
+    return !!(o?.email || o?.username);
+  }
+);
 
 type CreateUserFormInputs = CreateUserForm & {
   confirmPassword: string;
@@ -347,7 +359,7 @@ const CreateUserPage: React.FC = () => {
       const userData: CreateUserForm = {
         firstName: data.firstName,
         lastName: data.lastName,
-        email: data.email,
+        email: data.email || "",
         phone: data.phone,
         password: data.password,
         roleId: data.roleId,
@@ -376,6 +388,7 @@ const CreateUserPage: React.FC = () => {
         panNumber: data.panNumber || undefined,
         aadhaarDocument: aadhaarDocument || undefined,
         panDocument: panDocument || undefined,
+        username: data.username || undefined,
       };
 
       if (otherDocuments.length) {
@@ -539,7 +552,7 @@ const CreateUserPage: React.FC = () => {
                   htmlFor="email"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Email Address *
+                  Email Address
                 </label>
                 <input
                   type="email"
@@ -555,9 +568,26 @@ const CreateUserPage: React.FC = () => {
                 />
                 {errors.email && (
                   <p className="mt-1 text-sm text-red-600">
-                    {errors.email.message}
+                    {errors.email.message as string}
                   </p>
                 )}
+              </div>
+
+              {/* Username */}
+              <div>
+                <label
+                  htmlFor="username"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Username
+                </label>
+                <input
+                  type="text"
+                  id="username"
+                  {...register("username")}
+                  className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm border-gray-300 focus:border-blue-500"
+                  placeholder="Enter username (optional if email provided)"
+                />
               </div>
 
               {/* Phone */}
@@ -863,17 +893,20 @@ const CreateUserPage: React.FC = () => {
                   value={
                     departments.find((dept) => dept === watch("department"))
                       ? {
-                          value: watch("department"),
-                          label: watch("department"),
+                          value: watch("department") as User["department"],
+                          label: watch("department") as User["department"],
                         }
                       : null
                   }
                   onChange={(option) =>
-                    setValue("department", option?.value as User["department"] || "")
+                    setValue(
+                      "department",
+                      (option && (option as any).value) as User["department"] || ""
+                    )
                   }
                   options={departments.map((dept) => ({
-                    value: dept,
-                    label: dept,
+                    value: dept as User["department"],
+                    label: dept as User["department"],
                   }))}
                   placeholder="Select department"
                   isClearable
@@ -973,7 +1006,7 @@ const CreateUserPage: React.FC = () => {
                       : null
                   }
                   onChange={(option) =>
-                    setSelectedPrimaryGodownId(option?.value || "")
+                    setSelectedPrimaryGodownId((option && (option as any).value) || "")
                   }
                   options={godowns.map((g) => ({
                     value: g._id,
@@ -1021,7 +1054,7 @@ const CreateUserPage: React.FC = () => {
                     .filter(Boolean)}
                   onChange={(options) =>
                     setSelectedAccessibleGodownIds(
-                      options ? options.map((option) => option.value) : []
+                      options ? (options as any[]).map((option) => option.value) : []
                     )
                   }
                   options={godowns.map((g) => ({

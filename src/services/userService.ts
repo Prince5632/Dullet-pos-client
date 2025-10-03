@@ -1,6 +1,6 @@
 import { apiService } from './api';
 import { API_CONFIG } from '../config/api';
-import type { User, CreateUserForm, UpdateUserForm, PaginationResponse } from '../types';
+import type { User, CreateUserForm, UpdateUserForm } from '../types';
 
 export interface UserListParams {
   page?: number;
@@ -13,7 +13,7 @@ export interface UserListParams {
 
 class UserService {
   // Get all users with pagination and filtering
-  async getUsers(params: UserListParams = {}): Promise<PaginationResponse<{ users: User[] }>> {
+  async getUsers(params: UserListParams = {}): Promise<any> {
     const queryParams = new URLSearchParams();
     
     Object.entries(params).forEach(([key, value]) => {
@@ -42,7 +42,12 @@ class UserService {
     // Add text fields
     formData.append('firstName', userData.firstName);
     formData.append('lastName', userData.lastName);
-    formData.append('email', userData.email);
+    if (userData.email) {
+      formData.append('email', userData.email);
+    }
+    if ((userData as any).username) {
+      formData.append('username', (userData as any).username as string);
+    }
     formData.append('phone', userData.phone);
     formData.append('password', userData.password);
     formData.append('roleId', userData.roleId);

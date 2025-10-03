@@ -9,12 +9,11 @@ import type { LoginRequest } from '../../types';
 import { cn } from '../../utils';
 import toast from 'react-hot-toast';
 
-// Validation schema
+// Validation schema (identifier: username | email | phone)
 const loginSchema = yup.object({
-  email: yup
+  identifier: yup
     .string()
-    .email('Please enter a valid email address')
-    .required('Email is required'),
+    .required('Username, email, or phone is required'),
   password: yup
     .string()
     .min(6, 'Password must be at least 6 characters')
@@ -22,7 +21,7 @@ const loginSchema = yup.object({
 });
 
 type LoginFormData = {
-  email: string;
+  identifier: string;
   password: string;
 };
 
@@ -47,7 +46,7 @@ const LoginPage: React.FC = () => {
   } = useForm<LoginFormData>({
     resolver: yupResolver(loginSchema),
     defaultValues: {
-      email: '',
+      identifier: '',
       password: '',
     },
   });
@@ -68,7 +67,7 @@ const LoginPage: React.FC = () => {
       clearErrors();
 
       const loginData: LoginRequest = {
-        email: data.email,
+        identifier: data.identifier,
         password: data.password,
         faceImage: faceImage || undefined,
       };
@@ -170,27 +169,27 @@ const LoginPage: React.FC = () => {
 
       {/* Login Form */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        {/* Email */}
+        {/* Identifier */}
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-            Email Address
+          <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-2">
+            Username / Email / Phone
           </label>
           <input
-            {...register('email')}
-            type="email"
-            autoComplete="email"
+            {...register('identifier')}
+            type="text"
+            autoComplete="username"
             className={cn(
               'w-full px-4 py-3 border rounded-lg shadow-sm placeholder-gray-400 text-gray-900',
               'focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500',
               'transition-all duration-200 bg-white',
-              errors.email
+              (errors as any).identifier
                 ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                 : 'border-gray-300 hover:border-emerald-300'
             )}
-            placeholder="Enter your email"
+            placeholder="Enter username, email or phone"
           />
-          {errors.email && (
-            <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+          {(errors as any).identifier && (
+            <p className="mt-1 text-sm text-red-600">{(errors as any).identifier.message}</p>
           )}
         </div>
 

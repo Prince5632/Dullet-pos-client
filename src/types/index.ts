@@ -193,7 +193,8 @@ export interface CheckOutForm {
 
 // Auth Types
 export interface LoginRequest {
-  email: string;
+  email?: string;
+  identifier?: string; // username | email | phone
   password: string;
   faceImage?: File;
 }
@@ -229,6 +230,7 @@ export interface CreateUserForm {
   panDocument?: File;
   otherDocuments?: File[];
   otherDocumentsMeta?: { label?: string; type: UserDocumentType }[];
+  username?: string;
 }
 
 export interface UpdateUserForm extends Partial<CreateUserForm> {
