@@ -33,6 +33,12 @@ const CreateVisitPage = lazy(() => import('../pages/orders/CreateVisitPage'));
 const VisitDetailsPage = lazy(() => import('../pages/orders/VisitDetailsPage'));
 const EditVisitPage = lazy(() => import('../pages/orders/EditVisitPage'));
 
+// Customer Management Pages
+const CustomersPage = lazy(() => import('../pages/customers/CustomersPage'));
+const CreateCustomerPage = lazy(() => import('../pages/customers/CreateCustomerPage.tsx'));
+const EditCustomerPage = lazy(() => import('../pages/customers/EditCustomerPage.tsx'));
+const CustomerDetailsPage = lazy(() => import('../pages/customers/CustomerDetailsPage.tsx'));
+
 // Attendance Management Pages
 const AttendancePage = lazy(() => import('../pages/attendance/AttendancePage'));
 const AttendanceDetailsPage = lazy(() => import('../pages/attendance/AttendanceDetailsPage'));
@@ -164,6 +170,45 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute requiredPermission="roles.update">
                 <EditRolePage />
+              </ProtectedRoute>
+            ),
+          },
+        ],
+      },
+
+      // Customer Management
+      {
+        path: 'customers',
+        children: [
+          {
+            index: true,
+            element: (
+              <ProtectedRoute requiredPermission="customers.read">
+                <CustomersPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'create',
+            element: (
+              <ProtectedRoute requiredPermission="customers.create">
+                <CreateCustomerPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: ':id',
+            element: (
+              <ProtectedRoute requiredPermission="customers.read">
+                <CustomerDetailsPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: ':id/edit',
+            element: (
+              <ProtectedRoute requiredPermission="customers.update">
+                <EditCustomerPage />
               </ProtectedRoute>
             ),
           },

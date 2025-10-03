@@ -1,0 +1,226 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { customerService } from '../../services/customerService';
+import type { Customer, TableColumn } from '../../types';
+import { MagnifyingGlassIcon, PlusIcon, FunnelIcon, XMarkIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import Table from '../../components/ui/Table';
+import Pagination from '../../components/ui/Pagination';
+import Avatar from '../../components/ui/Avatar';
+
+const CustomersPage: React.FC = () => {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [type, setType] = useState('');
+  const [stateFilter, setStateFilter] = useState('');
+  const [city, setCity] = useState('');
+  const [status, setStatus] = useState('');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCustomers, setTotalCustomers] = useState(0);
+  const [showFilters, setShowFilters] = useState(false);
+
+  const loadCustomers = async () => {
+    try {
+      setLoading(true);
+      const res = await customerService.getCustomers({
+        page,
+        limit,
+        search,
+        customerType: type,
+        isActive: status,
+        sortBy: 'businessName',
+        sortOrder: 'asc',
+      });
+      if (res.success && res.data) {
+        const list = res.data.customers || [];
+        const filtered = list.filter(c =>
+          (!stateFilter || c.address?.state === stateFilter) &&
+          (!city || c.address?.city?.toLowerCase().includes(city.toLowerCase()))
+        );
+        setCustomers(filtered);
+        setTotalPages(res.pagination?.totalPages || 1);
+        setTotalCustomers(res.pagination?.totalRecords || filtered.length);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const t = setTimeout(loadCustomers, 100);
+    return () => clearTimeout(t);
+  }, [page, limit, search, type, status, stateFilter, city]);
+
+  const columns: TableColumn<Customer>[] = useMemo(() => [
+    {
+      key: 'businessName',
+      label: 'Customer',
+      render: (_, customer) => (
+        <div className="flex items-center gap-2">
+          <Avatar name={customer.businessName} size="sm" />
+          <div className="min-w-0">
+            <div className="text-xs font-medium text-gray-900 truncate">{customer.businessName}</div>
+            <div className="text-xs text-gray-500 truncate">{customer.contactPersonName} • {customer.phone}</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'customerId',
+      label: 'ID',
+      render: (value) => <span className="text-xs text-gray-700">{value}</span>,
+    },
+    {
+      key: 'address',
+      label: 'Location',
+      render: (_, c) => (
+        <span className="text-xs text-gray-700">{c.address?.city}, {c.address?.state}</span>
+      ),
+    },
+    {
+      key: 'customerType',
+      label: 'Type',
+      render: (value) => <span className="text-xs text-gray-700">{value}</span>,
+    },
+    {
+      key: 'actions',
+      label: '',
+      render: (_, c) => (
+        <div className="flex items-center justify-end gap-1">
+          <Link to={`/customers/${c._id}`} className="px-2 py-1 text-blue-600 hover:bg-blue-50 rounded-md text-xs">View</Link>
+          <Link to={`/customers/${c._id}/edit`} className="px-2 py-1 text-gray-700 hover:bg-gray-50 rounded-md text-xs">Edit</Link>
+        </div>
+      ),
+    },
+  ], []);
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-3 sm:px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <BuildingOfficeIcon className="w-4 h-4 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900">Customers</h1>
+                <p className="text-xs text-gray-500 hidden sm:block">Manage and filter customers by location</p>
+              </div>
+            </div>
+            <Link to="/customers/create" className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+              <PlusIcon className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Add Customer</span>
+              <span className="sm:hidden">Add</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-3 sm:px-4 py-3">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4">
+          <div className="p-3">
+            <div className="relative mb-3">
+              <MagnifyingGlassIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search customers..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="block w-full pl-8 pr-8 py-2 text-sm border border-gray-300 rounded-md bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-2.5 top-2.5">
+                  <XMarkIcon className="h-4 w-4 text-gray-400" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
+                  showFilters ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                <FunnelIcon className="h-3.5 w-3.5" />
+                Filters
+              </button>
+            </div>
+
+            {showFilters && (
+              <div className="mt-3 pt-3 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                <select value={type} onChange={(e) => setType(e.target.value)} className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  {customerService.getCustomerTypes().map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                <select value={stateFilter} onChange={(e) => setStateFilter(e.target.value)} className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <option value="">All States</option>
+                  {customerService.getStates().map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <option value="">All Status</option>
+                  <option value="true">Active</option>
+                  <option value="false">Inactive</option>
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
+            <div className="text-xs text-gray-500">Total</div>
+            <div className="text-sm font-semibold">{totalCustomers}</div>
+          </div>
+          <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
+            <div className="text-xs text-gray-500">Active</div>
+            <div className="text-sm font-semibold text-green-600">{customers.filter(c => c.isActive).length}</div>
+          </div>
+          <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
+            <div className="text-xs text-gray-500">Inactive</div>
+            <div className="text-sm font-semibold text-red-600">{customers.filter(c => !c.isActive).length}</div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <span className="text-sm text-gray-600">Loading...</span>
+              </div>
+            </div>
+          ) : (
+            <div className="hidden lg:block overflow-x-auto">
+              <Table data={customers} columns={columns} loading={false} />
+            </div>
+          )}
+
+          {totalPages > 1 && (
+            <div className="px-3 py-2 border-t border-gray-200 bg-gray-50">
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={totalCustomers}
+                itemsPerPage={limit}
+                onPageChange={setPage}
+                onItemsPerPageChange={setLimit}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CustomersPage;
+
+

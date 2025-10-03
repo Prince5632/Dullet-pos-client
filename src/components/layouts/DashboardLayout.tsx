@@ -10,6 +10,7 @@ import {
   ClipboardDocumentListIcon,
   CalendarDaysIcon,
   ChartBarIcon,
+  BuildingOfficeIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import type { NavItem } from '../../types';
@@ -34,6 +35,12 @@ const navigationItems: NavItem[] = [
     href: '/visits',
     icon: ClipboardDocumentListIcon,
     permission: 'orders.read',
+  },
+  {
+    name: 'Customers',
+    href: '/customers',
+    icon: BuildingOfficeIcon,
+    permission: 'customers.read',
   },
   {
     name: 'Attendance',
