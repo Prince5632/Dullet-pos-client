@@ -259,10 +259,10 @@ class OrderService {
     throw new Error(response.message || 'Failed to reject order');
   }
 
-  async assignDriver(id: string, driverId: string, notes?: string): Promise<Order> {
+  async assignDriver(id: string, driverId: string, notes?: string, vehicleNumber?: string): Promise<Order> {
     const response = await apiService.patch<{ order: Order }>(
       API_CONFIG.ENDPOINTS.ORDER_ASSIGN_DRIVER(id),
-      { driverId, notes }
+      { driverId, notes, vehicleNumber }
     );
 
     if (response.success && response.data) {

@@ -226,6 +226,10 @@ DELIVERY INFO
 Delivered At: ${deliveryDate}, ${deliveryTime}
 Location: ${
       order.driverAssignment?.deliveryLocation?.address || "Location recorded"
+    }${
+      order.driverAssignment?.vehicleNumber
+        ? `\nVehicle: ${order.driverAssignment.vehicleNumber}`
+        : ""
     }
 
 ITEMS DELIVERED
@@ -814,14 +818,14 @@ Dullet POS Team`;
                           <div className="flex items-center gap-2">
                             <Avatar
                               name={
-                                order.driverAssignment.driver.fullName ||
+                                order?.driverAssignment?.driver?.firstName ||
                                 "Driver"
                               }
                               size="sm"
                             />
                             <div>
                               <p className="text-xs font-medium text-gray-900">
-                                {order.driverAssignment.driver.fullName}
+                                {order?.driverAssignment?.driver?.firstName} {order?.driverAssignment?.driver?.lastName}
                               </p>
                               <p className="text-[10px] text-gray-600">
                                 {order.driverAssignment.driver.email}
@@ -829,6 +833,11 @@ Dullet POS Team`;
                               {order.driverAssignment.driver.phone && (
                                 <p className="text-[10px] text-gray-500">
                                   {order.driverAssignment.driver.phone}
+                                </p>
+                              )}
+                              {order.driverAssignment.vehicleNumber && (
+                                <p className="text-[10px] text-gray-900 font-medium mt-1">
+                                  Vehicle: {order.driverAssignment.vehicleNumber}
                                 </p>
                               )}
                             </div>

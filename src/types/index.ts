@@ -381,6 +381,7 @@ export interface Order {
       address?: string;
     };
     driverNotes?: string;
+    vehicleNumber?: string;
   };
   signatures?: {
     pickupProof?: string;
