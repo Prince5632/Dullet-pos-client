@@ -29,7 +29,7 @@ type LoginFormData = {
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isLoading, error, clearError, isAuthenticated } = useAuth();
+  const { login, isLoading, error, clearError, isAuthenticated, hasPermission, hasRole } = useAuth();
   
   const [showPassword, setShowPassword] = useState(false);
   const [faceImage, setFaceImage] = useState<File | null>(null);
@@ -79,9 +79,19 @@ const LoginPage: React.FC = () => {
       
       // Small delay to ensure state is updated
       setTimeout(() => {
-        const from = (location.state as any)?.from?.pathname || '/dashboard';
-        console.log('Navigating to:', from);
-        navigate(from, { replace: true });
+        // Role/permission-based landing
+        let landing = '/dashboard';
+        // Drivers: send to orders (or a dedicated page if exists)
+        if (hasRole('Driver')) landing = '/orders';
+        // Sales executive: send to visits by default if they have access
+        if (hasRole('Sales Executive') && hasPermission('orders.read')) landing = '/visits';
+        // Admin/Manager: dashboard by default
+        if (hasRole('Super Admin') || hasRole('Admin') || hasRole('Manager')) landing = '/dashboard';
+        // If a guarded route redirected us here, prefer that
+        const from = (location.state as any)?.from?.pathname;
+        const destination = from || landing;
+        console.log('Navigating to:', destination);
+        navigate(destination, { replace: true });
       }, 100);
       
     } catch (error: any) {

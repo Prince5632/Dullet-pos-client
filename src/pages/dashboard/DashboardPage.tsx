@@ -30,6 +30,7 @@ import { apiService } from '../../services/api';
 import { API_CONFIG } from '../../config/api';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
+import { userService } from '../../services/userService';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 interface DashboardStats {
@@ -83,19 +84,32 @@ const DashboardPage: React.FC = () => {
         promises.push(orderService.getOrderStats({ godownId: selectedGodownId }));
         promises.push(orderService.getOrders({ limit: 5, sortBy: 'orderDate', sortOrder: 'desc', godownId: selectedGodownId }));
       }
+      if (hasPermission('users.read')) {
+        promises.push(userService.getUserStats());
+      }
 
       const results = await Promise.allSettled(promises);
       
       let orderStats: any = null;
       let orders: Order[] = [];
+      let userStats: { totalUsers: number; activeUsers: number; todayLogins: number; inactiveUsers: number } | null = null;
 
+      // Map settled results based on what we pushed
+      let idx = 0;
       if (hasPermission('orders.read')) {
-        if (results[0].status === 'fulfilled') {
-          orderStats = results[0].value;
+        if (results[idx]?.status === 'fulfilled') {
+          orderStats = (results[idx] as PromiseFulfilledResult<any>).value;
         }
-        if (results[1].status === 'fulfilled') {
-          const ordersResult = results[1].value as any;
+        idx += 1;
+        if (results[idx]?.status === 'fulfilled') {
+          const ordersResult = (results[idx] as PromiseFulfilledResult<any>).value as any;
           orders = ordersResult.data?.orders || [];
+        }
+        idx += 1;
+      }
+      if (hasPermission('users.read')) {
+        if (results[idx]?.status === 'fulfilled') {
+          userStats = (results[idx] as PromiseFulfilledResult<any>).value;
         }
       }
 
@@ -110,9 +124,9 @@ const DashboardPage: React.FC = () => {
           pendingApproval: orderStats?.pendingOrders || 0,
         },
         users: {
-          total: 25,
-          active: 23,
-          todayLogins: 12,
+          total: userStats?.totalUsers || 0,
+          active: userStats?.activeUsers || 0,
+          todayLogins: userStats?.todayLogins || 0,
         },
         revenue: {
           today: orderStats?.monthlyRevenue || 0,
@@ -388,7 +402,7 @@ const DashboardPage: React.FC = () => {
           </div>
 
           {/* Manager Actions */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
+          {/* <div className="bg-white rounded-xl border border-gray-200 p-4">
             <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
               <FireIcon className="h-4 w-4 mr-2 text-orange-600" />
               Manager Tools
@@ -416,7 +430,7 @@ const DashboardPage: React.FC = () => {
                 </Link>
               ))}
             </div>
-          </div>
+          </div> */}
         </>
       )}
 
@@ -459,7 +473,7 @@ const DashboardPage: React.FC = () => {
           </div>
 
           {/* Sales Actions */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
+          {/* <div className="bg-white rounded-xl border border-gray-200 p-4">
             <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
               <LightBulbIcon className="h-4 w-4 mr-2 text-yellow-600" />
               Sales Tools
@@ -481,7 +495,7 @@ const DashboardPage: React.FC = () => {
                 </Link>
               ))}
             </div>
-          </div>
+          </div> */}
 
           {/* Sales Tip */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-4">

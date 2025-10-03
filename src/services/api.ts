@@ -159,9 +159,11 @@ class ApiService {
     const message = error.response?.data?.message || error.message || 'An error occurred';
     
     // Don't show toast for certain errors
-    const silentErrors = [401, 422]; // Unauthorized, Validation errors
+    const silentErrors = [401, 403, 422]; // Unauthorized, Forbidden, Validation errors
+    // Prevent spamming the same toast multiple times
+    const toastId = `${error.response?.status}-${error.config?.url}`;
     if (!silentErrors.includes(error.response?.status)) {
-      toast.error(message);
+      toast.error(message, { id: toastId });
     }
     
     console.error('API Error:', {

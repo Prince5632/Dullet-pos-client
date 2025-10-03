@@ -211,10 +211,10 @@ const SalesExecutiveReportsPage: React.FC = () => {
             <span className="text-gray-500">Pending:</span>
             <span className="font-medium">{row.pendingOrders}</span>
           </div>
-          <div className="flex justify-between">
+          {/* <div className="flex justify-between">
             <span className="text-gray-500">Completed:</span>
             <span className="font-medium text-green-600">{row.completedOrders}</span>
-          </div>
+          </div> */}
         </div>
       ),
     },
