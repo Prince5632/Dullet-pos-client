@@ -453,7 +453,7 @@ const DashboardPage: React.FC = () => {
       {roleName === 'sales executive' && (
         <>
           {/* Sales Stats */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* <div className="grid grid-cols-3 gap-3">
             {stats && [
               {
                 label: 'Today',
@@ -486,10 +486,10 @@ const DashboardPage: React.FC = () => {
                 <p className="text-[10px] text-gray-400">{stat.subtitle}</p>
               </div>
             ))}
-          </div>
+          </div> */}
 
           {/* Sales Actions */}
-          {/* <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
             <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
               <LightBulbIcon className="h-4 w-4 mr-2 text-yellow-600" />
               Sales Tools
@@ -497,9 +497,8 @@ const DashboardPage: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               {[
                 { label: 'New Order', href: '/orders/new', icon: PlusIcon },
-                { label: 'Customers', href: '/customers', icon: UsersIcon },
-                { label: 'Quick Order', href: '/orders/quick', icon: DocumentTextIcon },
-                { label: 'Reports', href: '/reports/sales', icon: ChartBarIcon },
+                { label: 'Create Visit', href: '/visits/new', icon: UsersIcon },
+        
               ].map((action) => (
                 <Link
                   key={action.label}
@@ -511,7 +510,7 @@ const DashboardPage: React.FC = () => {
                 </Link>
               ))}
             </div>
-          </div> */}
+          </div>
 
           {/* Sales Tip */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-4">
