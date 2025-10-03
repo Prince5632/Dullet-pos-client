@@ -114,11 +114,11 @@ const DashboardPage: React.FC = () => {
             userService.getUsers({ limit: 1 }),
             userService.getUsers({ limit: 1, isActive: 'true' as any }),
           ]);
-          const totalUsers = (allUsersRes as any)?.pagination?.totalUsers
-            || (allUsersRes as any)?.pagination?.totalRecords
+          const totalUsers = (allUsersRes as any)?.data?.pagination?.totalUsers
+            || (allUsersRes as any)?.pagination?.totalUsers
             || 0;
-          const activeUsers = (activeUsersRes as any)?.pagination?.totalUsers
-            || (activeUsersRes as any)?.pagination?.totalRecords
+          const activeUsers = (activeUsersRes as any)?.data?.pagination?.totalUsers
+            || (activeUsersRes as any)?.pagination?.totalUsers
             || 0;
           userStats = {
             totalUsers,
