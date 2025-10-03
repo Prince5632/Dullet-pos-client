@@ -24,7 +24,7 @@ import Badge from "../../components/ui/Badge";
 import Modal from "../../components/ui/Modal";
 import UserActivityTimeline from "../../components/users/UserActivityTimeline";
 import toast from "react-hot-toast";
-import { resolveCapturedImageSrc } from "../../utils/image";
+import { resolveCapturedImageSrc, resolveProfileImageSrc, resolveDocumentSrc } from "../../utils/image";
 
 const UserDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -80,7 +80,7 @@ const UserDetailsPage: React.FC = () => {
     try {
       setActionLoading(true);
       if (user.isActive) {
-        // Deactivate logic would go here
+        await userService.deactivateUser(user._id);
         toast.success("User deactivated successfully");
       } else {
         await userService.activateUser(user._id);
@@ -305,7 +305,7 @@ const UserDetailsPage: React.FC = () => {
           <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-6">
             <div className="flex flex-col items-center">
               <Avatar
-                src={resolveCapturedImageSrc(user.profilePhoto)}
+                src={resolveProfileImageSrc(user.profilePhoto)}
                 name={`${user.firstName} ${user.lastName}`}
                 size="xl"
                 className="mb-4"
@@ -353,6 +353,42 @@ const UserDetailsPage: React.FC = () => {
                         : ""}
                       )
                     </span>
+                  </div>
+                )}
+
+                {user.address && (
+                  <div className="flex items-start text-sm text-gray-600">
+                    <BuildingOfficeIcon className="h-4 w-4 mr-3 text-gray-400 mt-1" />
+                    <span className="space-y-0.5">
+                      {user.address.line1 && <div>{user.address.line1}</div>}
+                      {user.address.line2 && <div>{user.address.line2}</div>}
+                      {(user.address.city || user.address.state || user.address.pincode) && (
+                        <div>
+                          {[user.address.city, user.address.state]
+                            .filter(Boolean)
+                            .join(", ")}
+                          {user.address.pincode ? ` - ${user.address.pincode}` : ""}
+                        </div>
+                      )}
+                      {user.address.country && <div>{user.address.country}</div>}
+                    </span>
+                  </div>
+                )}
+
+                {(user.aadhaarNumber || user.panNumber) && (
+                  <div className="flex flex-col gap-2 text-sm text-gray-600">
+                    {user.aadhaarNumber && (
+                      <div className="flex items-center">
+                        <IdentificationIcon className="h-4 w-4 mr-3 text-gray-400" />
+                        <span>Aadhaar: {user.aadhaarNumber}</span>
+                      </div>
+                    )}
+                    {user.panNumber && (
+                      <div className="flex items-center">
+                        <IdentificationIcon className="h-4 w-4 mr-3 text-gray-400" />
+                        <span>PAN: {user.panNumber}</span>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -500,6 +536,48 @@ const UserDetailsPage: React.FC = () => {
               )}
             </div>
           </div>
+
+          {user.documents && user.documents.length > 0 && (
+            <div className="bg-white shadow-sm rounded-lg border border-gray-200">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900">Documents</h3>
+              </div>
+              <div className="p-6 space-y-3">
+                {user.documents.map((doc) => (
+                  <div
+                    key={doc._id || `${doc.type}-${doc.url}`}
+                    className="flex items-center justify-between border border-gray-200 rounded-md px-4 py-3"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {doc.type === "aadhaar"
+                          ? "Aadhaar"
+                          : doc.type === "pan"
+                          ? "PAN"
+                          : doc.label || "Document"}
+                      </p>
+                      {doc.fileName && (
+                        <p className="text-xs text-gray-500">{doc.fileName}</p>
+                      )}
+                      {doc.uploadedAt && (
+                        <p className="text-xs text-gray-400">
+                          Uploaded {formatDate(doc.uploadedAt)}
+                        </p>
+                      )}
+                    </div>
+                    <a
+                      href={resolveDocumentSrc(doc.url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                    >
+                      View
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* User Activity */}
           {showActivity && (

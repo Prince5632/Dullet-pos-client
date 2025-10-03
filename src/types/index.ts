@@ -46,6 +46,31 @@ export interface User {
   // Godown assignments
   primaryGodown?: Godown;
   accessibleGodowns?: Godown[];
+  address?: UserAddress;
+  aadhaarNumber?: string;
+  panNumber?: string;
+  documents?: UserDocument[];
+}
+
+export interface UserAddress {
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  country?: string;
+}
+
+export type UserDocumentType = "aadhaar" | "pan" | "other";
+
+export interface UserDocument {
+  _id?: string;
+  type: UserDocumentType;
+  url: string;
+  fileName?: string;
+  label?: string;
+  uploadedAt?: string;
+  mimeType?: string;
 }
 
 // Role Types
@@ -197,10 +222,24 @@ export interface CreateUserForm {
   profilePhoto?: File;
   primaryGodownId?: string;
   accessibleGodownIds?: string[];
+  address?: UserAddress;
+  aadhaarNumber?: string;
+  panNumber?: string;
+  aadhaarDocument?: File;
+  panDocument?: File;
+  otherDocuments?: File[];
+  otherDocumentsMeta?: { label?: string; type: UserDocumentType }[];
 }
 
 export interface UpdateUserForm extends Partial<CreateUserForm> {
   isActive?: boolean;
+  addressLine1?: string;
+  addressLine2?: string;
+  addressCity?: string;
+  addressState?: string;
+  addressPincode?: string;
+  addressCountry?: string;
+  removeDocumentIds?: string[];
 }
 
 export interface CreateRoleForm {

@@ -1,6 +1,6 @@
 import React from "react";
 import { cn, getInitials, getAvatarColor } from "../../utils";
-import { resolveCapturedImageSrc } from "../../utils/image";
+import { resolveProfileImageSrc } from "../../utils/image";
 
 interface AvatarProps {
   src?: string;
@@ -26,7 +26,7 @@ const Avatar: React.FC<AvatarProps> = ({
   const baseClasses =
     "inline-flex items-center justify-center rounded-full font-medium";
 
-  const resolvedSrc = resolveCapturedImageSrc(src);
+  const resolvedSrc = resolveProfileImageSrc(src);
 
   if (resolvedSrc) {
     return (

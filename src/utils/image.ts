@@ -39,6 +39,10 @@ export function resolveImageSrc(
 
   // If useBackendUrl is true and value looks like a file path, construct backend URL
   if (useBackendUrl && (value.includes('/') || value.includes('.'))) {
+    // If the value already starts with /uploads, don't add backendPath
+    if (value.startsWith('/uploads/')) {
+      return `${API_CONFIG.BASE_URL}${value}`;
+    }
     const cleanPath = value.startsWith('/') ? value : `/${value}`;
     return `${API_CONFIG.BASE_URL}${backendPath}${cleanPath}`;
   }
@@ -83,6 +87,27 @@ export function resolveProductImageSrc(value?: string | null): string | undefine
     backendPath: '/uploads/products',
     defaultImageType: 'jpeg'
   });
+}
+
+/**
+ * Specialized function for document URLs
+ * @param value - Document URL data
+ * @returns Resolved document URL
+ */
+export function resolveDocumentSrc(value?: string | null): string | undefined {
+  if (!value) return undefined;
+  
+  // If it's already a complete URL, return as is
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+    return value;
+  }
+  
+  // If it starts with /uploads, prepend backend URL
+  if (value.startsWith('/uploads/')) {
+    return `${API_CONFIG.BASE_URL}${value}`;
+  }
+  
+  return value;
 }
 
 /**

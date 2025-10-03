@@ -54,6 +54,39 @@ class UserService {
       formData.append('profilePhoto', userData.profilePhoto);
     }
 
+    // Add address information
+    if (userData.address) {
+      formData.append('address', JSON.stringify(userData.address));
+    }
+
+    // Identification numbers
+    if (userData.aadhaarNumber) {
+      formData.append('aadhaarNumber', userData.aadhaarNumber);
+    }
+
+    if (userData.panNumber) {
+      formData.append('panNumber', userData.panNumber);
+    }
+
+    // Identification documents
+    if (userData.aadhaarDocument) {
+      formData.append('aadhaarDocument', userData.aadhaarDocument);
+    }
+
+    if (userData.panDocument) {
+      formData.append('panDocument', userData.panDocument);
+    }
+
+    if (Array.isArray(userData.otherDocuments) && userData.otherDocuments.length) {
+      userData.otherDocuments.forEach((file) => {
+        formData.append('otherDocuments', file);
+      });
+    }
+
+    if (Array.isArray(userData.otherDocumentsMeta) && userData.otherDocumentsMeta.length) {
+      formData.append('otherDocumentsMeta', JSON.stringify(userData.otherDocumentsMeta));
+    }
+
     // Add godown assignments
     if (userData.primaryGodownId) {
       formData.append('primaryGodown', userData.primaryGodownId);
@@ -84,14 +117,51 @@ class UserService {
     
     // Add text fields (only if provided)
     Object.entries(userData).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && key !== 'profilePhoto') {
-        formData.append(key, String(value));
+      if (
+        value === undefined ||
+        value === null ||
+        key === 'profilePhoto' ||
+        key === 'accessibleGodownIds' ||
+        key === 'primaryGodownId' ||
+        key === 'aadhaarDocument' ||
+        key === 'panDocument' ||
+        key === 'address'
+      ) {
+        return;
       }
+
+      formData.append(key, String(value));
     });
+
+    if (userData.address) {
+      formData.append('address', JSON.stringify(userData.address));
+    }
     
     // Add profile photo if provided
     if (userData.profilePhoto) {
       formData.append('profilePhoto', userData.profilePhoto);
+    }
+
+    if (userData.aadhaarDocument) {
+      formData.append('aadhaarDocument', userData.aadhaarDocument);
+    }
+
+    if (userData.panDocument) {
+      formData.append('panDocument', userData.panDocument);
+    }
+
+    if (Array.isArray(userData.otherDocuments) && userData.otherDocuments.length) {
+      userData.otherDocuments.forEach((file) => {
+        formData.append('otherDocuments', file);
+      });
+    }
+
+    if (Array.isArray(userData.otherDocumentsMeta) && userData.otherDocumentsMeta.length) {
+      formData.append('otherDocumentsMeta', JSON.stringify(userData.otherDocumentsMeta));
+    }
+
+    if (Array.isArray(userData.removeDocumentIds) && userData.removeDocumentIds.length) {
+      formData.append('removeDocumentIds', JSON.stringify(userData.removeDocumentIds));
     }
 
     // Add godown assignments if provided
@@ -134,9 +204,9 @@ class UserService {
     }
   }
 
-  // Deactivate user (soft delete)
+  // Deactivate user (set isActive to false)
   async deactivateUser(id: string): Promise<void> {
-    const response = await apiService.delete(API_CONFIG.ENDPOINTS.USER_BY_ID(id));
+    const response = await apiService.put(API_CONFIG.ENDPOINTS.DEACTIVATE_USER(id));
     if (!response.success) {
       throw new Error(response.message || 'Failed to deactivate user');
     }

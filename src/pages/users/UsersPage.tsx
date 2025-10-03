@@ -71,7 +71,7 @@ const UsersPage: React.FC = () => {
     search: "",
     department: "",
     role: "",
-    status: "",
+    status: "", // Default to showing only active users
   });
 
   // Departments list
