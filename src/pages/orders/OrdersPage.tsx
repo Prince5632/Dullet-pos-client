@@ -435,11 +435,13 @@ const OrdersPage: React.FC = () => {
                 Created: {orderService.formatDate(visit.orderDate)}
               </div>
               <div className="text-xs text-gray-400">
-                {Math.ceil(
-                  (new Date().getTime() - new Date(visit.orderDate).getTime()) /
-                    (1000 * 60 * 60 * 24)
-                )}{" "}
-                days ago
+                {(() => {
+                  const daysAgo = Math.floor(
+                    (new Date().getTime() - new Date(visit.orderDate).getTime()) /
+                      (1000 * 60 * 60 * 24)
+                  );
+                  return daysAgo === 0 ? "Today" : `${daysAgo} day${daysAgo === 1 ? '' : 's'} ago`;
+                })()}
               </div>
             </div>
           ),
