@@ -54,7 +54,7 @@ interface DashboardStats {
     today: number;
     thisWeek: number;
     thisMonth: number;
-    growth: number;
+    // growth: number;
   };
 }
 
@@ -152,7 +152,7 @@ const DashboardPage: React.FC = () => {
           today: orderStats?.monthlyRevenue || 0,
           thisWeek: orderStats?.monthlyRevenue || 0,
           thisMonth: orderStats?.monthlyRevenue || 0,
-          growth: 5.2,
+          // growth: 5.2,
         }
       });
       
@@ -260,7 +260,7 @@ const DashboardPage: React.FC = () => {
                 subtitle: 'Today',
                 icon: BanknotesIcon,
                 bgColor: 'bg-emerald-500',
-                trend: stats.revenue.growth,
+                // trend: stats.revenue.growth,
               },
               {
                 label: 'Orders',
