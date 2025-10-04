@@ -25,7 +25,7 @@ import { toast } from "react-hot-toast";
 import { resolveCapturedImageSrc } from "../../utils/image";
 
 const visitSchema = yup.object().shape({
-  scheduleDate: yup.string().required("Schedule date is required"),
+  scheduleDate: yup.string().required("Visit date is required"),
   notes: yup.string(),
   address: yup.string(),
 });
@@ -375,12 +375,11 @@ const EditVisitPage: React.FC = () => {
                 <div className="p-3 sm:p-4 space-y-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                      Schedule Date <span className="text-red-500">*</span>
+                      Visit Date <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
                       {...register("scheduleDate")}
-                      min={new Date().toISOString().split("T")[0]}
                       className={`w-full px-3 py-2 text-sm border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                         errors.scheduleDate
                           ? "border-red-500"

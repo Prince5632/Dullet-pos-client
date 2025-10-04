@@ -32,10 +32,12 @@ import { resolveCapturedImageSrc } from "../../utils/image";
 interface DashboardStats {
   orders: {
     total: number;
+    totalVisits: number;
     pending: number;
     approved: number;
     completed: number;
     todayOrders: number;
+    todayVisits: number;
     todayRevenue: number;
     pendingApproval: number;
   };
@@ -260,10 +262,12 @@ const OrdersPage: React.FC = () => {
       setStats({
         orders: {
           total: orderStats?.totalOrders || 0,
+          totalVisits: orderStats?.totalVisits || 0,
           pending: orderStats?.pendingOrders || 0,
           approved: orderStats?.approvedOrders || 0,
           completed: orderStats?.completedOrders || 0,
           todayOrders: orderStats?.todayOrders || 0,
+          todayVisits: orderStats?.todayVisits || 0,
           todayRevenue: orderStats?.monthlyRevenue || 0,
           pendingApproval: orderStats?.pendingOrders || 0,
         },
@@ -459,7 +463,7 @@ const OrdersPage: React.FC = () => {
         },
         {
           key: "scheduleDate",
-          label: "Schedule",
+          label: "Visit Date",
           sortable: true,
           render: (_value, visit) => (
             <div className="min-w-0 py-1">
@@ -472,7 +476,7 @@ const OrdersPage: React.FC = () => {
                 <div
                   className={`text-xs ${
                     new Date(visit.scheduleDate) < new Date()
-                      ? "text-red-600"
+                      ? "text-gray-600"
                       : new Date(visit.scheduleDate).toDateString() ===
                         new Date().toDateString()
                       ? "text-blue-600"
@@ -480,7 +484,7 @@ const OrdersPage: React.FC = () => {
                   }`}
                 >
                   {new Date(visit.scheduleDate) < new Date()
-                    ? "Overdue"
+                    ? "Past"
                     : new Date(visit.scheduleDate).toDateString() ===
                       new Date().toDateString()
                     ? "Today"
@@ -703,7 +707,7 @@ const OrdersPage: React.FC = () => {
                   <p className="text-xs text-gray-500 hidden sm:block">
                     {viewType === "orders"
                       ? "Manage customer orders"
-                      : "Manage visits with scheduled tasks"}
+                      : "Log and manage customer visits"}
                   </p>
                 </div>
                 {/* View switch removed; visits has its own tab */}
@@ -951,8 +955,8 @@ const OrdersPage: React.FC = () => {
                         }
                         className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
-                        <option value="">Schedule Status</option>
-                        <option value="overdue">Overdue</option>
+                        <option value="">Visit Date Filter</option>
+                        <option value="overdue">Past Visits</option>
                         <option value="today">Today</option>
                         <option value="upcoming">Upcoming</option>
                       </select>
@@ -963,7 +967,7 @@ const OrdersPage: React.FC = () => {
                         className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
                         <option value="">Visit Status</option>
-                        <option value="scheduled">Scheduled</option>
+                        <option value="scheduled">Planned</option>
                         <option value="in-progress">In Progress</option>
                         <option value="completed">Completed</option>
                         <option value="cancelled">Cancelled</option>
@@ -1033,7 +1037,7 @@ const OrdersPage: React.FC = () => {
                   {
                     label: 'Orders',
                     value: stats.orders.total.toString(),
-                    subtitle: 'Total',
+                    subtitle: `${stats.orders.totalVisits} visits`,
                     icon: ClipboardDocumentListIcon,
                     bgColor: 'bg-blue-500',
                   },

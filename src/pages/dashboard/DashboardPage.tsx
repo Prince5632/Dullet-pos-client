@@ -36,10 +36,12 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 interface DashboardStats {
   orders: {
     total: number;
+    totalVisits: number;
     pending: number;
     approved: number;
     completed: number;
     todayOrders: number;
+    todayVisits: number;
     todayRevenue: number;
     pendingApproval: number;
   };
@@ -132,10 +134,12 @@ const DashboardPage: React.FC = () => {
       setStats({
         orders: {
           total: orderStats?.totalOrders || 0,
+          totalVisits: orderStats?.totalVisits || 0,
           pending: orderStats?.pendingOrders || 0,
           approved: orderStats?.approvedOrders || 0,
           completed: orderStats?.completedOrders || 0,
           todayOrders: orderStats?.todayOrders || 0,
+          todayVisits: orderStats?.todayVisits || 0,
           todayRevenue: orderStats?.monthlyRevenue || 0,
           pendingApproval: orderStats?.pendingOrders || 0,
         },

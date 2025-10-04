@@ -415,19 +415,19 @@ const VisitDetailsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Visit Schedule */}
+            {/* Visit Details */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200">
               <div className="px-3 sm:px-4 py-2.5 border-b border-gray-200">
                 <h3 className="text-sm font-semibold text-gray-900 flex items-center">
                   <CalendarIcon className="h-4 w-4 mr-1.5 text-blue-600" />
-                  Schedule
+                  Visit Information
                 </h3>
               </div>
               <div className="p-3 sm:p-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-medium text-gray-600 block mb-1">
-                      Scheduled Date
+                      Visit Date
                     </label>
                     <p className="text-sm text-gray-900">
                       {formatDate(visit.scheduleDate)}

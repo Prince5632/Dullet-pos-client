@@ -17,7 +17,7 @@ import { toast } from "react-hot-toast";
 
 const schema = yup.object({
   customer: yup.string().required("Customer is required"),
-  scheduleDate: yup.string().required("Schedule date is required"),
+  scheduleDate: yup.string().required("Visit date is required"),
   notes: yup.string().optional(),
 });
 
@@ -185,7 +185,7 @@ const CreateVisitPage: React.FC = () => {
     // Validate required fields first
     const missingFields = [];
     if (!data.customer) missingFields.push('Customer');
-    if (!data.scheduleDate) missingFields.push('Schedule Date');
+    if (!data.scheduleDate) missingFields.push('Visit Date');
     
     if (missingFields.length > 0) {
       toast.error(`Please fill in: ${missingFields.join(', ')}`);
@@ -376,12 +376,11 @@ const CreateVisitPage: React.FC = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Schedule Date <span className="text-red-500">*</span>
+                      Visit Date <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
                       {...register("scheduleDate")}
-                      min={new Date().toISOString().split("T")[0]} // disables past dates
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                     />
                     {errors.scheduleDate && (
@@ -468,7 +467,7 @@ const CreateVisitPage: React.FC = () => {
                           <div className="mt-2 text-sm text-yellow-700">
                             <ul className="list-disc pl-5 space-y-1">
                               {!selectedCustomerId && <li>Select a customer</li>}
-                              {!watch('scheduleDate') && <li>Set a schedule date</li>}
+                              {!watch('scheduleDate') && <li>Set a visit date</li>}
                             </ul>
                           </div>
                         </div>
