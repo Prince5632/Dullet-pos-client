@@ -296,7 +296,7 @@ const VisitDetailsPage: React.FC = () => {
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
                   {visit?.orderNumber || "Visit Details"}
                 </h1>
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                {/* <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   <Badge
                     className={`${currentStatusInfo.color} text-[10px] px-1.5 py-0.5`}
                   >
@@ -311,7 +311,7 @@ const VisitDetailsPage: React.FC = () => {
                       • {visit.customer.businessName}
                     </span>
                   )}
-                </div>
+                </div> */}
               </div>
             </div>
 
@@ -503,7 +503,7 @@ const VisitDetailsPage: React.FC = () => {
                 <h3 className="text-sm font-semibold text-gray-900">Summary</h3>
               </div>
               <div className="p-3 sm:p-4 space-y-3">
-                <div className="flex justify-between items-center">
+                {/* <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-600">Status</span>
                   <Badge
                     className={`${currentStatusInfo.color} text-[10px] px-1.5 py-0.5`}
@@ -511,7 +511,7 @@ const VisitDetailsPage: React.FC = () => {
                     <currentStatusInfo.icon className="h-3 w-3 mr-0.5" />
                     {visit.status.replace("_", " ")}
                   </Badge>
-                </div>
+                </div> */}
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-600">Type</span>
                   <span className="text-xs font-medium text-gray-900 capitalize">
