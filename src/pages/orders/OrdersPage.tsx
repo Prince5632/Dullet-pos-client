@@ -711,7 +711,7 @@ const OrdersPage: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              {hasPermission("orders.approve") && viewType === "orders" && (
+              {/* {hasPermission("orders.approve") && viewType === "orders" && (
                 <Link
                   to="/orders/approval"
                   className="relative inline-flex items-center justify-center px-2 py-1.5 border border-amber-200 text-xs font-medium rounded-lg text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
@@ -725,7 +725,7 @@ const OrdersPage: React.FC = () => {
                     </span>
                   )}
                 </Link>
-              )}
+              )} */}
               <Link
                 to={viewType === "orders" ? "/orders/new" : "/visits/new"}
                 className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"

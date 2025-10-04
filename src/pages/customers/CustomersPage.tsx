@@ -206,9 +206,81 @@ const CustomersPage: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="hidden lg:block overflow-x-auto">
-              <Table data={customers} columns={columns} loading={false} />
-            </div>
+            <>
+              {/* Mobile Card View */}
+              <div className="lg:hidden divide-y divide-gray-200">
+                {customers.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 px-4">
+                    <BuildingOfficeIcon className="h-12 w-12 text-gray-400 mb-3" />
+                    <p className="text-sm text-gray-500">No customers found</p>
+                  </div>
+                ) : (
+                  customers.map((customer) => (
+                    <div key={customer._id} className="p-4 hover:bg-gray-50">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <Avatar name={customer.businessName} size="sm" />
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-sm font-medium text-gray-900 truncate">{customer.businessName}</h3>
+                            <p className="text-xs text-gray-500">ID: {customer.customerId}</p>
+                          </div>
+                        </div>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                          customer.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {customer.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-1.5 mb-3">
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-gray-500 w-16">Type:</span>
+                          <span className="text-gray-900">{customer.customerType}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-gray-500 w-16">Location:</span>
+                          <span className="text-gray-900">{customer.address?.city}, {customer.address?.state}</span>
+                        </div>
+                        {customer.phone && (
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="text-gray-500 w-16">Phone:</span>
+                            <span className="text-gray-900">{customer.phone}</span>
+                          </div>
+                        )}
+                        {customer.location && (
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="text-gray-500 w-16">Map:</span>
+                            <a href={customer.location} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                              View Location
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Link 
+                          to={`/customers/${customer._id}`} 
+                          className="flex-1 text-center px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+                        >
+                          View Details
+                        </Link>
+                        <Link 
+                          to={`/customers/${customer._id}/edit`} 
+                          className="flex-1 text-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                        >
+                          Edit
+                        </Link>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden lg:block overflow-x-auto">
+                <Table data={customers} columns={columns} loading={false} />
+              </div>
+            </>
           )}
 
           {totalPages > 1 && (
