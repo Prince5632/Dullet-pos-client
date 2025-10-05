@@ -71,7 +71,7 @@ const UsersPage: React.FC = () => {
     search: "",
     department: "",
     role: "",
-    status: "", // Default to showing only active users
+    status: "true", // Default to showing only active users
   });
 
   // Departments list
@@ -105,8 +105,16 @@ const UsersPage: React.FC = () => {
 
       if (response.success && response.data) {
         setUsers(response.data.users);
-        setTotalUsers(response.pagination?.totalUsers || 0);
-        setTotalPages(response.pagination?.totalPages || 1);
+        
+        console.log('📊 Users Pagination:', {
+          totalPages: response.data.pagination?.totalPages,
+          totalUsers: response.data.pagination?.totalUsers,
+          currentPage: response.data.pagination?.currentPage,
+          fullResponse: response
+        });
+        
+        setTotalUsers(response.data.pagination?.totalUsers || 0);
+        setTotalPages(response.data.pagination?.totalPages || 1);
       }
     } catch (error: any) {
       if (error.name !== "CanceledError") {
@@ -699,21 +707,17 @@ const UsersPage: React.FC = () => {
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="grid grid-cols-2 gap-2 mb-4">
           <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
-            <div className="text-xs text-gray-500">Total</div>
+            <div className="text-xs text-gray-500">
+              {filters.status === "true" ? "Active Users" : filters.status === "false" ? "Inactive Users" : "Total Users"}
+            </div>
             <div className="text-sm font-semibold">{totalUsers}</div>
           </div>
           <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
-            <div className="text-xs text-gray-500">Active</div>
-            <div className="text-sm font-semibold text-green-600">
-              {users.filter((u) => u.isActive).length}
-            </div>
-          </div>
-          <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
-            <div className="text-xs text-gray-500">Inactive</div>
-            <div className="text-sm font-semibold text-red-600">
-              {users.filter((u) => !u.isActive).length}
+            <div className="text-xs text-gray-500">On This Page</div>
+            <div className="text-sm font-semibold text-blue-600">
+              {users.length}
             </div>
           </div>
         </div>

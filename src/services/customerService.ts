@@ -8,6 +8,8 @@ export interface CustomerListParams {
   search?: string;
   customerType?: string;
   isActive?: boolean | string;
+  state?: string;
+  city?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }

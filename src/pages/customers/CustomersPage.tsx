@@ -30,18 +30,15 @@ const CustomersPage: React.FC = () => {
         search,
         customerType: type,
         isActive: status,
+        state: stateFilter,
+        city: city,
         sortBy: 'businessName',
         sortOrder: 'asc',
       });
       if (res.success && res.data) {
-        const list = res.data.customers || [];
-        const filtered = list.filter(c =>
-          (!stateFilter || c.address?.state === stateFilter) &&
-          (!city || c.address?.city?.toLowerCase().includes(city.toLowerCase()))
-        );
-        setCustomers(filtered);
+        setCustomers(res.data.customers || []);
         setTotalPages(res.pagination?.totalPages || 1);
-        setTotalCustomers(res.pagination?.totalRecords || filtered.length);
+        setTotalCustomers(res.pagination?.totalRecords || 0);
       }
     } finally {
       setLoading(false);
@@ -52,6 +49,13 @@ const CustomersPage: React.FC = () => {
     const t = setTimeout(loadCustomers, 100);
     return () => clearTimeout(t);
   }, [page, limit, search, type, status, stateFilter, city]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    if (page !== 1) {
+      setPage(1);
+    }
+  }, [search, type, status, stateFilter, city]);
 
   const columns: TableColumn<Customer>[] = useMemo(() => [
     {
@@ -182,18 +186,16 @@ const CustomersPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="grid grid-cols-2 gap-2 mb-4">
           <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
-            <div className="text-xs text-gray-500">Total</div>
+            <div className="text-xs text-gray-500">
+              {status === "true" ? "Active Customers" : status === "false" ? "Inactive Customers" : "Total Customers"}
+            </div>
             <div className="text-sm font-semibold">{totalCustomers}</div>
           </div>
           <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
-            <div className="text-xs text-gray-500">Active</div>
-            <div className="text-sm font-semibold text-green-600">{customers.filter(c => c.isActive).length}</div>
-          </div>
-          <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
-            <div className="text-xs text-gray-500">Inactive</div>
-            <div className="text-sm font-semibold text-red-600">{customers.filter(c => !c.isActive).length}</div>
+            <div className="text-xs text-gray-500">On This Page</div>
+            <div className="text-sm font-semibold text-blue-600">{customers.length}</div>
           </div>
         </div>
 

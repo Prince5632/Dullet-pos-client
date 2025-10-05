@@ -112,23 +112,25 @@ const DashboardPage: React.FC = () => {
       // Fallback: compute user counts from paginated list if stats unavailable
       if (hasPermission('users.read')) {
         try {
-          const [allUsersRes, activeUsersRes] = await Promise.all([
-            userService.getUsers({ limit: 1 }),
-            userService.getUsers({ limit: 1, isActive: 'true' as any }),
-          ]);
-          const totalUsers = (allUsersRes as any)?.data?.pagination?.totalUsers
-            || (allUsersRes as any)?.pagination?.totalUsers
-            || 0;
-          const activeUsers = (activeUsersRes as any)?.data?.pagination?.totalUsers
-            || (activeUsersRes as any)?.pagination?.totalUsers
-            || 0;
+          // Use the same API call as user management page
+          const response = await userService.getUsers({ 
+            page: 1,
+            limit: 1, 
+            isActive: 'true'
+          });
+          
+          // Get count from data.pagination.totalUsers (based on actual API response structure)
+          const activeUsers = response.data?.pagination?.totalUsers || 0;
+          
           userStats = {
-            totalUsers,
+            totalUsers: activeUsers, // Show only active users count
             activeUsers,
             todayLogins: 0,
-            inactiveUsers: Math.max(totalUsers - activeUsers, 0),
+            inactiveUsers: 0,
           };
-        } catch {}
+        } catch (err) {
+          console.error('Failed to fetch user stats:', err);
+        }
       }
 
       setStats({
@@ -280,7 +282,7 @@ const DashboardPage: React.FC = () => {
               {
                 label: 'Users',
                 value: stats.users.total.toString(),
-                subtitle: `${stats.users.active} active`,
+                subtitle: 'Active users',
                 icon: UserGroupIcon,
                 bgColor: 'bg-purple-500',
               },
