@@ -114,6 +114,7 @@ export interface Godown {
   location: { city: string; state: string; area?: string };
   allowedProducts?: string[];
   isActive: boolean;
+  orderCount?: number;
 }
 
 // Attendance Types

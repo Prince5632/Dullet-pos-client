@@ -275,10 +275,18 @@ const DashboardPage: React.FC = () => {
                   <BuildingOfficeIcon className="h-4 w-4 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">
-                    All Godowns
+                  <p className="text-sm flex items-center gap-2 font-medium text-gray-900">
+                    All Godowns  <span className="text-[10px] text-emerald-700 bg-emerald-100 rounded px-1.5 py-0.5">
+                      Orders:{" "}
+                      {godowns.reduce((sum, x) => sum + (x.orderCount || 0), 0)}
+                    </span>
                   </p>
-                  <p className="text-xs text-gray-500">View across locations</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-gray-500">
+                      View across locations
+                    </p>
+                   
+                  </div>
                 </div>
               </div>
             </button>
@@ -303,10 +311,16 @@ const DashboardPage: React.FC = () => {
                     <BuildingOfficeIcon className="h-4 w-4 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium flex gap-2 text-gray-900">
                       {g.name}
+                       <span className="text-[10px] flex justify-center items-center text-gray-700 bg-gray-100 rounded px-1.5 py-0.5">
+                        Orders: {g.orderCount ?? 0}
+                      </span>
                     </p>
-                    <p className="text-xs text-gray-500">{g.location.city}</p>
+                    <div className="flex items-center  gap-2">
+                      <p className="text-xs text-gray-500">{g.location.city}</p>
+                     
+                    </div>
                   </div>
                 </div>
               </button>

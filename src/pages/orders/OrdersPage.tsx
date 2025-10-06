@@ -56,7 +56,7 @@ interface DashboardStats {
 
 const OrdersPage: React.FC = () => {
   const location = useLocation();
-  const isVisitsRoute = location.pathname.startsWith('/visits');
+  const isVisitsRoute = location.pathname.startsWith("/visits");
   const { hasPermission, user } = useAuth();
 
   // State
@@ -66,7 +66,9 @@ const OrdersPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [godowns, setGodowns] = useState<Godown[]>([]);
   const [godownFilter, setGodownFilter] = useState("");
-  const [viewType, setViewType] = useState<"orders" | "visits">(() => (isVisitsRoute ? "visits" : "orders"));
+  const [viewType, setViewType] = useState<"orders" | "visits">(() =>
+    isVisitsRoute ? "visits" : "orders"
+  );
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
 
@@ -112,7 +114,7 @@ const OrdersPage: React.FC = () => {
 
   const handleViewImage = (imageData: string | undefined, title: string) => {
     if (!imageData) return;
-    const formattedSrc = resolveCapturedImageSrc(imageData || '');
+    const formattedSrc = resolveCapturedImageSrc(imageData || "");
     if (formattedSrc) {
       setSelectedImage({ src: formattedSrc, title });
       setShowImageModal(true);
@@ -213,43 +215,50 @@ const OrdersPage: React.FC = () => {
 
   const fetchStats = useCallback(async () => {
     const roleName = user?.role?.name?.toLowerCase();
-    if (roleName !== 'super admin' && roleName !== 'admin') return;
+    if (roleName !== "super admin" && roleName !== "admin") return;
 
     try {
       setStatsLoading(true);
-      
+
       const promises = [];
-      
-      if (hasPermission('orders.read')) {
+
+      if (hasPermission("orders.read")) {
         promises.push(orderService.getOrderStats({ godownId: godownFilter }));
       }
 
       const results = await Promise.allSettled(promises);
-      
+
       let orderStats: any = null;
-      let userStats: { totalUsers: number; activeUsers: number; todayLogins: number; inactiveUsers: number } | null = null;
+      let userStats: {
+        totalUsers: number;
+        activeUsers: number;
+        todayLogins: number;
+        inactiveUsers: number;
+      } | null = null;
 
       let idx = 0;
-      if (hasPermission('orders.read')) {
-        if (results[idx]?.status === 'fulfilled') {
+      if (hasPermission("orders.read")) {
+        if (results[idx]?.status === "fulfilled") {
           orderStats = (results[idx] as PromiseFulfilledResult<any>).value;
         }
         idx += 1;
       }
 
       // Fallback: compute user counts from paginated list if stats unavailable
-      if (hasPermission('users.read')) {
+      if (hasPermission("users.read")) {
         try {
           const [allUsersRes, activeUsersRes] = await Promise.all([
             userService.getUsers({ limit: 1 }),
-            userService.getUsers({ limit: 1, isActive: 'true' as any }),
+            userService.getUsers({ limit: 1, isActive: "true" as any }),
           ]);
-          const totalUsers = (allUsersRes as any)?.data?.pagination?.totalUsers
-            || (allUsersRes as any)?.pagination?.totalUsers
-            || 0;
-          const activeUsers = (activeUsersRes as any)?.data?.pagination?.totalUsers
-            || (activeUsersRes as any)?.pagination?.totalUsers
-            || 0;
+          const totalUsers =
+            (allUsersRes as any)?.data?.pagination?.totalUsers ||
+            (allUsersRes as any)?.pagination?.totalUsers ||
+            0;
+          const activeUsers =
+            (activeUsersRes as any)?.data?.pagination?.totalUsers ||
+            (activeUsersRes as any)?.pagination?.totalUsers ||
+            0;
           userStats = {
             totalUsers,
             activeUsers,
@@ -281,10 +290,10 @@ const OrdersPage: React.FC = () => {
           thisWeek: orderStats?.monthlyRevenue || 0,
           thisMonth: orderStats?.monthlyRevenue || 0,
           growth: 5.2,
-        }
+        },
       });
     } catch (error) {
-      console.error('Failed to fetch stats:', error);
+      console.error("Failed to fetch stats:", error);
     } finally {
       setStatsLoading(false);
     }
@@ -437,10 +446,13 @@ const OrdersPage: React.FC = () => {
               <div className="text-xs text-gray-400">
                 {(() => {
                   const daysAgo = Math.floor(
-                    (new Date().getTime() - new Date(visit.orderDate).getTime()) /
+                    (new Date().getTime() -
+                      new Date(visit.orderDate).getTime()) /
                       (1000 * 60 * 60 * 24)
                   );
-                  return daysAgo === 0 ? "Today" : `${daysAgo} day${daysAgo === 1 ? '' : 's'} ago`;
+                  return daysAgo === 0
+                    ? "Today"
+                    : `${daysAgo} day${daysAgo === 1 ? "" : "s"} ago`;
                 })()}
               </div>
             </div>
@@ -529,7 +541,7 @@ const OrdersPage: React.FC = () => {
                   title="View Image"
                 >
                   <img
-                    src={resolveCapturedImageSrc(visit.capturedImage) || ''}
+                    src={resolveCapturedImageSrc(visit.capturedImage) || ""}
                     alt="Check In"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                   />
@@ -897,19 +909,6 @@ const OrdersPage: React.FC = () => {
                         <option value="urgent">Urgent</option>
                       </select>
 
-                      <select
-                        value={godownFilter}
-                        onChange={(e) => setGodownFilter(e.target.value)}
-                        className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      >
-                        <option value="">All Godowns</option>
-                        {godowns.map((g) => (
-                          <option key={g._id} value={g._id}>
-                            {g.name}
-                          </option>
-                        ))}
-                      </select>
-
                       <input
                         type="number"
                         value={minAmountFilter}
@@ -957,122 +956,200 @@ const OrdersPage: React.FC = () => {
         </div>
 
         {/* Stats Section - Super Admin/Admin only */}
-        {viewType === "orders" && (user?.role?.name?.toLowerCase() === 'super admin' || user?.role?.name?.toLowerCase() === 'admin') && (
-          <>
-            {/* Godown Selector */}
-            {godowns.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 p-3 mb-4">
-                <div className="flex items-center gap-2">
-                  <BuildingOfficeIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                  <select
-                    value={godownFilter}
-                    onChange={(e) => setGodownFilter(e.target.value)}
-                    className="flex-1 text-sm border-0 focus:ring-0 bg-transparent text-gray-700 font-medium"
-                  >
-                    <option value="">All Godowns</option>
-                    {godowns.map(g => (
-                      <option key={g._id} value={g._id}>
-                        {g.name} - {g.location.city}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+        <>
+          {/* Godown Selector - Cards (matches Dashboard design) */}
+          {godowns.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 p-3 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <BuildingOfficeIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                <span className="text-sm font-semibold text-gray-700">
+                  Select Godown
+                </span>
               </div>
-            )}
-
-            {/* Stats Grid */}
-            {stats && !statsLoading && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                {[
-                  {
-                    label: 'Revenue',
-                    value: `₹${((stats.revenue.today || 0) / 1000).toFixed(1)}k`,
-                    subtitle: 'Today',
-                    icon: BanknotesIcon,
-                    bgColor: 'bg-emerald-500',
-                    trend: stats.revenue.growth,
-                  },
-                  {
-                    label: 'Orders',
-                    value: stats.orders.total.toString(),
-                    subtitle: `${stats.orders.totalVisits} visits`,
-                    icon: ClipboardDocumentListIcon,
-                    bgColor: 'bg-blue-500',
-                  },
-                  {
-                    label: 'Pending',
-                    value: stats.orders.pendingApproval.toString(),
-                    subtitle: 'Approval',
-                    icon: ExclamationTriangleIcon,
-                    bgColor: 'bg-amber-500',
-                    urgent: stats.orders.pendingApproval > 0,
-                  },
-                  {
-                    label: 'Users',
-                    value: stats.users.total.toString(),
-                    subtitle: `${stats.users.active} active`,
-                    icon: UserGroupIcon,
-                    bgColor: 'bg-purple-500',
-                  },
-                ].map((stat) => (
-                  <div
-                    key={stat.label}
-                    className={`relative bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-sm ${
-                      stat.urgent ? 'ring-2 ring-amber-200' : ''
-                    }`}
-                  >
-                    <div className={`${stat.bgColor} rounded-lg p-2 w-fit mb-2`}>
-                      <stat.icon className="h-4 w-4 text-white" />
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                {/* All Godowns card */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGodownFilter("");
+                  }}
+                  className={`text-left rounded-lg border p-3 transition-colors ${
+                    godownFilter === ""
+                      ? "border-emerald-500 bg-emerald-50"
+                      : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
+                  }`}
+                  aria-pressed={godownFilter === ""}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-md bg-emerald-100">
+                      <BuildingOfficeIcon className="h-4 w-4 text-emerald-600" />
                     </div>
-                    <div className="flex items-baseline gap-1">
-                      <p className="text-xl sm:text-2xl font-bold text-gray-900">{stat.value}</p>
-                      {stat.trend !== undefined && (
-                        <span className={`text-xs ${stat.trend >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {stat.trend >= 0 ? '↑' : '↓'}{Math.abs(stat.trend)}%
+                    <div>
+                      <p className="text-sm flex items-center gap-2 font-medium text-gray-900">
+                        All Godowns
+                        <span className="text-[10px] text-emerald-700 bg-emerald-100 rounded px-1.5 py-0.5">
+                          Orders:{" "}
+                          {godowns.reduce(
+                            (sum, x) => sum + (x.orderCount || 0),
+                            0
+                          )}
                         </span>
-                      )}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-gray-500">
+                          View across locations
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-600 mt-0.5">{stat.label}</p>
-                    <p className="text-[10px] text-gray-400">{stat.subtitle}</p>
-                    {stat.urgent && (
-                      <div className="absolute top-2 right-2 h-2 w-2 bg-amber-400 rounded-full animate-pulse"></div>
-                    )}
                   </div>
+                </button>
+
+                {godowns.map((g) => (
+                  <button
+                    key={g._id}
+                    type="button"
+                    onClick={() => {
+                      setGodownFilter(g._id);
+                    }}
+                    className={`text-left rounded-lg border p-3 transition-colors ${
+                      godownFilter === g._id
+                        ? "border-emerald-500 bg-emerald-50"
+                        : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
+                    }`}
+                    aria-pressed={godownFilter === g._id}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-md bg-blue-100">
+                        <BuildingOfficeIcon className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium flex gap-2 text-gray-900">
+                          {g.name}
+                          <span className="text-[10px] flex justify-center items-center text-gray-700 bg-gray-100 rounded px-1.5 py-0.5">
+                            Orders: {g.orderCount ?? 0}
+                          </span>
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-gray-500">
+                            {g.location.city}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
                 ))}
               </div>
-            )}
+            </div>
+          )}
 
-            {statsLoading && (
-              <div className="flex items-center justify-center py-4 mb-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-              </div>
-            )}
-          </>
-        )}
+          {/* Stats Grid */}
+          {stats && !statsLoading && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              {[
+                {
+                  label: "Revenue",
+                  value: `₹${((stats.revenue.today || 0) / 1000).toFixed(1)}k`,
+                  subtitle: "Today",
+                  icon: BanknotesIcon,
+                  bgColor: "bg-emerald-500",
+                  trend: stats.revenue.growth,
+                },
+                {
+                  label: "Orders",
+                  value: stats.orders.total.toString(),
+                  subtitle: `${stats.orders.totalVisits} visits`,
+                  icon: ClipboardDocumentListIcon,
+                  bgColor: "bg-blue-500",
+                },
+                {
+                  label: "Pending",
+                  value: stats.orders.pendingApproval.toString(),
+                  subtitle: "Approval",
+                  icon: ExclamationTriangleIcon,
+                  bgColor: "bg-amber-500",
+                  urgent: stats.orders.pendingApproval > 0,
+                },
+                {
+                  label: "Users",
+                  value: stats.users.total.toString(),
+                  subtitle: `${stats.users.active} active`,
+                  icon: UserGroupIcon,
+                  bgColor: "bg-purple-500",
+                },
+              ].map((stat) => (
+            <div
+  key={stat.label}
+  className={`relative flex items-start gap-3 bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-sm ${
+    stat.urgent ? "ring-2 ring-amber-200" : ""
+  }`}
+>
+  <div className={`${stat.bgColor} rounded-lg p-2 mt-[4px] shrink-0`}>
+    <stat.icon className="h-4 w-4 text-white" />
+  </div>
+
+  <div className="flex flex-col">
+    <div className="flex items-baseline gap-2">
+      <p className="text-xl sm:text-2xl font-bold text-gray-900">
+        {stat.value}
+      </p>
+      {stat.trend !== undefined && (
+        <span
+          className={`text-xs ${
+            stat.trend >= 0 ? "text-emerald-600" : "text-red-600"
+          }`}
+        >
+          {stat.trend >= 0 ? "↑" : "↓"}
+          {Math.abs(stat.trend)}%
+        </span>
+      )}
+    </div>
+    <p className="text-xs text-gray-600">{stat.label}</p>
+    <p className="text-[10px] text-gray-400">{stat.subtitle}</p>
+  </div>
+
+  {stat.urgent && (
+    <div className="absolute top-2 right-2 h-2 w-2 bg-amber-400 rounded-full animate-pulse"></div>
+  )}
+</div>
+
+              ))}
+            </div>
+          )}
+
+          {statsLoading && (
+            <div className="flex items-center justify-center py-4 mb-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            </div>
+          )}
+        </>
 
         {/* Compact Stats for other roles */}
-        {!loading && orders.length > 0 && viewType === "orders" && user?.role?.name?.toLowerCase() !== 'super admin' && user?.role?.name?.toLowerCase() !== 'admin' && (
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
-              <div className="text-xs text-gray-500">Total</div>
-              <div className="font-semibold text-sm">{totalOrders}</div>
-            </div>
-            <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
-              <div className="text-xs text-gray-500">Pending</div>
-              <div className="font-semibold text-sm text-amber-600">
-                {orders.filter((o) => o.status === "pending").length}
+        {!loading &&
+          orders.length > 0 &&
+          viewType === "orders" &&
+          user?.role?.name?.toLowerCase() !== "super admin" &&
+          user?.role?.name?.toLowerCase() !== "admin" && (
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
+                <div className="text-xs text-gray-500">Total</div>
+                <div className="font-semibold text-sm">{totalOrders}</div>
+              </div>
+              <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
+                <div className="text-xs text-gray-500">Pending</div>
+                <div className="font-semibold text-sm text-amber-600">
+                  {orders.filter((o) => o.status === "pending").length}
+                </div>
+              </div>
+              <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
+                <div className="text-xs text-gray-500">Value</div>
+                <div className="font-semibold text-xs">
+                  {orderService.formatCurrency(
+                    orders.reduce((sum, o) => sum + o.totalAmount, 0)
+                  )}
+                </div>
               </div>
             </div>
-            <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
-              <div className="text-xs text-gray-500">Value</div>
-              <div className="font-semibold text-xs">
-                {orderService.formatCurrency(
-                  orders.reduce((sum, o) => sum + o.totalAmount, 0)
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+          )}
 
         {/* Orders Table */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -1092,7 +1169,9 @@ const OrdersPage: React.FC = () => {
               <p className="text-xs text-gray-500 mb-4">
                 {statusFilter || searchTerm
                   ? "Try adjusting filters"
-                  : viewType === "orders" ? "Create your first order" : "Create your first visit"}
+                  : viewType === "orders"
+                  ? "Create your first order"
+                  : "Create your first visit"}
               </p>
               {!statusFilter && !searchTerm ? (
                 viewType === "orders" ? (
@@ -1155,13 +1234,21 @@ const OrdersPage: React.FC = () => {
                       </div>
                       <div className="flex items-center space-x-1">
                         <Link
-                          to={viewType === "visits" ? `/visits/${order._id}` : `/orders/${order._id}`}
+                          to={
+                            viewType === "visits"
+                              ? `/visits/${order._id}`
+                              : `/orders/${order._id}`
+                          }
                           className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                         >
                           <EyeIcon className="h-4 w-4" />
                         </Link>
                         <Link
-                          to={viewType === "visits" ? `/visits/${order._id}/edit` : `/orders/${order._id}/edit`}
+                          to={
+                            viewType === "visits"
+                              ? `/visits/${order._id}/edit`
+                              : `/orders/${order._id}/edit`
+                          }
                           className="p-1.5 text-gray-600 hover:bg-gray-50 rounded-md transition-colors"
                         >
                           <PencilIcon className="h-4 w-4" />
@@ -1172,7 +1259,8 @@ const OrdersPage: React.FC = () => {
                               handleViewImage(
                                 order.capturedImage,
                                 `Visit Image - ${
-                                  order.customer?.businessName || "Unknown Customer"
+                                  order.customer?.businessName ||
+                                  "Unknown Customer"
                                 }`
                               )
                             }
@@ -1180,7 +1268,10 @@ const OrdersPage: React.FC = () => {
                             title="View Image"
                           >
                             <img
-                              src={resolveCapturedImageSrc(order.capturedImage) || ''}
+                              src={
+                                resolveCapturedImageSrc(order.capturedImage) ||
+                                ""
+                              }
                               alt="Visit Image"
                               className="w-4 h-4 object-cover rounded"
                             />
