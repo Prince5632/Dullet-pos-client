@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDownIcon, MagnifyingGlassIcon, UserIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { customerService } from '../../services/customerService';
-import type { Customer, CreateCustomerForm } from '../../types';
+import type { Customer, CreateCustomerForm, Godown } from '../../types';
+import Select from 'react-select';
+import { apiService } from '../../services/api';
+import { API_CONFIG } from '../../config/api';
 import { toast } from 'react-hot-toast';
 import Modal from '../ui/Modal'; // Import your improved Modal component
 
@@ -44,8 +47,12 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
       pincode: '',
     },
     customerType: 'Retailer',
+    assignedGodownId: '',
+
   });
   const [createLoading, setCreateLoading] = useState(false);
+  const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [godownsLoading, setGodownsLoading] = useState(false);
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -53,6 +60,18 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
   // Load customers on mount
   useEffect(() => {
     loadCustomers();
+    // Load godowns for assignment in create modal
+    (async () => {
+      try {
+        setGodownsLoading(true);
+        const res = await apiService.get<{ godowns: Godown[] }>(API_CONFIG.ENDPOINTS.GODOWNS);
+        if (res.success && res.data) setGodowns(res.data.godowns);
+      } catch (err) {
+        console.error('Failed to load godowns:', err);
+      } finally {
+        setGodownsLoading(false);
+      }
+    })();
   }, []);
 
   // Handle selected customer ID change
@@ -483,6 +502,24 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
               <option value="Distributor">Distributor</option>
               <option value="Wholesaler">Wholesaler</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Assigned Godown
+            </label>
+            <Select
+              isLoading={godownsLoading}
+              options={godowns.map(g => ({ value: g._id, label: `${g.name}${g.code ? ` (${g.code})` : ''}` }))}
+              value={
+                createFormData.assignedGodownId
+                  ? { value: createFormData.assignedGodownId, label: godowns.find(g => g._id === createFormData.assignedGodownId)?.name || 'Selected' }
+                  : null
+              }
+              onChange={(opt) => handleCreateFormChange('assignedGodownId', (opt as any)?.value)}
+              placeholder="Select godown"
+              classNamePrefix="react-select"
+            />
           </div>
 
           {/* Action Buttons */}

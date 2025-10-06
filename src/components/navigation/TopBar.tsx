@@ -79,25 +79,25 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
               {user?.profilePhoto ? (
                 <img
                   className="h-8 w-8 rounded-full object-cover"
-                  src={resolveCapturedImageSrc(user.profilePhoto)}
-                  alt={user.fullName}
+                  src={resolveCapturedImageSrc(user?.profilePhoto)}
+                  alt={user?.firstName + ' ' + user?.lastName || 'User'}
                 />
               ) : (
                 <div className={cn(
                   'h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-medium',
-                  getAvatarColor(user?.fullName || 'User')
+                  getAvatarColor(user?.firstName + ' ' + user?.lastName || 'User')
                 )}>
-                  {getInitials(user?.fullName || 'User')}
+                  {getInitials(user?.firstName + ' ' + user?.lastName || 'User')}
                 </div>
               )}
               
               {/* User info */}
               <span className="hidden lg:flex lg:items-center ml-3">
                 <span className="text-sm font-semibold leading-6 text-gray-900">
-                  {user?.fullName}
+                  {user?.firstName + ' ' + user?.lastName}
                 </span>
                 <span className="ml-2 text-xs text-gray-500">
-                  {user?.role?.name}
+                  {/* {user?.role?.name} */}
                 </span>
               </span>
             </Menu.Button>

@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { customerService } from '../../services/customerService';
-import type { CreateCustomerForm } from '../../types';
+import type { CreateCustomerForm, Godown } from '../../types';
 import { BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import Select from 'react-select';
+import { apiService } from '../../services/api';
+import { API_CONFIG } from '../../config/api';
 
 const CreateCustomerPage: React.FC = () => {
   const navigate = useNavigate();
@@ -14,7 +17,24 @@ const CreateCustomerPage: React.FC = () => {
     address: { street: '', city: '', state: 'Punjab', pincode: '', country: 'India' },
     customerType: 'Retailer',
     notes: '',
+    assignedGodownId: ''
   });
+  const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [godownsLoading, setGodownsLoading] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setGodownsLoading(true);
+        const res = await apiService.get<{ godowns: Godown[] }>(API_CONFIG.ENDPOINTS.GODOWNS);
+        if (res.success && res.data) setGodowns(res.data.godowns);
+      } catch (err) {
+        console.error('Failed to load godowns:', err);
+      } finally {
+        setGodownsLoading(false);
+      }
+    })();
+  }, []);
 
   const update = (path: string, value: any) => {
     if (path.includes('.')) {
@@ -67,6 +87,21 @@ const CreateCustomerPage: React.FC = () => {
           <input className="px-3 py-2 border rounded" placeholder="State" value={form.address.state} onChange={e => update('address.state', e.target.value)} />
           <input className="px-3 py-2 border rounded" placeholder="Pincode" value={form.address.pincode} onChange={e => update('address.pincode', e.target.value)} />
           <input className="px-3 py-2 border rounded sm:col-span-2" placeholder="Notes" value={form.notes || ''} onChange={e => update('notes', e.target.value)} />
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Godown</label>
+            <Select
+              isLoading={godownsLoading}
+              options={godowns.map(g => ({ value: g._id, label: `${g.name}${g.code ? ` (${g.code})` : ''}` }))}
+              value={
+                form.assignedGodownId
+                  ? { value: form.assignedGodownId, label: godowns.find(g => g._id === form.assignedGodownId)?.name || 'Selected' }
+                  : null
+              }
+              onChange={(opt) => update('assignedGodownId', (opt as any)?.value)}
+              placeholder="Select godown"
+              classNamePrefix="react-select"
+            />
+          </div>
         </div>
 
         <div className="flex justify-end gap-2">

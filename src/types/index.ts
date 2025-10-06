@@ -288,6 +288,7 @@ export interface Customer {
   updatedBy?: User;
   createdAt: string;
   updatedAt: string;
+  assignedGodownId?: string;
   // Virtual fields
   fullAddress?: string;
   creditUtilization?: number;
@@ -312,6 +313,7 @@ export interface CreateCustomerForm {
   creditDays?: number;
   customerType: "Retailer" | "Distributor" | "Wholesaler";
   notes?: string;
+  assignedGodownId?: string;
 }
 
 export interface UpdateCustomerForm extends Partial<CreateCustomerForm> {}

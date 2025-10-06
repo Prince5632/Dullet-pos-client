@@ -809,11 +809,11 @@ const OrdersPage: React.FC = () => {
                     }`}
                   >
                     <span>{status.label}</span>
-                    {status.count > 0 && (
+                    {/* {status.count > 0 && (
                       <span className="text-xs bg-white rounded px-1">
                         {status.count}
                       </span>
-                    )}
+                    )} */}
                   </button>
                 ))}
               </div>

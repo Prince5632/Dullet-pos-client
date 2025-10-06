@@ -245,7 +245,8 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
       </div>
-
+  {(roleName === "super admin" || roleName === "admin") && (
+        <>
       {/* Godown Selector - Cards */}
       {godowns.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-3">
@@ -328,6 +329,7 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
       )}
+      </>)}
 
       {/* Role-based Content */}
       {(roleName === "super admin" || roleName === "admin") && (
@@ -454,56 +456,7 @@ const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Recent Orders */}
-          {recentOrders.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-900">
-                  Recent Orders
-                </h3>
-                <Link
-                  to="/orders"
-                  className="text-xs font-medium text-emerald-600 hover:text-emerald-700 flex items-center"
-                >
-                  View all <ChevronRightIcon className="h-3 w-3 ml-1" />
-                </Link>
-              </div>
-              <div className="divide-y divide-gray-100">
-                {recentOrders.slice(0, 5).map((order) => (
-                  <Link
-                    key={order._id}
-                    to={`/orders/${order._id}`}
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
-                  >
-                    <Avatar
-                      name={order.customer?.businessName || "Customer"}
-                      size="sm"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {order.orderNumber}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {order.customer?.businessName}
-                      </p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-sm font-semibold text-gray-900">
-                        ₹{((order.totalAmount || 0) / 1000).toFixed(1)}k
-                      </p>
-                      <Badge
-                        className={`${orderService.getStatusColor(
-                          order.status
-                        )} text-[10px] px-1.5 py-0.5`}
-                      >
-                        {order.status}
-                      </Badge>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
+
         </>
       )}
 
@@ -677,12 +630,12 @@ const DashboardPage: React.FC = () => {
       )}
 
       {/* Recent Orders for Sales/Manager */}
-      {(roleName === "manager" || roleName === "sales executive") &&
+      {(roleName === "super admin" || roleName === "admin") &&
         recentOrders.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
               <h3 className="text-sm font-semibold text-gray-900">
-                My Recent Orders
+                Recent Orders
               </h3>
               <Link
                 to="/orders"
