@@ -803,7 +803,7 @@ Dullet POS Team`;
                               {item.quantity} {item.unit}
                             </td>
                             <td className="px-4 py-2.5 text-xs text-gray-900">
-                              {orderService.formatCurrency(item.ratePerUnit)}
+                              {item.ratePerUnit}
                             </td>
                             <td className="px-4 py-2.5 text-xs font-medium text-gray-900">
                               {orderService.formatCurrency(item.totalAmount)}

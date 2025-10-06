@@ -129,19 +129,61 @@ export const generateDeliveryNotePDF = (order: Order, downloadDirectly: boolean 
 
   yPos += 5;
 
-  // Prepare table data
-  const tableData = (order.items || []).map((item, index) => [
-    (index + 1).toString(),
-    item.productName || 'N/A',
-    item.packaging || 'N/A',
-    `${Number(item.quantity || 0).toFixed(2)} ${item.unit || 'KG'}`,
-    `Rs ${Number(item.ratePerUnit || 0).toFixed(2)}`,
-    `Rs ${Number(item.totalAmount || 0).toFixed(2)}`,
-  ]);
+  // Check if all items have "5kg Bags" packaging
+  const allItemsHave5kgBags = (order.items || []).every(item => 
+    item.packaging === '5kg Bags'
+  );
+
+  // Prepare table data conditionally
+  const tableData = (order.items || []).map((item, index) => {
+    const baseData = [
+      (index + 1).toString(),
+      item.productName || 'N/A',
+    ];
+    
+    if (!allItemsHave5kgBags) {
+      baseData.push(item.packaging || 'N/A');
+    }
+    
+    baseData.push(
+      `${Number(item.quantity || 0).toFixed(2)} ${item.unit || 'KG'}`,
+      `Rs ${Number(item.ratePerUnit || 0).toFixed(2)}`,
+      `Rs ${Number(item.totalAmount || 0).toFixed(2)}`
+    );
+    
+    return baseData;
+  });
+
+  // Prepare table headers conditionally
+  const tableHeaders = ['#', 'Product'];
+  if (!allItemsHave5kgBags) {
+    tableHeaders.push('Packaging');
+  }
+  tableHeaders.push('Quantity', 'Rate', 'Amount');
+
+  // Prepare column styles conditionally
+  const columnStyles: { [key: number]: { cellWidth: number } } = {
+    0: { cellWidth: 10 },
+  };
+
+  if (allItemsHave5kgBags) {
+    // Without packaging column - redistribute widths
+    columnStyles[1] = { cellWidth: 65 }; // Product column wider
+    columnStyles[2] = { cellWidth: 35 }; // Quantity
+    columnStyles[3] = { cellWidth: 30 }; // Rate
+    columnStyles[4] = { cellWidth: 30 }; // Amount
+  } else {
+    // With packaging column - original widths
+    columnStyles[1] = { cellWidth: 50 }; // Product
+    columnStyles[2] = { cellWidth: 30 }; // Packaging
+    columnStyles[3] = { cellWidth: 30 }; // Quantity
+    columnStyles[4] = { cellWidth: 25 }; // Rate
+    columnStyles[5] = { cellWidth: 25 }; // Amount
+  }
 
   autoTable(doc, {
     startY: yPos,
-    head: [['#', 'Product', 'Packaging', 'Quantity', 'Rate', 'Amount']],
+    head: [tableHeaders],
     body: tableData,
     theme: 'grid',
     headStyles: {
@@ -153,14 +195,7 @@ export const generateDeliveryNotePDF = (order: Order, downloadDirectly: boolean 
     bodyStyles: {
       fontSize: 8,
     },
-    columnStyles: {
-      0: { cellWidth: 10 },
-      1: { cellWidth: 50 },
-      2: { cellWidth: 30 },
-      3: { cellWidth: 30 },
-      4: { cellWidth: 25 },
-      5: { cellWidth: 25 },
-    },
+    columnStyles,
     margin: { left: 14, right: 14 },
   });
 
