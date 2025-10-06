@@ -67,7 +67,8 @@ const QuickOrderPage: React.FC = () => {
   const [activeProduct, setActiveProduct] = useState<QuickProduct | null>(null);
   const [kg, setKg] = useState<number>(0);
   const [isBagSelection, setIsBagSelection] = useState(false);
-const [bagPieces, setBagPieces] = useState<number>(1);
+  const [bagPieces, setBagPieces] = useState<number>(1);
+  const [currentBagSize, setCurrentBagSize] = useState<number>(40); // Track current bag size (5 or 40)
 
   // Other minimal fields
   const [paymentTerms, setPaymentTerms] = useState<'Cash' | 'Credit' | 'Advance'>('Cash');
@@ -231,33 +232,26 @@ const [bagPieces, setBagPieces] = useState<number>(1);
     setActiveProduct(null);
     setIsBagSelection(false);
     setBagPieces(1);
+    setCurrentBagSize(40); // Reset to default
   };
 
   const confirmQty = () => {
     if (!activeProduct) return;
 
     const bagSize = activeProduct.bagSizeKg;
-    const is40kgBagProduct = bagSize === 40;
-    const isBag = isBagSelection && Boolean(bagSize);
-
     let totalKg = kg;
     let pieceCount: number | undefined = undefined;
     let bagsCount: number | undefined = undefined;
 
-    if (isBagSelection && bagSize) {
-      if (is40kgBagProduct) {
-        const pieces = Number.isFinite(bagPieces) ? bagPieces : 0;
-        if (!pieces || pieces <= 0) {
-          toast.error('Enter valid bag pieces');
-          return;
-        }
-        pieceCount = pieces;
-        totalKg = pieces * bagSize;
-        bagsCount = pieces;
-      } else {
-        totalKg = bagSize;
-        bagsCount = 1;
+    if (isBagSelection) {
+      const pieces = Number.isFinite(bagPieces) ? bagPieces : 0;
+      if (!pieces || pieces <= 0) {
+        toast.error('Enter valid bag pieces');
+        return;
       }
+      pieceCount = pieces;
+      totalKg = pieces * currentBagSize;
+      bagsCount = pieces;
     }
 
     if (!totalKg || totalKg <= 0) {
@@ -266,8 +260,11 @@ const [bagPieces, setBagPieces] = useState<number>(1);
     }
 
     let packaging: SelectedItem['packaging'] = 'Loose';
-    if (isBag) {
-      if (activeProduct.bagSizeKg === 40) {
+    if (isBagSelection) {
+      // Determine packaging based on current bag size
+      if (currentBagSize === 5) {
+        packaging = '5kg Bags';
+      } else if (currentBagSize === 40) {
         packaging = '40kg Bag';
       } else if (activeProduct.defaultPackaging && activeProduct.defaultPackaging !== 'Loose') {
         packaging = activeProduct.defaultPackaging as typeof packaging;
@@ -282,7 +279,7 @@ const [bagPieces, setBagPieces] = useState<number>(1);
       quantityKg: totalKg,
       packaging,
       bags: bagsCount,
-      isBagSelection: isBag,
+      isBagSelection: isBagSelection,
       bagPieces: pieceCount,
     };
     setSelectedItems(prev => ({ ...prev, [activeProduct.key]: item }));
@@ -305,17 +302,27 @@ const [bagPieces, setBagPieces] = useState<number>(1);
     const kgValue = computeItemKg(it);
     const normalizedKg = Number.isFinite(kgValue) ? kgValue : 0;
     if (it.isBagSelection) {
-      const bagSize = it.product?.bagSizeKg || (it.bagPieces ? normalizedKg / it.bagPieces : undefined);
-      if (it.bagPieces && it.bagPieces > 0 && bagSize) {
-        const displayBagSize = Math.round(bagSize * 100) / 100;
+      // Determine the actual bag size used based on packaging or calculation
+      let actualBagSize: number;
+      if (it.packaging === '5kg Bags') {
+        actualBagSize = 5;
+      } else if (it.packaging === '40kg Bag') {
+        actualBagSize = 40;
+      } else if (it.bagPieces && it.bagPieces > 0) {
+        // Calculate bag size from total kg and pieces
+        actualBagSize = normalizedKg / it.bagPieces;
+      } else {
+        // Fallback to product bag size
+        actualBagSize = it.product?.bagSizeKg || 40;
+      }
+
+      if (it.bagPieces && it.bagPieces > 0) {
+        const displayBagSize = Math.round(actualBagSize * 100) / 100;
         return `${it.bagPieces} × ${displayBagSize}kg (${normalizedKg}kg)`;
       }
-      if (it.bags && it.bags > 0 && bagSize) {
-        const displayBagSize = Math.round(bagSize * 100) / 100;
+      if (it.bags && it.bags > 0) {
+        const displayBagSize = Math.round(actualBagSize * 100) / 100;
         return `${it.bags} × ${displayBagSize}kg (${normalizedKg}kg)`;
-      }
-      if (it.bagPieces && it.bagPieces > 0) {
-        return `${it.bagPieces} bag${it.bagPieces > 1 ? 's' : ''} (${normalizedKg}kg)`;
       }
       return `${normalizedKg}kg (bag)`;
     }
@@ -328,11 +335,12 @@ const [bagPieces, setBagPieces] = useState<number>(1);
   }, [itemsArray]);
 
   const displayedKgValue = useMemo(() => {
-    if (isBagSelection && activeProduct?.bagSizeKg) {
-      return activeProduct.bagSizeKg;
+    if (isBagSelection) {
+      // Show the current bag size when in bag selection mode
+      return currentBagSize;
     }
     return kg;
-  }, [isBagSelection, activeProduct, kg]);
+  }, [isBagSelection, currentBagSize, kg]);
 
   const canSubmit = selectedCustomerId && itemsArray.length > 0 && !creating;
 
@@ -808,10 +816,10 @@ const [bagPieces, setBagPieces] = useState<number>(1);
                  <button
                    type="button"
                    onClick={() => {
-                     if (isBagSelection && activeProduct?.bagSizeKg) {
+                     if (isBagSelection) {
                        const newPieces = Math.max(0, (Number(bagPieces) || 0) - 1);
                        setBagPieces(newPieces);
-                       setKg(newPieces * activeProduct.bagSizeKg);
+                       setKg(newPieces * currentBagSize);
                      } else {
                        setIsBagSelection(false);
                        setKg(prev => Math.max(0, (Number(prev) || 0) - 0.5));
@@ -832,10 +840,10 @@ const [bagPieces, setBagPieces] = useState<number>(1);
                       setKg(0);
                     } else {
                       const num = Math.max(0, Number(value));
-                      if (isBagSelection && activeProduct?.bagSizeKg) {
-                        const pieces = Math.ceil(num / activeProduct.bagSizeKg);
+                      if (isBagSelection) {
+                        const pieces = Math.ceil(num / currentBagSize);
                         setBagPieces(pieces);
-                        setKg(pieces * activeProduct.bagSizeKg);
+                        setKg(pieces * currentBagSize);
                       } else {
                         setKg(num);
                         setIsBagSelection(false);
@@ -855,10 +863,10 @@ const [bagPieces, setBagPieces] = useState<number>(1);
                  <button
                    type="button"
                    onClick={() => {
-                     if (isBagSelection && activeProduct?.bagSizeKg) {
+                     if (isBagSelection) {
                        const newPieces = (Number(bagPieces) || 0) + 1;
                        setBagPieces(newPieces);
-                       setKg(newPieces * activeProduct.bagSizeKg);
+                       setKg(newPieces * currentBagSize);
                      } else {
                        setIsBagSelection(false);
                        setKg(prev => (Number(prev) || 0) + 0.5);
@@ -871,13 +879,15 @@ const [bagPieces, setBagPieces] = useState<number>(1);
               </div>
                <div className="mt-2 flex gap-1.5">
                  {(() => {
-                   const presetOptions: { label: string; value: number; isBag?: boolean }[] = [
-                     { label: '5kg', value: 5 },
-                     { label: '10kg', value: 10 },
-                     { label: '25kg', value: 25 },
-                     { label: '40kg', value: 40 },
-                     { label: '50kg', value: 50 }
-                   ];
+                  const presetOptions: { label: string; value: number; isBag?: boolean; bagSize?: number }[] = [
+                    { label: '5kg', value: 5 },
+                    { label: '10kg', value: 10 },
+                    { label: '25kg', value: 25 },
+                    { label: '40kg', value: 40 },
+                    { label: '50kg', value: 50 },
+                    // 5kg bag preset with bag selection functionality
+                    { label: '5kg (bag)', value: 5, isBag: true, bagSize: 5 }
+                  ];
 
                    if (activeProduct.bagSizeKg) {
                      presetOptions.push({
@@ -888,28 +898,32 @@ const [bagPieces, setBagPieces] = useState<number>(1);
                    }
 
                    return presetOptions.map(preset => (
-                     <button
-                       key={`${preset.label}-${preset.value}`}
-                       type="button"
-                       onClick={() => {
-                         setKg(preset.value);
-                         setIsBagSelection(!!preset.isBag);
-                         if (preset.isBag && activeProduct.bagSizeKg) {
-                           const count = preset.value / activeProduct.bagSizeKg;
-                           setBagPieces(!Number.isNaN(count) ? Math.max(1, Math.round(count)) : 1);
-                         } else {
-                           setBagPieces(1);
-                         }
-                       }}
-                       className="flex-1 px-2 py-1 text-[10px] border border-gray-200 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-600 active:scale-95"
-                     >
-                       {preset.label}
-                     </button>
-                   ));
-                 })()}
+                    <button
+                      key={`${preset.label}-${preset.value}`}
+                      type="button"
+                      onClick={() => {
+                        setKg(preset.value);
+                        if (preset.isBag) {
+                          // Use custom bagSize for presets like 5kg (bag), or fall back to activeProduct.bagSizeKg
+                          const bagSize = preset.bagSize || activeProduct.bagSizeKg || 40;
+                          setCurrentBagSize(bagSize); // Set the current bag size
+                          const count = preset.value / bagSize;
+                          setBagPieces(!Number.isNaN(count) ? Math.max(1, Math.round(count)) : 1);
+                        } else {
+                          setBagPieces(1);
+                          setCurrentBagSize(40); // Reset to default
+                        }
+                        setIsBagSelection(!!preset.isBag);
+                      }}
+                      className="flex-1 px-2 py-1 text-[10px] border border-gray-200 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-600 active:scale-95"
+                    >
+                      {preset.label}
+                    </button>
+                  ));
+                })()}
                </div>
             </div>
-            {isBagSelection && activeProduct?.bagSizeKg === 40 && (
+            {isBagSelection && (
               <div className="mt-3">
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">Bag Pieces</label>
                 <div className="flex items-center gap-2">
@@ -921,20 +935,31 @@ const [bagPieces, setBagPieces] = useState<number>(1);
                     onChange={(e) => {
                       const value = e.target.value;
                       if (value === '') {
-            setBagPieces(0);
-            setKg(0);
+                        setBagPieces(0);
+                        setKg(0);
                         return;
                       }
-          const count = Math.max(0, Math.floor(Number(value)));
+                      const count = Math.max(0, Math.floor(Number(value)));
                       setBagPieces(count);
-                      if (activeProduct?.bagSizeKg) {
-                        setKg(count * activeProduct.bagSizeKg);
-                      }
+                      
+                      // Calculate kg based on the current bag size
+                      // For 5kg (bag) preset, we use 5kg per bag
+                      // For 40kg products, we use activeProduct.bagSizeKg
+                      const currentBagSize = (() => {
+                        // Check if we're in 5kg bag mode (when kg is 5 and isBagSelection is true)
+                        if (kg === 5 && isBagSelection) return 5;
+                        // Otherwise use the product's bag size
+                        return activeProduct?.bagSizeKg || 5;
+                      })();
+                      
+                      setKg(count * currentBagSize);
                     }}
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     placeholder="Number of bags"
                   />
-                  <span className="text-xs text-gray-500">x {activeProduct.bagSizeKg}kg</span>
+                  <span className="text-xs text-gray-500">
+                    x {currentBagSize}kg
+                  </span>
                 </div>
               </div>
             )}
