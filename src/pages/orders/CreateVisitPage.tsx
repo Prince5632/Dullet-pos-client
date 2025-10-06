@@ -49,6 +49,7 @@ const CreateVisitPage: React.FC = () => {
   const [addressLoading, setAddressLoading] = useState(false);
   const [manualAddress, setManualAddress] = useState<string>("");
   const [showCameraCapture, setShowCameraCapture] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   
   // Visit creation flow state
   const [isCreatingVisit, setIsCreatingVisit] = useState(false);
@@ -63,7 +64,18 @@ const CreateVisitPage: React.FC = () => {
     watch,
   } = useForm<CreateVisitForm>({
     resolver: yupResolver(schema) as any,
+    defaultValues: {
+      // Default visit date to today in YYYY-MM-DD format
+      scheduleDate: new Date().toISOString().slice(0, 10),
+    },
   });
+
+  const noteSuggestions = [
+    "Customer need loose atta.",
+    "Owner not available.",
+    "Not intrested.",
+    "Prices are high."
+  ];
 
   const getAddressFromCoordinates = async (
     latitude: number,
@@ -164,21 +176,6 @@ const CreateVisitPage: React.FC = () => {
     
     // Reset the completion flag
     setVisitCompleted(false);
-  };
-
-  const removeImage = () => {
-    setCapturedImage(null);
-    setImagePreview(null);
-  };
-
-  const updateAddress = (newAddress: string) => {
-    setManualAddress(newAddress);
-    if (location) {
-      setLocation({
-        ...location,
-        address: newAddress,
-      });
-    }
   };
 
   const onSubmit = async (data: CreateVisitForm) => {
@@ -374,15 +371,54 @@ const CreateVisitPage: React.FC = () => {
                 </h3>
 
                 <div className="space-y-4">
+                  {/* Visit Date (hidden by default, defaults to today) */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Visit Date <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="date"
-                      {...register("scheduleDate")}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
-                    />
+                    {!showDatePicker && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-700">
+                          {watch("scheduleDate") || new Date().toISOString().slice(0, 10)}
+                        </span>
+                        {/* <button
+                          type="button"
+                          onClick={() => setShowDatePicker(true)}
+                          className="text-sm text-emerald-700 hover:text-emerald-800 hover:underline"
+                        >
+                          Change date
+                        </button> */}
+                      </div>
+                    )}
+                    {showDatePicker && (
+                      <div className="space-y-2">
+                        <input
+                          type="date"
+                          {...register("scheduleDate")}
+                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                        />
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const today = new Date().toISOString().slice(0, 10);
+                              setValue("scheduleDate", today, { shouldDirty: true });
+                              setShowDatePicker(false);
+                            }}
+                            className="px-3 py-1.5 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50 text-gray-700"
+                          >
+                            Use today
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowDatePicker(false)}
+                            className="px-3 py-1.5 text-sm rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+                          >
+                            Done
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     {errors.scheduleDate && (
                       <p className="mt-1 text-sm text-red-600">
                         {errors.scheduleDate.message}
@@ -390,10 +426,28 @@ const CreateVisitPage: React.FC = () => {
                     )}
                   </div>
 
+                  {/* Notes with quick-pick suggestions */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Notes
                     </label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {noteSuggestions.map((s, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            const current = watch("notes") || "";
+                            const prefix = current ? "\n" : "";
+                            const next = `${current}${prefix}${s}`;
+                            setValue("notes", next, { shouldDirty: true });
+                          }}
+                          className="px-3 py-1.5 text-xs sm:text-sm rounded-full border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
                     <textarea
                       {...register("notes")}
                       rows={3}
