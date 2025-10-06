@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   UsersIcon,
   ShieldCheckIcon,
@@ -22,16 +22,16 @@ import {
   FireIcon,
   LightBulbIcon,
   ChevronRightIcon,
-} from '@heroicons/react/24/outline';
-import { useAuth } from '../../contexts/AuthContext';
-import { orderService } from '../../services/orderService';
-import type { Order, Godown } from '../../types';
-import { apiService } from '../../services/api';
-import { API_CONFIG } from '../../config/api';
-import Avatar from '../../components/ui/Avatar';
-import Badge from '../../components/ui/Badge';
-import { userService } from '../../services/userService';
-import LoadingSpinner from '../../components/common/LoadingSpinner';
+} from "@heroicons/react/24/outline";
+import { useAuth } from "../../contexts/AuthContext";
+import { orderService } from "../../services/orderService";
+import type { Order, Godown } from "../../types";
+import { apiService } from "../../services/api";
+import { API_CONFIG } from "../../config/api";
+import Avatar from "../../components/ui/Avatar";
+import Badge from "../../components/ui/Badge";
+import { userService } from "../../services/userService";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 interface DashboardStats {
   orders: {
@@ -64,45 +64,62 @@ const DashboardPage: React.FC = () => {
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [godowns, setGodowns] = useState<Godown[]>([]);
-  const [selectedGodownId, setSelectedGodownId] = useState<string>('');
-
+  const [selectedGodownId, setSelectedGodownId] = useState<string>("");
+  const navigate = useNavigate();
   useEffect(() => {
     (async () => {
       try {
-        const res = await apiService.get<{ godowns: Godown[] }>(API_CONFIG.ENDPOINTS.GODOWNS);
+        const res = await apiService.get<{ godowns: Godown[] }>(
+          API_CONFIG.ENDPOINTS.GODOWNS
+        );
         if (res.success && res.data) setGodowns(res.data.godowns);
       } catch {}
     })();
     fetchDashboardData();
   }, []);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (godownId?: string) => {
     try {
       setLoading(true);
-      
+
       const promises = [];
-      
-      if (hasPermission('orders.read')) {
-        promises.push(orderService.getOrderStats({ godownId: selectedGodownId }));
-        promises.push(orderService.getOrders({ limit: 5, sortBy: 'orderDate', sortOrder: 'desc', godownId: selectedGodownId }));
+
+      if (hasPermission("orders.read")) {
+        promises.push(
+          orderService.getOrderStats({ godownId: godownId ?? selectedGodownId })
+        );
+        promises.push(
+          orderService.getOrders({
+            limit: 5,
+            sortBy: "orderDate",
+            sortOrder: "desc",
+            godownId: godownId ?? selectedGodownId,
+          })
+        );
       }
       // Removed user stats endpoint (not available); we'll compute via list fallback below
 
       const results = await Promise.allSettled(promises);
-      
+
       let orderStats: any = null;
       let orders: Order[] = [];
-      let userStats: { totalUsers: number; activeUsers: number; todayLogins: number; inactiveUsers: number } | null = null;
+      let userStats: {
+        totalUsers: number;
+        activeUsers: number;
+        todayLogins: number;
+        inactiveUsers: number;
+      } | null = null;
 
       // Map settled results based on what we pushed
       let idx = 0;
-      if (hasPermission('orders.read')) {
-        if (results[idx]?.status === 'fulfilled') {
+      if (hasPermission("orders.read")) {
+        if (results[idx]?.status === "fulfilled") {
           orderStats = (results[idx] as PromiseFulfilledResult<any>).value;
         }
         idx += 1;
-        if (results[idx]?.status === 'fulfilled') {
-          const ordersResult = (results[idx] as PromiseFulfilledResult<any>).value as any;
+        if (results[idx]?.status === "fulfilled") {
+          const ordersResult = (results[idx] as PromiseFulfilledResult<any>)
+            .value as any;
           orders = ordersResult.data?.orders || [];
         }
         idx += 1;
@@ -110,18 +127,18 @@ const DashboardPage: React.FC = () => {
       // No direct user stats in results
 
       // Fallback: compute user counts from paginated list if stats unavailable
-      if (hasPermission('users.read')) {
+      if (hasPermission("users.read")) {
         try {
           // Use the same API call as user management page
-          const response = await userService.getUsers({ 
+          const response = await userService.getUsers({
             page: 1,
-            limit: 1, 
-            isActive: 'true'
+            limit: 1,
+            isActive: "true",
           });
-          
+
           // Get count from data.pagination.totalUsers (based on actual API response structure)
           const activeUsers = response.data?.pagination?.totalUsers || 0;
-          
+
           userStats = {
             totalUsers: activeUsers, // Show only active users count
             activeUsers,
@@ -129,7 +146,7 @@ const DashboardPage: React.FC = () => {
             inactiveUsers: 0,
           };
         } catch (err) {
-          console.error('Failed to fetch user stats:', err);
+          console.error("Failed to fetch user stats:", err);
         }
       }
 
@@ -155,12 +172,12 @@ const DashboardPage: React.FC = () => {
           thisWeek: orderStats?.monthlyRevenue || 0,
           thisMonth: orderStats?.monthlyRevenue || 0,
           // growth: 5.2,
-        }
+        },
       });
-      
+
       setRecentOrders(orders);
     } catch (error) {
-      console.error('Failed to fetch dashboard data:', error);
+      console.error("Failed to fetch dashboard data:", error);
     } finally {
       setLoading(false);
     }
@@ -168,16 +185,16 @@ const DashboardPage: React.FC = () => {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
   };
 
   const getTimeIcon = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return '☀️';
-    if (hour < 17) return '🌤️';
-    return '🌙';
+    if (hour < 12) return "☀️";
+    if (hour < 17) return "🌤️";
+    return "🌙";
   };
 
   if (loading) {
@@ -210,7 +227,7 @@ const DashboardPage: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             {/* Today's Quick Stats */}
             {/* <div className="flex items-center gap-3 sm:gap-4">
               <div className="text-right">
@@ -229,88 +246,139 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Godown Selector - Compact */}
+      {/* Godown Selector - Cards */}
       {godowns.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-3">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mb-2">
             <BuildingOfficeIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-            <select
-              value={selectedGodownId}
-              onChange={(e) => { setSelectedGodownId(e.target.value); fetchDashboardData(); }}
-              className="flex-1 text-sm border-0 focus:ring-0 bg-transparent text-gray-700 font-medium"
+            <span className="text-sm font-semibold text-gray-700">
+              Select Godown
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            {/* All Godowns card */}
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedGodownId("");
+                fetchDashboardData("");
+              }}
+              className={`text-left rounded-lg border p-3 transition-colors ${
+                selectedGodownId === ""
+                  ? "border-emerald-500 bg-emerald-50"
+                  : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
+              }`}
+              aria-pressed={selectedGodownId === ""}
             >
-              <option value="">All Godowns</option>
-              {godowns.map(g => (
-                <option key={g._id} value={g._id}>
-                  {g.name} - {g.location.city}
-                </option>
-              ))}
-            </select>
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-md bg-emerald-100">
+                  <BuildingOfficeIcon className="h-4 w-4 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    All Godowns
+                  </p>
+                  <p className="text-xs text-gray-500">View across locations</p>
+                </div>
+              </div>
+            </button>
+
+            {godowns.map((g) => (
+              <button
+                key={g._id}
+                type="button"
+                onClick={() => {
+                  setSelectedGodownId(g._id);
+                  fetchDashboardData(g._id);
+                }}
+                className={`text-left rounded-lg border p-3 transition-colors ${
+                  selectedGodownId === g._id
+                    ? "border-emerald-500 bg-emerald-50"
+                    : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
+                }`}
+                aria-pressed={selectedGodownId === g._id}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-md bg-blue-100">
+                    <BuildingOfficeIcon className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {g.name}
+                    </p>
+                    <p className="text-xs text-gray-500">{g.location.city}</p>
+                  </div>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       )}
 
       {/* Role-based Content */}
-      {(roleName === 'super admin' || roleName === 'admin') && (
+      {(roleName === "super admin" || roleName === "admin") && (
         <>
           {/* Compact Stats Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {stats && [
-              {
-                label: 'Revenue',
-                value: `₹${((stats.revenue.today || 0) / 1000).toFixed(1)}k`,
-                subtitle: 'Today',
-                icon: BanknotesIcon,
-                bgColor: 'bg-emerald-500',
-                // trend: stats.revenue.growth,
-              },
-              {
-                label: 'Orders',
-                value: stats.orders.total.toString(),
-                subtitle: 'Total',
-                icon: ClipboardDocumentListIcon,
-                bgColor: 'bg-blue-500',
-              },
-              {
-                label: 'Pending',
-                value: stats.orders.pendingApproval.toString(),
-                subtitle: 'Approval',
-                icon: ExclamationTriangleIcon,
-                bgColor: 'bg-amber-500',
-                urgent: stats.orders.pendingApproval > 0,
-              },
-              {
-                label: 'Users',
-                value: stats.users.total.toString(),
-                subtitle: 'Active users',
-                icon: UserGroupIcon,
-                bgColor: 'bg-purple-500',
-              },
-            ].map((stat) => (
-              <div
-                key={stat.label}
-                className={`relative bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-sm ${
-                  stat.urgent ? 'ring-2 ring-amber-200' : ''
-                }`}
-              >
-                <div className={`${stat.bgColor} rounded-lg p-2 w-fit mb-2`}>
-                  <stat.icon className="h-4 w-4 text-white" />
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{stat.value}</p>
-                  {stat.trend !== undefined && (
-                    <span className={`text-xs ${stat.trend >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {stat.trend >= 0 ? '↑' : '↓'}{Math.abs(stat.trend)}%
-                    </span>
+            {stats &&
+              [
+                {
+                  label: "Revenue",
+                  value: `₹${((stats.revenue.today || 0) / 1000).toFixed(1)}k`,
+                  subtitle: "Today",
+                  icon: BanknotesIcon,
+                  bgColor: "bg-emerald-500",
+                  link: "/reports/sales-executives",
+                  // trend: stats.revenue.growth,
+                },
+                {
+                  label: "Orders",
+                  value: stats.orders.total.toString(),
+                  subtitle: "Total",
+                  icon: ClipboardDocumentListIcon,
+                  bgColor: "bg-blue-500",
+                  link: "/orders",
+                },
+                {
+                  label: "Pending",
+                  value: stats.orders.pendingApproval.toString(),
+                  subtitle: "Approval",
+                  icon: ExclamationTriangleIcon,
+                  bgColor: "bg-amber-500",
+                  urgent: stats.orders.pendingApproval > 0,
+                  link: "/orders",
+                },
+                {
+                  label: "Users",
+                  value: stats.users.total.toString(),
+                  subtitle: "Active users",
+                  icon: UserGroupIcon,
+                  bgColor: "bg-purple-500",
+                  link: "/users",
+                },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className={`relative cursor-pointer bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-sm ${
+                    stat.urgent ? "ring-2 ring-amber-200" : ""
+                  }`}
+                  onClick={() => navigate(stat.link)}
+                >
+                  <div className={`${stat.bgColor} rounded-lg p-2 w-fit mb-2`}>
+                    <stat.icon className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900">
+                      {stat.value}
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-0.5">{stat.label}</p>
+                  <p className="text-[10px] text-gray-400">{stat.subtitle}</p>
+                  {stat.urgent && (
+                    <div className="absolute top-2 right-2 h-2 w-2 bg-amber-400 rounded-full animate-pulse"></div>
                   )}
                 </div>
-                <p className="text-xs text-gray-600 mt-0.5">{stat.label}</p>
-                <p className="text-[10px] text-gray-400">{stat.subtitle}</p>
-                {stat.urgent && (
-                  <div className="absolute top-2 right-2 h-2 w-2 bg-amber-400 rounded-full animate-pulse"></div>
-                )}
-              </div>
-            ))}
+              ))}
           </div>
 
           {/* Quick Actions */}
@@ -321,22 +389,52 @@ const DashboardPage: React.FC = () => {
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
-                { label: 'New Order', href: '/orders/new', icon: PlusIcon, color: 'blue', permission: 'orders.create' },
-                { label: 'Add User', href: '/users/create', icon: UsersIcon, color: 'green', permission: 'users.create' },
-                { label: 'New Role', href: '/roles/create', icon: ShieldCheckIcon, color: 'purple', permission: 'roles.create' },
-                { label: 'Approvals', href: '/orders/approval', icon: CheckCircleIcon, color: 'amber', permission: 'orders.approve' },
+                {
+                  label: "New Order",
+                  href: "/orders/new",
+                  icon: PlusIcon,
+                  color: "blue",
+                  permission: "orders.create",
+                },
+                {
+                  label: "Add User",
+                  href: "/users/create",
+                  icon: UsersIcon,
+                  color: "green",
+                  permission: "users.create",
+                },
+                {
+                  label: "New Role",
+                  href: "/roles/create",
+                  icon: ShieldCheckIcon,
+                  color: "purple",
+                  permission: "roles.create",
+                },
+                {
+                  label: "Approvals",
+                  href: "/orders/approval",
+                  icon: CheckCircleIcon,
+                  color: "amber",
+                  permission: "orders.approve",
+                },
               ]
-                .filter(action => hasPermission(action.permission))
+                .filter((action) => hasPermission(action.permission))
                 .map((action) => (
                   <Link
                     key={action.label}
                     to={action.href}
                     className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-all active:scale-95"
                   >
-                    <div className={`p-2 rounded-lg bg-${action.color}-100 mb-2`}>
-                      <action.icon className={`h-4 w-4 text-${action.color}-600`} />
+                    <div
+                      className={`p-2 rounded-lg bg-${action.color}-100 mb-2`}
+                    >
+                      <action.icon
+                        className={`h-4 w-4 text-${action.color}-600`}
+                      />
                     </div>
-                    <span className="text-xs font-medium text-gray-700 text-center">{action.label}</span>
+                    <span className="text-xs font-medium text-gray-700 text-center">
+                      {action.label}
+                    </span>
                   </Link>
                 ))}
             </div>
@@ -346,8 +444,13 @@ const DashboardPage: React.FC = () => {
           {recentOrders.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-900">Recent Orders</h3>
-                <Link to="/orders" className="text-xs font-medium text-emerald-600 hover:text-emerald-700 flex items-center">
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Recent Orders
+                </h3>
+                <Link
+                  to="/orders"
+                  className="text-xs font-medium text-emerald-600 hover:text-emerald-700 flex items-center"
+                >
                   View all <ChevronRightIcon className="h-3 w-3 ml-1" />
                 </Link>
               </div>
@@ -358,16 +461,27 @@ const DashboardPage: React.FC = () => {
                     to={`/orders/${order._id}`}
                     className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
                   >
-                    <Avatar name={order.customer?.businessName || 'Customer'} size="sm" />
+                    <Avatar
+                      name={order.customer?.businessName || "Customer"}
+                      size="sm"
+                    />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{order.orderNumber}</p>
-                      <p className="text-xs text-gray-500 truncate">{order.customer?.businessName}</p>
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {order.orderNumber}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {order.customer?.businessName}
+                      </p>
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="text-sm font-semibold text-gray-900">
                         ₹{((order.totalAmount || 0) / 1000).toFixed(1)}k
                       </p>
-                      <Badge className={`${orderService.getStatusColor(order.status)} text-[10px] px-1.5 py-0.5`}>
+                      <Badge
+                        className={`${orderService.getStatusColor(
+                          order.status
+                        )} text-[10px] px-1.5 py-0.5`}
+                      >
                         {order.status}
                       </Badge>
                     </div>
@@ -379,48 +493,57 @@ const DashboardPage: React.FC = () => {
         </>
       )}
 
-      {roleName === 'manager' && (
+      {roleName === "manager" && (
         <>
           {/* Manager Stats */}
           <div className="grid grid-cols-3 gap-3">
-            {stats && [
-              {
-                label: 'Pending',
-                value: stats.orders.pendingApproval.toString(),
-                subtitle: 'Approvals',
-                icon: ClockIcon,
-                bgColor: 'bg-amber-500',
-                urgent: stats.orders.pendingApproval > 0,
-              },
-              {
-                label: 'Today',
-                value: stats.orders.todayOrders.toString(),
-                subtitle: 'Orders',
-                icon: ShoppingCartIcon,
-                bgColor: 'bg-blue-500',
-              },
-              {
-                label: 'Team',
-                value: '95%',
-                subtitle: 'Performance',
-                icon: TruckIcon,
-                bgColor: 'bg-green-500',
-              },
-            ].map((stat) => (
-              <div
-                key={stat.label}
-                className={`bg-white rounded-xl border border-gray-200 p-3 shadow-sm ${
-                  stat.urgent ? 'ring-2 ring-amber-200' : ''
-                }`}
-              >
-                <div className={`${stat.bgColor} rounded-lg p-2 w-fit mb-2`}>
-                  <stat.icon className="h-4 w-4 text-white" />
+            {stats &&
+              [
+                {
+                  label: "Pending",
+                  value: stats.orders.pendingApproval.toString(),
+                  subtitle: "Approvals",
+                  icon: ClockIcon,
+                  bgColor: "bg-amber-500",
+                  urgent: stats.orders.pendingApproval > 0,
+                  link: "/orders",
+                },
+                {
+                  label: "Today",
+                  value: stats.orders.todayOrders.toString(),
+                  subtitle: "Orders",
+                  icon: ShoppingCartIcon,
+                  bgColor: "bg-blue-500",
+                  link: "/orders",
+                },
+                {
+                  label: "Team",
+                  value: "95%",
+                  subtitle: "Performance",
+                  icon: TruckIcon,
+                  bgColor: "bg-green-500",
+                  link: "/reports/sales-executives",
+                },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className={`cursor-pointer bg-white rounded-xl border border-gray-200 p-3 shadow-sm ${
+                    stat.urgent ? "ring-2 ring-amber-200" : ""
+                  }`}
+                  onClick={() => navigate(stat.link)}
+                >
+                  <div className={`${stat.bgColor} rounded-lg p-2 w-fit mb-2`}>
+                    <stat.icon className="h-4 w-4 text-white" />
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {stat.value}
+                  </p>
+                  <p className="text-[10px] text-gray-600 mt-0.5">
+                    {stat.label}
+                  </p>
+                  <p className="text-[10px] text-gray-400">{stat.subtitle}</p>
                 </div>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                <p className="text-[10px] text-gray-600 mt-0.5">{stat.label}</p>
-                <p className="text-[10px] text-gray-400">{stat.subtitle}</p>
-              </div>
-            ))}
+              ))}
           </div>
 
           {/* Manager Actions */}
@@ -456,7 +579,7 @@ const DashboardPage: React.FC = () => {
         </>
       )}
 
-      {roleName === 'sales executive' && (
+      {roleName === "sales executive" && (
         <>
           {/* Sales Stats */}
           {/* <div className="grid grid-cols-3 gap-3">
@@ -502,9 +625,8 @@ const DashboardPage: React.FC = () => {
             </h3>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: 'New Order', href: '/orders/new', icon: PlusIcon },
-                { label: 'Create Visit', href: '/visits/new', icon: UsersIcon },
-        
+                { label: "New Order", href: "/orders/new", icon: PlusIcon },
+                { label: "Create Visit", href: "/visits/new", icon: UsersIcon },
               ].map((action) => (
                 <Link
                   key={action.label}
@@ -512,7 +634,9 @@ const DashboardPage: React.FC = () => {
                   className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-all active:scale-95"
                 >
                   <action.icon className="h-5 w-5 text-gray-600 mb-2" />
-                  <span className="text-xs font-medium text-gray-700">{action.label}</span>
+                  <span className="text-xs font-medium text-gray-700">
+                    {action.label}
+                  </span>
                 </Link>
               ))}
             </div>
@@ -525,9 +649,12 @@ const DashboardPage: React.FC = () => {
                 <LightBulbIcon className="h-4 w-4 text-blue-600" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-1">💡 Pro Tip</h3>
+                <h3 className="text-sm font-semibold text-gray-900 mb-1">
+                  💡 Pro Tip
+                </h3>
                 <p className="text-xs text-gray-700 leading-relaxed">
-                  Follow up within 24 hours of delivery to boost customer satisfaction and repeat orders.
+                  Follow up within 24 hours of delivery to boost customer
+                  satisfaction and repeat orders.
                 </p>
               </div>
             </div>
@@ -536,39 +663,56 @@ const DashboardPage: React.FC = () => {
       )}
 
       {/* Recent Orders for Sales/Manager */}
-      {(roleName === 'manager' || roleName === 'sales executive') && recentOrders.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-900">My Recent Orders</h3>
-            <Link to="/orders" className="text-xs font-medium text-emerald-600 hover:text-emerald-700 flex items-center">
-              View all <ChevronRightIcon className="h-3 w-3 ml-1" />
-            </Link>
-          </div>
-          <div className="divide-y divide-gray-100">
-            {recentOrders.slice(0, 5).map((order) => (
+      {(roleName === "manager" || roleName === "sales executive") &&
+        recentOrders.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-200">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-900">
+                My Recent Orders
+              </h3>
               <Link
-                key={order._id}
-                to={`/orders/${order._id}`}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                to="/orders"
+                className="text-xs font-medium text-emerald-600 hover:text-emerald-700 flex items-center"
               >
-                <Avatar name={order.customer?.businessName || 'Customer'} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{order.orderNumber}</p>
-                  <p className="text-xs text-gray-500 truncate">{order.customer?.businessName}</p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-semibold text-gray-900">
-                    ₹{((order.totalAmount || 0) / 1000).toFixed(1)}k
-                  </p>
-                  <Badge className={`${orderService.getStatusColor(order.status)} text-[10px] px-1.5 py-0.5`}>
-                    {order.status}
-                  </Badge>
-                </div>
+                View all <ChevronRightIcon className="h-3 w-3 ml-1" />
               </Link>
-            ))}
+            </div>
+            <div className="divide-y divide-gray-100">
+              {recentOrders.slice(0, 5).map((order) => (
+                <Link
+                  key={order._id}
+                  to={`/orders/${order._id}`}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                >
+                  <Avatar
+                    name={order.customer?.businessName || "Customer"}
+                    size="sm"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {order.orderNumber}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {order.customer?.businessName}
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-semibold text-gray-900">
+                      ₹{((order.totalAmount || 0) / 1000).toFixed(1)}k
+                    </p>
+                    <Badge
+                      className={`${orderService.getStatusColor(
+                        order.status
+                      )} text-[10px] px-1.5 py-0.5`}
+                    >
+                      {order.status}
+                    </Badge>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 };
