@@ -1,6 +1,6 @@
-import React, { useState, Fragment } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
-import { Dialog, Transition } from '@headlessui/react';
+import React, { useState, Fragment } from "react";
+import { Outlet, useLocation } from "react-router-dom";
+import { Dialog, Transition } from "@headlessui/react";
 import {
   XMarkIcon,
   HomeIcon,
@@ -11,66 +11,66 @@ import {
   CalendarDaysIcon,
   ChartBarIcon,
   BuildingOfficeIcon,
-} from '@heroicons/react/24/outline';
-import { useAuth } from '../../contexts/AuthContext';
-import type { NavItem } from '../../types';
-import Sidebar from '../navigation/Sidebar';
-import TopBar from '../navigation/TopBar.tsx';
+} from "@heroicons/react/24/outline";
+import { useAuth } from "../../contexts/AuthContext";
+import type { NavItem } from "../../types";
+import Sidebar from "../navigation/Sidebar";
+import TopBar from "../navigation/TopBar.tsx";
 
 // Navigation items with permissions
 const navigationItems: NavItem[] = [
   {
-    name: 'Dashboard',
-    href: '/dashboard',
+    name: "Dashboard",
+    href: "/dashboard",
     icon: HomeIcon,
   },
   {
-    name: 'Orders',
-    href: '/orders',
+    name: "Orders",
+    href: "/orders",
     icon: ClipboardDocumentListIcon,
-    permission: 'orders.read',
+    permission: "orders.read",
   },
   {
-    name: 'Visits',
-    href: '/visits',
+    name: "Visits",
+    href: "/visits",
     icon: ClipboardDocumentListIcon,
-    permission: 'orders.read',
+    permission: "orders.read",
   },
   {
-    name: 'Customers',
-    href: '/customers',
+    name: "Customers",
+    href: "/customers",
     icon: BuildingOfficeIcon,
-    permission: 'customers.read',
+    permission: "customers.read",
   },
   {
-    name: 'Attendance',
-    href: '/attendance',
+    name: "Attendance",
+    href: "/attendance",
     icon: CalendarDaysIcon,
-    permission: 'attendance.read',
+    permission: "attendance.read",
   },
   {
-    name: 'Reports',
-    href: '/reports/sales-executives',
+    name: "Reports",
+    href: "/reports/sales-executives",
     icon: ChartBarIcon,
-    permission: 'reports.read',
+    permission: "reports.read",
   },
   {
-    name: 'User Management',
-    href: '/users',
+    name: "User Management",
+    href: "/users",
     icon: UsersIcon,
-    permission: 'users.read',
+    permission: "users.read",
   },
   {
-    name: 'Role Management',
-    href: '/roles',
+    name: "Role Management",
+    href: "/roles",
     icon: ShieldCheckIcon,
-    permission: 'roles.read',
+    permission: "roles.read",
   },
   {
-    name: 'Settings',
-    href: '/settings',
+    name: "Settings",
+    href: "/settings",
     icon: CogIcon,
-    permission: 'settings.manage',
+    permission: "settings.manage",
   },
 ];
 
@@ -78,11 +78,19 @@ const DashboardLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { hasPermission } = useAuth();
   const location = useLocation();
+  const userDetails = localStorage.getItem("user_data") || "{}";
+  const userRole = userDetails ? JSON.parse(userDetails)?.role?.name : null;
 
-  // Filter navigation items based on user permissions
-  const filteredNavigation = navigationItems.filter(item => 
-    !item.permission || hasPermission(item.permission)
-  );
+  // Filter navigation items based on user permissions and role restrictions
+  const filteredNavigation = navigationItems.filter((item) => {
+    // Exclude 'Customers' route for Sales Executive
+    if (userRole === "Sales Executive" && item.href === "/customers") {
+      return false;
+    }
+
+    // Apply existing permission-based filtering
+    return !item.permission || hasPermission(item.permission);
+  });
 
   // Close mobile sidebar
   const closeMobileSidebar = () => {
@@ -93,7 +101,11 @@ const DashboardLayout: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Mobile sidebar with improved overlay */}
       <Transition.Root show={sidebarOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50 lg:hidden" onClose={setSidebarOpen}>
+        <Dialog
+          as="div"
+          className="relative z-50 lg:hidden"
+          onClose={setSidebarOpen}
+        >
           {/* Backdrop with lighter overlay */}
           <Transition.Child
             as={Fragment}
@@ -135,11 +147,14 @@ const DashboardLayout: React.FC = () => {
                       onClick={closeMobileSidebar}
                     >
                       <span className="sr-only">Close sidebar</span>
-                      <XMarkIcon className="h-6 w-6 text-white" aria-hidden="true" />
+                      <XMarkIcon
+                        className="h-6 w-6 text-white"
+                        aria-hidden="true"
+                      />
                     </button>
                   </div>
                 </Transition.Child>
-                
+
                 {/* Mobile Sidebar with auto-close functionality */}
                 <div className="flex grow flex-col bg-white shadow-xl border-r border-gray-200 rounded-r-xl overflow-hidden">
                   <Sidebar

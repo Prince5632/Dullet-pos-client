@@ -22,6 +22,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   fallback,
 }) => {
   const { isAuthenticated, isLoading, hasPermission, hasAnyPermission, hasAllPermissions, hasRole } = useAuth();
+  const userDetails = localStorage.getItem("user_data") || "{}";
+  const userRole = userDetails ? JSON.parse(userDetails)?.role?.name : null;
   const location = useLocation();
 
   // Show loading spinner while checking authentication
@@ -53,6 +55,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (!hasRequiredPermissions) {
       return fallback || <Navigate to="/unauthorized" replace />;
     }
+  }
+  if(userRole === "Sales Executive" && location.pathname === "/customers"){
+    return fallback || <Navigate to="/unauthorized" replace />;
   }
 
   // All checks passed, render children
