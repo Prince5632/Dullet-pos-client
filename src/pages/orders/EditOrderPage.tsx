@@ -107,35 +107,61 @@ const EditOrderPage: React.FC = () => {
   const watchedValues = watch();
 
   // Location-based product and pricing helpers
-  const normalizeCity = (raw?: string): string =>
-    (raw || "").toLowerCase().trim();
+  const normalizeCity = (raw?: string): string => (raw || '').toLowerCase().trim();
   const canonicalCity = (raw?: string): string => {
     const city = normalizeCity(raw);
     switch (city) {
-      case "ludhaina":
-        return "ludhiana";
-      case "fatehgarh":
-        return "fatehgarh sahib";
+      case 'ludhaina':
+        return 'ludhiana';
+      case 'fatehgarh':
+        return 'fatehgarh sahib';
       default:
         return city;
     }
   };
   const getCurrentCity = (): string => {
-    // Get city from the order's godown
-    return canonicalCity(order?.godown?.location?.city);
+    const g = godowns.find(gd => gd._id === order?.godown?._id);
+    const rawCity = g?.location?.city;
+    const normalizedCity = canonicalCity(rawCity);
+    console.log("getCurrentCity debug:", {
+      orderGodownId: order?.godown?._id,
+      foundGodown: g,
+      rawCity,
+      normalizedCity
+    });
+    return normalizedCity;
   };
 
   const currentProducts = useMemo(() => {
     const city = getCurrentCity();
-    const area = order?.godown?.location?.area?.toLowerCase();
+    const area = godowns.find(g => g._id === order?.godown?._id)?.location?.area?.toLowerCase();
     const tokensToMatch = [city, area ? `${city}:${area}` : ""].filter(Boolean);
-    if (!tokensToMatch.length) return [] as QuickProduct[];
-    return products.filter(
+    
+    console.log("currentProducts filtering:", {
+      city,
+      area,
+      tokensToMatch,
+      orderGodownId: order?.godown?._id,
+      godownsCount: godowns.length,
+      productsCount: products.length,
+      productsWithTokens: products.filter(p => Array.isArray(p.cityTokens)).length
+    });
+    
+    if (!tokensToMatch.length) {
+      console.log("No tokens to match, returning empty array");
+      return [] as QuickProduct[];
+    }
+    
+    const filtered = products.filter(
       (p) =>
         Array.isArray(p.cityTokens) &&
         p.cityTokens.some((token) => tokensToMatch.includes(token))
     );
-  }, [products, order]);
+    
+    console.log("Filtered products:", filtered.length, filtered.map(p => ({ name: p.name, cityTokens: p.cityTokens })));
+    
+    return filtered;
+  }, [products, order, godowns]);
 
   // Load products
   useEffect(() => {
@@ -160,8 +186,10 @@ const EditOrderPage: React.FC = () => {
   useEffect(() => {
     const loadGodowns = async () => {
       try {
-        const response = await apiService.get(API_CONFIG.ENDPOINTS.GODOWNS);
-        setGodowns(response.data);
+        const response = await apiService.get<{ godowns: Godown[] }>(API_CONFIG.ENDPOINTS.GODOWNS);
+        if (response.success && response.data) {
+          setGodowns(response.data.godowns);
+        }
       } catch (error) {
         console.error("Failed to load godowns:", error);
       }
@@ -207,41 +235,109 @@ const EditOrderPage: React.FC = () => {
     loadOrder();
   }, [orderId, navigate, setValue]);
 
-  // Convert OrderItems to SelectedItems when products and order are loaded
+  // Convert OrderItems to SelectedItems when currentProducts and order are loaded
   useEffect(() => {
-    if (products.length > 0 && orderItems.length > 0) {
+    console.log("Conversion useEffect triggered:", {
+      currentProductsLength: currentProducts.length,
+      orderItemsLength: orderItems.length,
+      hasCurrentProducts: currentProducts.length > 0,
+      hasOrderItems: orderItems.length > 0
+    });
+
+    if (currentProducts.length > 0 && orderItems.length > 0) {
       console.log("Converting orderItems to selectedItems:", {
-        productsCount: products.length,
+        currentProductsCount: currentProducts.length,
         orderItemsCount: orderItems.length,
         orderItems: orderItems.map((item) => ({
           name: item.productName,
           quantity: item.quantity,
+          packaging: item.packaging,
+          isBagSelection: item.isBagSelection,
         })),
+        availableProducts: currentProducts.map(p => ({
+          name: p.name,
+          key: p.key,
+          bagSizeKg: p.bagSizeKg
+        }))
       });
 
       const convertedItems: Record<string, SelectedItem> = {};
 
       orderItems.forEach((item) => {
-        // Try to find matching product by name from all products (not just currentProducts)
-        // This ensures existing order items are shown even if they're not available in current location
-        const matchingProduct = products.find(
-          (p) =>
-            p.name.toLowerCase().includes(item.productName.toLowerCase()) ||
-            item.productName.toLowerCase().includes(p.name.toLowerCase())
-        );
+        console.log("Processing order item:", {
+          productName: item.productName,
+          quantity: item.quantity,
+          packaging: item.packaging,
+          isBagSelection: item.isBagSelection
+        });
+
+        // Try to find matching product by name from currentProducts (godown-filtered products)
+        // This ensures we only match products available in the selected godown
+        const matchingProduct = currentProducts.find((p) => {
+          const productNameLower = p.name.toLowerCase();
+          const itemNameLower = item.productName.toLowerCase();
+          
+          // Exact match
+          if (productNameLower === itemNameLower) return true;
+          
+          // Contains match (both directions)
+          if (productNameLower.includes(itemNameLower) || itemNameLower.includes(productNameLower)) return true;
+          
+          // Remove common words and try again
+          const cleanProductName = productNameLower.replace(/\b(atta|flour|kg|bag|bags)\b/g, '').trim();
+          const cleanItemName = itemNameLower.replace(/\b(atta|flour|kg|bag|bags)\b/g, '').trim();
+          
+          if (cleanProductName && cleanItemName && 
+              (cleanProductName.includes(cleanItemName) || cleanItemName.includes(cleanProductName))) {
+            return true;
+          }
+          
+          return false;
+        });
 
         console.log(
           `Matching product for "${item.productName}":`,
-          matchingProduct ? matchingProduct.name : "NOT FOUND"
+          matchingProduct ? {
+            name: matchingProduct.name,
+            key: matchingProduct.key,
+            bagSizeKg: matchingProduct.bagSizeKg
+          } : "NOT FOUND"
         );
 
         if (matchingProduct) {
-          convertedItems[matchingProduct.key] = {
+          const packaging = item.packaging || "Loose";
+          // Use isBagSelection from backend if available, otherwise calculate
+          const isBagSelection = item.isBagSelection !== undefined ? item.isBagSelection : packaging !== "Loose";
+          let bagPieces: number | undefined = undefined;
+          let bags: number | undefined = undefined;
+
+          // Calculate bag pieces based on packaging and quantity
+          if (isBagSelection) {
+            if (packaging === "5kg Bags") {
+              bagPieces = Math.round(item.quantity / 5);
+              bags = bagPieces;
+            } else if (packaging === "40kg Bag") {
+              bagPieces = Math.round(item.quantity / 40);
+              bags = bagPieces;
+            } else if (matchingProduct.bagSizeKg) {
+              // For other bag types, calculate based on product's bag size
+              bagPieces = Math.round(item.quantity / matchingProduct.bagSizeKg);
+              bags = bagPieces;
+            }
+          }
+
+          const convertedItem = {
             product: matchingProduct,
             mode: "kg",
             quantityKg: item.quantity,
-            packaging: item.packaging || "Loose",
+            packaging: packaging as SelectedItem['packaging'],
+            isBagSelection,
+            bagPieces,
+            bags,
           };
+
+          console.log(`Converted item for "${item.productName}":`, convertedItem);
+          convertedItems[matchingProduct.key] = convertedItem;
         }
       });
 
@@ -251,8 +347,20 @@ const EditOrderPage: React.FC = () => {
         convertedItems
       );
       setSelectedItems(convertedItems);
+      
+      console.log("Final selectedItems set:", {
+        convertedItemsCount: Object.keys(convertedItems).length,
+        convertedItemsKeys: Object.keys(convertedItems),
+        willDisableSaveButton: Object.keys(convertedItems).length === 0
+      });
+    } else {
+      console.log("Conversion skipped - conditions not met:", {
+        currentProductsLength: currentProducts.length,
+        orderItemsLength: orderItems.length,
+        reason: currentProducts.length === 0 ? "No current products" : "No order items"
+      });
     }
-  }, [products, orderItems]);
+  }, [currentProducts, orderItems]);
 
   // Product management functions (similar to QuickOrderPage)
   const formatNumber = (num: number) => {
@@ -268,15 +376,34 @@ const EditOrderPage: React.FC = () => {
       setKg(existing.quantityKg || 0);
       setIsBagSelection(!!existing.isBagSelection);
       setBagPieces(existing.bagPieces || existing.bags || 1);
+      // Set currentBagSize based on existing selection
+      if (existing.isBagSelection && existing.packaging === '5kg Bags') {
+        setCurrentBagSize(5);
+      } else if (existing.isBagSelection && existing.packaging === '40kg Bag') {
+        setCurrentBagSize(40);
+      } else {
+        setCurrentBagSize(product.bagSizeKg || 40);
+      }
     } else {
-      if (product.bagSizeKg === 40) {
+      // Initialize based on product's bagSizeKg from pricing config
+      if (product.bagSizeKg === 5) {
+        // For 5kg products, default to bag selection with 5kg bags
         setIsBagSelection(true);
         setBagPieces(1);
-        setKg(product.bagSizeKg || 0);
+        setKg(5);
+        setCurrentBagSize(5);
+      } else if (product.bagSizeKg === 40) {
+        // For 40kg products, default to bag selection with 40kg bags
+        setIsBagSelection(true);
+        setBagPieces(1);
+        setKg(40);
+        setCurrentBagSize(40);
       } else {
+        // For other products, start with loose selection
         setKg(0);
         setIsBagSelection(false);
         setBagPieces(1);
+        setCurrentBagSize(product.bagSizeKg || 40);
       }
     }
   };
@@ -285,67 +412,60 @@ const EditOrderPage: React.FC = () => {
     setActiveProduct(null);
     setIsBagSelection(false);
     setBagPieces(1);
+    setCurrentBagSize(40); // Reset to default
   };
 
   const confirmQty = () => {
     if (!activeProduct) return;
 
-    const bagSize = activeProduct.bagSizeKg;
-    const is40kgBagProduct = bagSize === 40;
-    const isBag = isBagSelection && Boolean(bagSize);
-
     let totalKg = kg;
     let pieceCount: number | undefined = undefined;
     let bagsCount: number | undefined = undefined;
 
-    if (isBagSelection && bagSize) {
-      if (is40kgBagProduct) {
-        const pieces = Number.isFinite(bagPieces) ? bagPieces : 0;
-        if (!pieces || pieces <= 0) {
-          toast.error("Enter valid bag pieces");
-          return;
-        }
-        pieceCount = pieces;
-        totalKg = pieces * bagSize;
-        bagsCount = pieces;
-      } else {
-        totalKg = bagSize;
-        bagsCount = 1;
+    if (isBagSelection) {
+      const pieces = Number.isFinite(bagPieces) ? bagPieces : 0;
+      if (!pieces || pieces <= 0) {
+        toast.error('Enter valid bag pieces');
+        return;
       }
+      pieceCount = pieces;
+      totalKg = pieces * currentBagSize;
+      bagsCount = pieces;
     }
 
     if (!totalKg || totalKg <= 0) {
-      toast.error("Enter valid quantity");
+      toast.error('Enter valid quantity');
       return;
     }
 
-    let packaging: SelectedItem["packaging"] = "Loose";
-    if (isBag) {
-      if (activeProduct.bagSizeKg === 40) {
-        packaging = "40kg Bag";
-      } else if (
-        activeProduct.defaultPackaging &&
-        activeProduct.defaultPackaging !== "Loose"
-      ) {
+    let packaging: SelectedItem['packaging'] = 'Loose';
+    if (isBagSelection) {
+      // Determine packaging based on current bag size
+      if (currentBagSize === 5) {
+        packaging = '5kg Bags';
+      } else if (currentBagSize === 40) {
+        packaging = '40kg Bag';
+      } else if (activeProduct.defaultPackaging && activeProduct.defaultPackaging !== 'Loose') {
         packaging = activeProduct.defaultPackaging as typeof packaging;
       } else {
-        packaging = "Custom";
+        packaging = 'Custom';
       }
     }
 
     const item: SelectedItem = {
       product: activeProduct,
-      mode: "kg",
+      mode: 'kg',
       quantityKg: totalKg,
       packaging,
       bags: bagsCount,
-      isBagSelection: isBag,
+      isBagSelection: isBagSelection,
       bagPieces: pieceCount,
     };
-    setSelectedItems((prev) => ({ ...prev, [activeProduct.key]: item }));
+    setSelectedItems(prev => ({ ...prev, [activeProduct.key]: item }));
     setActiveProduct(null);
     setIsBagSelection(false);
     setBagPieces(1);
+    setCurrentBagSize(40); // Reset to default
   };
 
   const removeItem = (key: string) => {
@@ -362,21 +482,27 @@ const EditOrderPage: React.FC = () => {
     const kgValue = computeItemKg(it);
     const normalizedKg = Number.isFinite(kgValue) ? kgValue : 0;
     if (it.isBagSelection) {
-      const bagSize =
-        it.product?.bagSizeKg ||
-        (it.bagPieces ? normalizedKg / it.bagPieces : undefined);
-      if (it.bagPieces && it.bagPieces > 0 && bagSize) {
-        const displayBagSize = Math.round(bagSize * 100) / 100;
+      // Determine the actual bag size used based on packaging or calculation
+      let actualBagSize: number;
+      if (it.packaging === '5kg Bags') {
+        actualBagSize = 5;
+      } else if (it.packaging === '40kg Bag') {
+        actualBagSize = 40;
+      } else if (it.bagPieces && it.bagPieces > 0) {
+        // Calculate bag size from total kg and pieces
+        actualBagSize = normalizedKg / it.bagPieces;
+      } else {
+        // Fallback to product bag size
+        actualBagSize = it.product?.bagSizeKg || 40;
+      }
+
+      if (it.bagPieces && it.bagPieces > 0) {
+        const displayBagSize = Math.round(actualBagSize * 100) / 100;
         return `${it.bagPieces} × ${displayBagSize}kg (${normalizedKg}kg)`;
       }
-      if (it.bags && it.bags > 0 && bagSize) {
-        const displayBagSize = Math.round(bagSize * 100) / 100;
+      if (it.bags && it.bags > 0) {
+        const displayBagSize = Math.round(actualBagSize * 100) / 100;
         return `${it.bags} × ${displayBagSize}kg (${normalizedKg}kg)`;
-      }
-      if (it.bagPieces && it.bagPieces > 0) {
-        return `${it.bagPieces} bag${
-          it.bagPieces > 1 ? "s" : ""
-        } (${normalizedKg}kg)`;
       }
       return `${normalizedKg}kg (bag)`;
     }
@@ -389,11 +515,12 @@ const EditOrderPage: React.FC = () => {
   );
 
   const displayedKgValue = useMemo(() => {
-    if (isBagSelection && activeProduct?.bagSizeKg) {
-      return activeProduct.bagSizeKg;
+    if (isBagSelection) {
+      // Show the current bag size when in bag selection mode
+      return currentBagSize;
     }
     return kg;
-  }, [isBagSelection, activeProduct, kg]);
+  }, [isBagSelection, currentBagSize, kg]);
 
   const calculateTotal = () => {
     return itemsArray.reduce(
@@ -411,12 +538,20 @@ const EditOrderPage: React.FC = () => {
     }
   };
   const onSubmit = async (data: UpdateOrderForm) => {
+    console.log("🚀 onSubmit FUNCTION CALLED! This means form submission is working!");
+    console.log("onSubmit called with data:", data);
+    console.log("itemsArray:", itemsArray);
+    console.log("selectedItems:", selectedItems);
     try {
-      if (!order) return;
+      if (!order) {
+        console.log("No order found, returning");
+        return;
+      }
       setSaving(true);
 
       // Validate order items
       if (itemsArray.length === 0) {
+        console.log("No items in array, showing error");
         toast.error("Please add at least one order item");
         return;
       }
@@ -493,6 +628,7 @@ const EditOrderPage: React.FC = () => {
             This order has been {order?.status} and cannot be edited.
           </p>
           <button
+            type="button"
             onClick={() => navigate(`/orders/${order._id}`)}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
           >
@@ -646,171 +782,62 @@ const EditOrderPage: React.FC = () => {
                   </div>
 
                   {/* Compact grouped products */}
-                  {(() => {
-                    // Group products by their base name (removing size info)
-                    const baseProductGroups = currentProducts.reduce(
-                      (groups, product) => {
-                        let baseName = product.name
-                          .replace(/\d+\s*kg\s*/gi, "")
-                          .replace(/\s+/g, " ")
-                          .trim();
-
-                        if (!groups[baseName]) {
-                          groups[baseName] = [];
-                        }
-                        groups[baseName].push(product);
-                        return groups;
-                      },
-                      {} as Record<string, typeof currentProducts>
-                    );
-
-                    // Categorize the base products
-                    const categorizedProducts = Object.entries(
-                      baseProductGroups
-                    ).reduce((categories, [baseName, variants]) => {
-                      let category = "";
-
-                      if (
-                        baseName.toLowerCase().includes("chakki") &&
-                        baseName.toLowerCase().includes("atta")
-                      ) {
-                        category = "Chakki Fresh Atta";
-                      } else if (
-                        baseName.toLowerCase().includes("wheat") &&
-                        !baseName.toLowerCase().includes("chakki")
-                      ) {
-                        category = "Wheat Products";
-                      } else if (baseName.toLowerCase().includes("flour")) {
-                        category = "Flour Products";
-                      } else if (baseName.toLowerCase().includes("maida")) {
-                        category = "Maida Products";
-                      } else if (
-                        baseName.toLowerCase().includes("suji") ||
-                        baseName.toLowerCase().includes("semolina")
-                      ) {
-                        category = "Suji/Semolina";
-                      } else if (baseName.toLowerCase().includes("besan")) {
-                        category = "Besan Products";
+                  {currentProducts.length > 0 && (() => {
+                    const baseProductGroups = currentProducts.reduce((groups, product) => {
+                      const baseName = product.name;
+                      if (!groups[baseName]) {
+                        groups[baseName] = [];
                       }
+                      groups[baseName].push(product);
+                      return groups;
+                    }, {} as Record<string, QuickProduct[]>);
 
-                      if (!categories[category]) {
-                        categories[category] = [];
-                      }
-                      categories[category].push([baseName, variants]);
-                      return categories;
-                    }, {} as Record<string, Array<[string, typeof products]>>);
+                    return Object.entries(baseProductGroups).map(([baseName, variants]) => (
+                      <div key={baseName} className="mb-3 last:mb-0">
+                        <div className="flex items-center mb-2">
+                          <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                            {baseName}
+                          </span>
+                          <div className="h-px bg-gray-200 flex-1 ml-2"></div>
+                        </div>
 
-                    return (
-                      <div className="space-y-3">
-                        {Object.entries(categorizedProducts).map(
-                          ([category, baseProducts]) => (
-                            <div key={category}>
-                              <h4 className="text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
-                                {category}
-                              </h4>
-                              <div className="space-y-1.5">
-                                {baseProducts.map(([baseName, variants]) => {
-                                  const hasSelectedVariant = variants.some(
-                                    (v) => !!selectedItems[v.key]
-                                  );
-                                  const selectedCount = variants.filter(
-                                    (v) => !!selectedItems[v.key]
-                                  ).length;
-
-                                  return (
-                                    <div
-                                      key={baseName}
-                                      className={`border rounded-lg p-2.5 transition-all duration-200 ${
-                                        hasSelectedVariant
-                                          ? "bg-emerald-50 border-emerald-300"
-                                          : "bg-white border-gray-200 hover:border-gray-300"
-                                      }`}
-                                    >
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex-1 min-w-0">
-                                          <div className="flex items-center gap-1.5">
-                                            <h4 className="text-xs font-semibold text-gray-900 truncate">
-                                              {baseName}
-                                            </h4>
-                                            <span className="text-[10px] text-gray-500 flex-shrink-0">
-                                              ₹
-                                              {formatNumber(
-                                                variants[0].pricePerKg
-                                              )}
-                                              /kg
-                                            </span>
-                                            {hasSelectedVariant && (
-                                              <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded-full flex-shrink-0">
-                                                {selectedCount}
-                                              </span>
-                                            )}
-                                          </div>
-                                        </div>
-
-                                        {/* Package size buttons */}
-                                        <div className="flex gap-1 ml-2">
-                                          {variants.map((variant) => {
-                                            const isSelected =
-                                              !!selectedItems[variant.key];
-                                            return (
-                                              <button
-                                                type="button"
-                                                key={variant.key}
-                                                onClick={() =>
-                                                  openQtyModal(variant)
-                                                }
-                                                className={`px-2 py-1 rounded text-[10px] font-medium transition-all duration-200 ${
-                                                  isSelected
-                                                    ? "bg-emerald-600 text-white"
-                                                    : "bg-gray-100 text-gray-700 hover:bg-emerald-100 hover:text-emerald-700 active:scale-95"
-                                                }`}
-                                              >
-                                                {variant.bagSizeKg
-                                                  ? `${variant.bagSizeKg}kg`
-                                                  : "Loose"}
-                                              </button>
-                                            );
-                                          })}
-                                        </div>
-                                      </div>
-
-                                      {/* Show selected quantities inline */}
-                                      {hasSelectedVariant && (
-                                        <div className="mt-1.5 pt-1.5 border-t border-emerald-200">
-                                          <div className="flex flex-wrap gap-1">
-                                            {variants
-                                              .filter(
-                                                (v) => !!selectedItems[v.key]
-                                              )
-                                              .map((variant) => {
-                                                const item =
-                                                  selectedItems[variant.key];
-                                                const kg = item.quantityKg || 0;
-
-                                                return (
-                                                  <div
-                                                    key={variant.key}
-                                                    className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded"
-                                                  >
-                                                    {variant.bagSizeKg
-                                                      ? `${variant.bagSizeKg}kg`
-                                                      : "Loose"}
-                                                    : {formatNumber(kg)}kg
-                                                  </div>
-                                                );
-                                              })}
-                                          </div>
-                                        </div>
-                                      )}
+                        <div className="space-y-1.5">
+                          {variants.map(variant => {
+                            const isSelected = !!selectedItems[variant.key];
+                            return (
+                              <button
+                                type="button"
+                                key={variant.key}
+                                onClick={() => openQtyModal(variant)}
+                                className={`w-full text-left p-2.5 rounded-lg border transition-all duration-200 ${
+                                  isSelected
+                                    ? 'bg-emerald-50 border-emerald-300'
+                                    : 'bg-white border-gray-200 hover:border-gray-300 active:scale-[0.99]'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <h4 className="text-xs font-semibold text-gray-900 truncate">
+                                        {variant.name}
+                                      </h4>
+                                      <span className="text-[10px] text-gray-500 flex-shrink-0">
+                                        ₹{formatNumber(variant.pricePerKg)}/kg
+                                      </span>
                                     </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )
-                        )}
+                                    {isSelected && (
+                                      <div className="text-[10px] text-emerald-600 mt-0.5">
+                                        {formatItemQuantity(selectedItems[variant.key])}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    );
+                    ));
                   })()}
 
                   {/* No products message */}
@@ -1039,6 +1066,7 @@ const EditOrderPage: React.FC = () => {
                     </div>
                     <div className="p-3 sm:p-4">
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.preventDefault();
                           handleViewImage(
@@ -1121,7 +1149,12 @@ const EditOrderPage: React.FC = () => {
                   <div className="hidden lg:block mt-3 space-y-1.5">
                     <button
                       type="submit"
-                      disabled={saving || orderItems.length === 0}
+                      disabled={saving || itemsArray.length === 0}
+                      onClick={() => {
+                        console.log("Desktop Save button clicked! Disabled:", saving || itemsArray.length === 0, "itemsArray.length:", itemsArray.length);
+                        console.log("Form errors:", errors);
+                        console.log("Form is valid:", Object.keys(errors).length === 0);
+                      }}
                       className="w-full flex justify-center items-center py-2 px-3 border border-transparent rounded-lg shadow-sm text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
                     >
                       {saving ? (
@@ -1168,8 +1201,15 @@ const EditOrderPage: React.FC = () => {
                     Cancel
                   </button>
                   <button
-                    type="submit"
-                    disabled={saving || orderItems.length === 0}
+                    type="button"
+                    disabled={saving || itemsArray.length === 0}
+                    onClick={() => {
+                      console.log("Mobile Save button clicked! Disabled:", saving || itemsArray.length === 0, "itemsArray.length:", itemsArray.length);
+                      console.log("Form errors:", errors);
+                      console.log("Form is valid:", Object.keys(errors).length === 0);
+                      console.log("Manually triggering form submission...");
+                      handleSubmit(onSubmit)();
+                    }}
                     className="px-4 py-2 border border-transparent rounded-lg text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center whitespace-nowrap"
                   >
                     {saving ? (
@@ -1222,13 +1262,13 @@ const EditOrderPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    if (isBagSelection && activeProduct?.bagSizeKg) {
+                    if (isBagSelection) {
                       const newPieces = Math.max(
                         0,
                         (Number(bagPieces) || 0) - 1
                       );
                       setBagPieces(newPieces);
-                      setKg(newPieces * activeProduct.bagSizeKg);
+                      setKg(newPieces * currentBagSize);
                     } else {
                       setIsBagSelection(false);
                       setKg((prev) => Math.max(0, (Number(prev) || 0) - 0.5));
@@ -1249,10 +1289,10 @@ const EditOrderPage: React.FC = () => {
                       setKg(0);
                     } else {
                       const num = Math.max(0, Number(value));
-                      if (isBagSelection && activeProduct?.bagSizeKg) {
-                        const pieces = Math.ceil(num / activeProduct.bagSizeKg);
+                      if (isBagSelection) {
+                        const pieces = Math.ceil(num / currentBagSize);
                         setBagPieces(pieces);
-                        setKg(pieces * activeProduct.bagSizeKg);
+                        setKg(pieces * currentBagSize);
                       } else {
                         setKg(num);
                         setIsBagSelection(false);
@@ -1272,10 +1312,10 @@ const EditOrderPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    if (isBagSelection && activeProduct?.bagSizeKg) {
+                    if (isBagSelection) {
                       const newPieces = (Number(bagPieces) || 0) + 1;
                       setBagPieces(newPieces);
-                      setKg(newPieces * activeProduct.bagSizeKg);
+                      setKg(newPieces * currentBagSize);
                     } else {
                       setIsBagSelection(false);
                       setKg((prev) => (Number(prev) || 0) + 0.5);
@@ -1292,6 +1332,7 @@ const EditOrderPage: React.FC = () => {
                     label: string;
                     value: number;
                     isBag?: boolean;
+                    bagSize?: number;
                   }[] = [
                     { label: "5kg", value: 5 },
                     { label: "10kg", value: 10 },
@@ -1300,29 +1341,46 @@ const EditOrderPage: React.FC = () => {
                     { label: "50kg", value: 50 },
                   ];
 
-                  if (activeProduct.bagSizeKg) {
+                  // Add bag presets based on product type - mutual exclusivity
+                  if (activeProduct.bagSizeKg === 5) {
+                    // For 5kg products, only show 5kg bag option
                     presetOptions.push({
-                      label: `${activeProduct.bagSizeKg}kg (bag)`,
+                      label: "5kg Bags",
+                      value: 5,
+                      isBag: true,
+                      bagSize: 5,
+                    });
+                  } else if (activeProduct.bagSizeKg === 40) {
+                    // For 40kg products, only show 40kg bag option
+                    presetOptions.push({
+                      label: "40kg Bag",
+                      value: 40,
+                      isBag: true,
+                      bagSize: 40,
+                    });
+                  } else if (activeProduct.bagSizeKg && activeProduct.bagSizeKg !== 5 && activeProduct.bagSizeKg !== 40) {
+                    // For other bag sizes, show the specific bag option
+                    presetOptions.push({
+                      label: `${activeProduct.bagSizeKg}kg Bag`,
                       value: activeProduct.bagSizeKg,
                       isBag: true,
+                      bagSize: activeProduct.bagSizeKg,
                     });
                   }
 
                   return presetOptions.map((preset) => (
                     <button
-                      key={`${preset.label}-${preset.value}`}
+                      key={`${preset.label}-${preset.value}-${preset.bagSize || 'loose'}`}
                       type="button"
                       onClick={() => {
-                        setKg(preset.value);
-                        setIsBagSelection(!!preset.isBag);
-                        if (preset.isBag && activeProduct.bagSizeKg) {
-                          const count = preset.value / activeProduct.bagSizeKg;
-                          setBagPieces(
-                            !Number.isNaN(count)
-                              ? Math.max(1, Math.round(count))
-                              : 1
-                          );
+                        if (preset.isBag && preset.bagSize) {
+                          setIsBagSelection(true);
+                          setCurrentBagSize(preset.bagSize);
+                          setBagPieces(1);
+                          setKg(preset.bagSize);
                         } else {
+                          setIsBagSelection(false);
+                          setKg(preset.value);
                           setBagPieces(1);
                         }
                       }}
@@ -1334,8 +1392,10 @@ const EditOrderPage: React.FC = () => {
                 })()}
               </div>
             </div>
-            {isBagSelection && activeProduct?.bagSizeKg === 40 && (
-              <div className="mt-3">
+            
+            {/* Bag Selection Controls */}
+            {isBagSelection && (
+              <div className="my-3">
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">
                   Bag Pieces
                 </label>
@@ -1354,15 +1414,13 @@ const EditOrderPage: React.FC = () => {
                       }
                       const count = Math.max(0, Math.floor(Number(value)));
                       setBagPieces(count);
-                      if (activeProduct?.bagSizeKg) {
-                        setKg(count * activeProduct.bagSizeKg);
-                      }
+                      setKg(count * currentBagSize);
                     }}
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     placeholder="Number of bags"
                   />
                   <span className="text-xs text-gray-500">
-                    x {activeProduct.bagSizeKg}kg
+                    x {currentBagSize}kg
                   </span>
                 </div>
               </div>

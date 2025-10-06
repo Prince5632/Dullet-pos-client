@@ -337,6 +337,7 @@ export interface OrderItem {
     | "50kg Bags"
     | "40kg Bag"
     | "Loose";
+  isBagSelection?: boolean;
 }
 
 export interface Order {
