@@ -115,6 +115,7 @@ export interface Godown {
   allowedProducts?: string[];
   isActive: boolean;
   orderCount?: number;
+  visitCount?: number;
 }
 
 // Attendance Types
