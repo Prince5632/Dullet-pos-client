@@ -264,26 +264,46 @@ const DashboardPage: React.FC = () => {
                 setSelectedGodownId("");
                 fetchDashboardData("");
               }}
-              className={`text-left rounded-lg border p-3 transition-colors ${
+              className={`text-left cursor-pointer  rounded-lg border p-3 transition-all duration-300 transform hover:scale-105 ${
                 selectedGodownId === ""
-                  ? "border-emerald-500 bg-emerald-50"
-                  : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
+                  ? "border-indigo-200 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 shadow-md"
+                  : "border-gray-200 hover:border-indigo-200 hover:bg-gradient-to-br hover:from-indigo-25 hover:to-purple-25"
               }`}
               aria-pressed={selectedGodownId === ""}
             >
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-md bg-emerald-100">
-                  <BuildingOfficeIcon className="h-4 w-4 text-emerald-600" />
+                <div className={`p-2 rounded-md ${
+                  selectedGodownId === ""
+                    ? "bg-indigo-100"
+                    : "bg-gradient-to-br from-indigo-50 to-purple-50"
+                }`}>
+                  <BuildingOfficeIcon className={`h-4 w-4 ${
+                    selectedGodownId === ""
+                      ? "text-indigo-600"
+                      : "text-indigo-500"
+                  }`} />
                 </div>
                 <div>
-                  <p className="text-sm flex items-center gap-2 font-medium text-gray-900">
-                    All Godowns  <span className="text-[10px] text-emerald-700 bg-emerald-100 rounded px-1.5 py-0.5">
+                  <p className={`text-sm cursor-pointer flex items-center gap-2 font-medium ${
+                    selectedGodownId === ""
+                      ? "text-indigo-700"
+                      : "text-gray-900"
+                  }`}>
+                    All Godowns  <span className={`text-[10px] rounded px-1.5 py-0.5 ${
+                      selectedGodownId === ""
+                        ? "text-indigo-700 bg-indigo-200"
+                        : "text-indigo-600 bg-indigo-100"
+                    }`}>
                       Orders:{" "}
                       {godowns.reduce((sum, x) => sum + (x.orderCount || 0), 0)}
                     </span>
                   </p>
                   <div className="flex items-center gap-2">
-                    <p className="text-xs text-gray-500">
+                    <p className={`text-xs ${
+                      selectedGodownId === ""
+                        ? "text-indigo-600"
+                        : "text-gray-500"
+                    }`}>
                       View across locations
                     </p>
                    
@@ -292,40 +312,128 @@ const DashboardPage: React.FC = () => {
               </div>
             </button>
 
-            {godowns.map((g) => (
-              <button
-                key={g._id}
-                type="button"
-                onClick={() => {
-                  setSelectedGodownId(g._id);
-                  fetchDashboardData(g._id);
-                }}
-                className={`text-left rounded-lg border p-3 transition-colors ${
-                  selectedGodownId === g._id
-                    ? "border-emerald-500 bg-emerald-50"
-                    : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
-                }`}
-                aria-pressed={selectedGodownId === g._id}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-md bg-blue-100">
-                    <BuildingOfficeIcon className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium flex gap-2 text-gray-900">
-                      {g.name}
-                       <span className="text-[10px] flex justify-center items-center text-gray-700 bg-gray-100 rounded px-1.5 py-0.5">
-                        Orders: {g.orderCount ?? 0}
-                      </span>
-                    </p>
-                    <div className="flex items-center  gap-2">
-                      <p className="text-xs text-gray-500">{g.location.city}</p>
-                     
+            {godowns.map((g, index) => {
+              // Create varied light color schemes for each godown
+               const colorSchemes = [
+                 {
+                   gradient: "from-blue-50 via-cyan-50 to-teal-50",
+                   hoverGradient: "hover:from-blue-25 hover:to-cyan-25",
+                   iconBg: "bg-gradient-to-br from-blue-100 to-cyan-100",
+                   iconColor: "text-blue-600",
+                   selectedIconBg: "bg-blue-100",
+                   selectedIconColor: "text-blue-700",
+                   selectedTextColor: "text-blue-800",
+                   selectedBadgeColor: "text-blue-700 bg-blue-200",
+                   badgeColor: "text-blue-600 bg-blue-100",
+                   hoverBorder: "hover:border-blue-200"
+                 },
+                 {
+                   gradient: "from-emerald-50 via-green-50 to-lime-50",
+                   hoverGradient: "hover:from-emerald-25 hover:to-green-25",
+                   iconBg: "bg-gradient-to-br from-emerald-100 to-green-100",
+                   iconColor: "text-emerald-600",
+                   selectedIconBg: "bg-emerald-100",
+                   selectedIconColor: "text-emerald-700",
+                   selectedTextColor: "text-emerald-800",
+                   selectedBadgeColor: "text-emerald-700 bg-emerald-200",
+                   badgeColor: "text-emerald-600 bg-emerald-100",
+                   hoverBorder: "hover:border-emerald-200"
+                 },
+                 {
+                   gradient: "from-orange-50 via-amber-50 to-yellow-50",
+                   hoverGradient: "hover:from-orange-25 hover:to-amber-25",
+                   iconBg: "bg-gradient-to-br from-orange-100 to-amber-100",
+                   iconColor: "text-orange-600",
+                   selectedIconBg: "bg-orange-100",
+                   selectedIconColor: "text-orange-700",
+                   selectedTextColor: "text-orange-800",
+                   selectedBadgeColor: "text-orange-700 bg-orange-200",
+                   badgeColor: "text-orange-600 bg-orange-100",
+                   hoverBorder: "hover:border-orange-200"
+                 },
+                 {
+                   gradient: "from-violet-50 via-purple-50 to-indigo-50",
+                   hoverGradient: "hover:from-violet-25 hover:to-purple-25",
+                   iconBg: "bg-gradient-to-br from-violet-100 to-purple-100",
+                   iconColor: "text-violet-600",
+                   selectedIconBg: "bg-violet-100",
+                   selectedIconColor: "text-violet-700",
+                   selectedTextColor: "text-violet-800",
+                   selectedBadgeColor: "text-violet-700 bg-violet-200",
+                   badgeColor: "text-violet-600 bg-violet-100",
+                   hoverBorder: "hover:border-violet-200"
+                 },
+                 {
+                   gradient: "from-rose-50 via-pink-50 to-fuchsia-50",
+                   hoverGradient: "hover:from-rose-25 hover:to-pink-25",
+                   iconBg: "bg-gradient-to-br from-rose-100 to-pink-100",
+                   iconColor: "text-rose-600",
+                   selectedIconBg: "bg-rose-100",
+                   selectedIconColor: "text-rose-700",
+                   selectedTextColor: "text-rose-800",
+                   selectedBadgeColor: "text-rose-700 bg-rose-200",
+                   badgeColor: "text-rose-600 bg-rose-100",
+                   hoverBorder: "hover:border-rose-200"
+                 }
+               ];
+              
+              const colorScheme = colorSchemes[index % colorSchemes.length];
+              
+              return (
+                <button
+                  key={g._id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedGodownId(g._id);
+                    fetchDashboardData(g._id);
+                  }}
+                  className={`text-left cursor-pointer   rounded-lg border p-3 transition-all duration-300 transform hover:scale-105 ${
+                     selectedGodownId === g._id
+                       ? `border-gray-200 bg-gradient-to-br ${colorScheme.gradient} shadow-md`
+                       : `border-gray-200 ${colorScheme.hoverBorder} hover:bg-gradient-to-br ${colorScheme.hoverGradient}`
+                   }`}
+                  aria-pressed={selectedGodownId === g._id}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={`p-2 rounded-md ${
+                      selectedGodownId === g._id
+                        ? colorScheme.selectedIconBg
+                        : colorScheme.iconBg
+                    }`}>
+                      <BuildingOfficeIcon className={`h-4 w-4 ${
+                        selectedGodownId === g._id
+                          ? colorScheme.selectedIconColor
+                          : colorScheme.iconColor
+                      }`} />
+                    </div>
+                    <div>
+                      <p className={`text-sm font-medium flex gap-2 ${
+                        selectedGodownId === g._id
+                          ? colorScheme.selectedTextColor
+                          : "text-gray-900"
+                      }`}>
+                        {g.name}
+                         <span className={`text-[10px] flex justify-center items-center rounded px-1.5 py-0.5 ${
+                           selectedGodownId === g._id
+                             ? colorScheme.selectedBadgeColor
+                             : colorScheme.badgeColor
+                         }`}>
+                          Orders: {g.orderCount ?? 0}
+                        </span>
+                      </p>
+                      <div className="flex items-center  gap-2">
+                        <p className={`text-xs ${
+                           selectedGodownId === g._id
+                             ? `${colorScheme.selectedTextColor.replace('800', '600')}`
+                             : "text-gray-500"
+                         }`}>{g.location.city}</p>
+                       
+                      </div>
                     </div>
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
