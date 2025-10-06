@@ -17,7 +17,11 @@ import type {
   OrderItem,
   UpdateOrderForm,
   QuickProduct,
+  Godown,
 } from "../../types";
+import { useAuth } from "../../contexts/AuthContext";
+import { apiService } from "../../services/api";
+import { API_CONFIG } from "../../config/api";
 import { toast } from "react-hot-toast";
 import Modal from "../../components/ui/Modal";
 import { resolveCapturedImageSrc } from "../../utils/image";
@@ -60,6 +64,7 @@ const schema = yup.object({
 const EditOrderPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -79,6 +84,11 @@ const EditOrderPage: React.FC = () => {
   const [kg, setKg] = useState(0);
   const [isBagSelection, setIsBagSelection] = useState(false);
   const [bagPieces, setBagPieces] = useState<number>(1);
+  const [currentBagSize, setCurrentBagSize] = useState<number>(40);
+
+  // Godown state
+  const [godowns, setGodowns] = useState<Godown[]>([]);
+
   const {
     register,
     handleSubmit,
@@ -95,6 +105,37 @@ const EditOrderPage: React.FC = () => {
   });
 
   const watchedValues = watch();
+
+  // Location-based product and pricing helpers
+  const normalizeCity = (raw?: string): string =>
+    (raw || "").toLowerCase().trim();
+  const canonicalCity = (raw?: string): string => {
+    const city = normalizeCity(raw);
+    switch (city) {
+      case "ludhaina":
+        return "ludhiana";
+      case "fatehgarh":
+        return "fatehgarh sahib";
+      default:
+        return city;
+    }
+  };
+  const getCurrentCity = (): string => {
+    // Get city from the order's godown
+    return canonicalCity(order?.godown?.location?.city);
+  };
+
+  const currentProducts = useMemo(() => {
+    const city = getCurrentCity();
+    const area = order?.godown?.location?.area?.toLowerCase();
+    const tokensToMatch = [city, area ? `${city}:${area}` : ""].filter(Boolean);
+    if (!tokensToMatch.length) return [] as QuickProduct[];
+    return products.filter(
+      (p) =>
+        Array.isArray(p.cityTokens) &&
+        p.cityTokens.some((token) => tokensToMatch.includes(token))
+    );
+  }, [products, order]);
 
   // Load products
   useEffect(() => {
@@ -113,6 +154,19 @@ const EditOrderPage: React.FC = () => {
       }
     };
     load();
+  }, []);
+
+  // Load godowns
+  useEffect(() => {
+    const loadGodowns = async () => {
+      try {
+        const response = await apiService.get(API_CONFIG.ENDPOINTS.GODOWNS);
+        setGodowns(response.data);
+      } catch (error) {
+        console.error("Failed to load godowns:", error);
+      }
+    };
+    loadGodowns();
   }, []);
 
   useEffect(() => {
@@ -156,14 +210,29 @@ const EditOrderPage: React.FC = () => {
   // Convert OrderItems to SelectedItems when products and order are loaded
   useEffect(() => {
     if (products.length > 0 && orderItems.length > 0) {
+      console.log("Converting orderItems to selectedItems:", {
+        productsCount: products.length,
+        orderItemsCount: orderItems.length,
+        orderItems: orderItems.map((item) => ({
+          name: item.productName,
+          quantity: item.quantity,
+        })),
+      });
+
       const convertedItems: Record<string, SelectedItem> = {};
 
       orderItems.forEach((item) => {
-        // Try to find matching product by name
+        // Try to find matching product by name from all products (not just currentProducts)
+        // This ensures existing order items are shown even if they're not available in current location
         const matchingProduct = products.find(
           (p) =>
             p.name.toLowerCase().includes(item.productName.toLowerCase()) ||
             item.productName.toLowerCase().includes(p.name.toLowerCase())
+        );
+
+        console.log(
+          `Matching product for "${item.productName}":`,
+          matchingProduct ? matchingProduct.name : "NOT FOUND"
         );
 
         if (matchingProduct) {
@@ -176,6 +245,11 @@ const EditOrderPage: React.FC = () => {
         }
       });
 
+      console.log(
+        "Converted items:",
+        Object.keys(convertedItems).length,
+        convertedItems
+      );
       setSelectedItems(convertedItems);
     }
   }, [products, orderItems]);
@@ -228,7 +302,7 @@ const EditOrderPage: React.FC = () => {
       if (is40kgBagProduct) {
         const pieces = Number.isFinite(bagPieces) ? bagPieces : 0;
         if (!pieces || pieces <= 0) {
-          toast.error('Enter valid bag pieces');
+          toast.error("Enter valid bag pieces");
           return;
         }
         pieceCount = pieces;
@@ -241,24 +315,27 @@ const EditOrderPage: React.FC = () => {
     }
 
     if (!totalKg || totalKg <= 0) {
-      toast.error('Enter valid quantity');
+      toast.error("Enter valid quantity");
       return;
     }
 
-    let packaging: SelectedItem['packaging'] = 'Loose';
+    let packaging: SelectedItem["packaging"] = "Loose";
     if (isBag) {
       if (activeProduct.bagSizeKg === 40) {
-        packaging = '40kg Bag';
-      } else if (activeProduct.defaultPackaging && activeProduct.defaultPackaging !== 'Loose') {
+        packaging = "40kg Bag";
+      } else if (
+        activeProduct.defaultPackaging &&
+        activeProduct.defaultPackaging !== "Loose"
+      ) {
         packaging = activeProduct.defaultPackaging as typeof packaging;
       } else {
-        packaging = 'Custom';
+        packaging = "Custom";
       }
     }
 
     const item: SelectedItem = {
       product: activeProduct,
-      mode: 'kg',
+      mode: "kg",
       quantityKg: totalKg,
       packaging,
       bags: bagsCount,
@@ -285,7 +362,9 @@ const EditOrderPage: React.FC = () => {
     const kgValue = computeItemKg(it);
     const normalizedKg = Number.isFinite(kgValue) ? kgValue : 0;
     if (it.isBagSelection) {
-      const bagSize = it.product?.bagSizeKg || (it.bagPieces ? normalizedKg / it.bagPieces : undefined);
+      const bagSize =
+        it.product?.bagSizeKg ||
+        (it.bagPieces ? normalizedKg / it.bagPieces : undefined);
       if (it.bagPieces && it.bagPieces > 0 && bagSize) {
         const displayBagSize = Math.round(bagSize * 100) / 100;
         return `${it.bagPieces} × ${displayBagSize}kg (${normalizedKg}kg)`;
@@ -295,7 +374,9 @@ const EditOrderPage: React.FC = () => {
         return `${it.bags} × ${displayBagSize}kg (${normalizedKg}kg)`;
       }
       if (it.bagPieces && it.bagPieces > 0) {
-        return `${it.bagPieces} bag${it.bagPieces > 1 ? 's' : ''} (${normalizedKg}kg)`;
+        return `${it.bagPieces} bag${
+          it.bagPieces > 1 ? "s" : ""
+        } (${normalizedKg}kg)`;
       }
       return `${normalizedKg}kg (bag)`;
     }
@@ -567,7 +648,7 @@ const EditOrderPage: React.FC = () => {
                   {/* Compact grouped products */}
                   {(() => {
                     // Group products by their base name (removing size info)
-                    const baseProductGroups = products.reduce(
+                    const baseProductGroups = currentProducts.reduce(
                       (groups, product) => {
                         let baseName = product.name
                           .replace(/\d+\s*kg\s*/gi, "")
@@ -580,14 +661,14 @@ const EditOrderPage: React.FC = () => {
                         groups[baseName].push(product);
                         return groups;
                       },
-                      {} as Record<string, typeof products>
+                      {} as Record<string, typeof currentProducts>
                     );
 
                     // Categorize the base products
                     const categorizedProducts = Object.entries(
                       baseProductGroups
                     ).reduce((categories, [baseName, variants]) => {
-                      let category = "Other";
+                      let category = "";
 
                       if (
                         baseName.toLowerCase().includes("chakki") &&
@@ -731,6 +812,35 @@ const EditOrderPage: React.FC = () => {
                       </div>
                     );
                   })()}
+
+                  {/* No products message */}
+                  {order && currentProducts.length === 0 && (
+                    <div className="text-center py-8">
+                      <div className="text-gray-400 mb-2">
+                        <svg
+                          className="w-12 h-12 mx-auto"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M9 9l3-3 3 3"
+                          />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        No products available for{" "}
+                        {order.godown?.name || "this godown"}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Location: {order.godown?.location?.city},{" "}
+                        {order.godown?.location?.area}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Cart */}
@@ -1113,12 +1223,15 @@ const EditOrderPage: React.FC = () => {
                   type="button"
                   onClick={() => {
                     if (isBagSelection && activeProduct?.bagSizeKg) {
-                      const newPieces = Math.max(0, (Number(bagPieces) || 0) - 1);
+                      const newPieces = Math.max(
+                        0,
+                        (Number(bagPieces) || 0) - 1
+                      );
                       setBagPieces(newPieces);
                       setKg(newPieces * activeProduct.bagSizeKg);
                     } else {
                       setIsBagSelection(false);
-                      setKg(prev => Math.max(0, (Number(prev) || 0) - 0.5));
+                      setKg((prev) => Math.max(0, (Number(prev) || 0) - 0.5));
                     }
                   }}
                   disabled={kg <= 0}
@@ -1129,10 +1242,10 @@ const EditOrderPage: React.FC = () => {
                 <input
                   type="number"
                   inputMode="decimal"
-                  value={displayedKgValue === 0 ? '' : displayedKgValue}
+                  value={displayedKgValue === 0 ? "" : displayedKgValue}
                   onChange={(e) => {
                     const value = e.target.value;
-                    if (value === '') {
+                    if (value === "") {
                       setKg(0);
                     } else {
                       const num = Math.max(0, Number(value));
@@ -1147,7 +1260,7 @@ const EditOrderPage: React.FC = () => {
                     }
                   }}
                   onFocus={(e) => {
-                    if (e.target.value === '0') {
+                    if (e.target.value === "0") {
                       e.target.select();
                     }
                   }}
@@ -1165,7 +1278,7 @@ const EditOrderPage: React.FC = () => {
                       setKg(newPieces * activeProduct.bagSizeKg);
                     } else {
                       setIsBagSelection(false);
-                      setKg(prev => (Number(prev) || 0) + 0.5);
+                      setKg((prev) => (Number(prev) || 0) + 0.5);
                     }
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-r-lg bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-medium active:scale-95"
@@ -1175,23 +1288,27 @@ const EditOrderPage: React.FC = () => {
               </div>
               <div className="mt-2 flex gap-1.5">
                 {(() => {
-                  const presetOptions: { label: string; value: number; isBag?: boolean }[] = [
-                    { label: '5kg', value: 5 },
-                    { label: '10kg', value: 10 },
-                    { label: '25kg', value: 25 },
-                    { label: '40kg', value: 40 },
-                    { label: '50kg', value: 50 }
+                  const presetOptions: {
+                    label: string;
+                    value: number;
+                    isBag?: boolean;
+                  }[] = [
+                    { label: "5kg", value: 5 },
+                    { label: "10kg", value: 10 },
+                    { label: "25kg", value: 25 },
+                    { label: "40kg", value: 40 },
+                    { label: "50kg", value: 50 },
                   ];
 
                   if (activeProduct.bagSizeKg) {
                     presetOptions.push({
                       label: `${activeProduct.bagSizeKg}kg (bag)`,
                       value: activeProduct.bagSizeKg,
-                      isBag: true
+                      isBag: true,
                     });
                   }
 
-                  return presetOptions.map(preset => (
+                  return presetOptions.map((preset) => (
                     <button
                       key={`${preset.label}-${preset.value}`}
                       type="button"
@@ -1200,7 +1317,11 @@ const EditOrderPage: React.FC = () => {
                         setIsBagSelection(!!preset.isBag);
                         if (preset.isBag && activeProduct.bagSizeKg) {
                           const count = preset.value / activeProduct.bagSizeKg;
-                          setBagPieces(!Number.isNaN(count) ? Math.max(1, Math.round(count)) : 1);
+                          setBagPieces(
+                            !Number.isNaN(count)
+                              ? Math.max(1, Math.round(count))
+                              : 1
+                          );
                         } else {
                           setBagPieces(1);
                         }
@@ -1215,16 +1336,18 @@ const EditOrderPage: React.FC = () => {
             </div>
             {isBagSelection && activeProduct?.bagSizeKg === 40 && (
               <div className="mt-3">
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">Bag Pieces</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                  Bag Pieces
+                </label>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
                     min={1}
                     step={1}
-                    value={bagPieces || ''}
+                    value={bagPieces || ""}
                     onChange={(e) => {
                       const value = e.target.value;
-                      if (value === '') {
+                      if (value === "") {
                         setBagPieces(0);
                         setKg(0);
                         return;
@@ -1238,7 +1361,9 @@ const EditOrderPage: React.FC = () => {
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     placeholder="Number of bags"
                   />
-                  <span className="text-xs text-gray-500">x {activeProduct.bagSizeKg}kg</span>
+                  <span className="text-xs text-gray-500">
+                    x {activeProduct.bagSizeKg}kg
+                  </span>
                 </div>
               </div>
             )}
