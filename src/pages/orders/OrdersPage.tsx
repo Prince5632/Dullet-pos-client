@@ -954,175 +954,183 @@ const OrdersPage: React.FC = () => {
             )}
           </div>
         </div>
-
-        {/* Stats Section - Super Admin/Admin only */}
-        <>
-          {/* Godown Selector - Cards (matches Dashboard design) */}
-          {godowns.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-3 mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <BuildingOfficeIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                <span className="text-sm font-semibold text-gray-700">
-                  Select Godown
-                </span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                {/* All Godowns card */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setGodownFilter("");
-                  }}
-                  className={`text-left rounded-lg border p-3 transition-colors ${
-                    godownFilter === ""
-                      ? "border-emerald-500 bg-emerald-50"
-                      : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
-                  }`}
-                  aria-pressed={godownFilter === ""}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 rounded-md bg-emerald-100">
-                      <BuildingOfficeIcon className="h-4 w-4 text-emerald-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm flex items-center gap-2 font-medium text-gray-900">
-                        All Godowns
-                        <span className="text-[10px] text-emerald-700 bg-emerald-100 rounded px-1.5 py-0.5">
-                          Orders:{" "}
-                          {godowns.reduce(
-                            (sum, x) => sum + (x.orderCount || 0),
-                            0
-                          )}
-                        </span>
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-gray-500">
-                          View across locations
-                        </p>
-                      </div>
-                    </div>
+        {viewType === "orders" &&
+          (user?.role?.name?.toLowerCase() === "super admin" ||
+            user?.role?.name?.toLowerCase() === "admin") && (
+            <>
+              {/* Godown Selector - Cards (matches Dashboard design) */}
+              {godowns.length > 0 && (
+                <div className="bg-white rounded-xl border border-gray-200 p-3 mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BuildingOfficeIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                    <span className="text-sm font-semibold text-gray-700">
+                      Select Godown
+                    </span>
                   </div>
-                </button>
-
-                {godowns.map((g) => (
-                  <button
-                    key={g._id}
-                    type="button"
-                    onClick={() => {
-                      setGodownFilter(g._id);
-                    }}
-                    className={`text-left rounded-lg border p-3 transition-colors ${
-                      godownFilter === g._id
-                        ? "border-emerald-500 bg-emerald-50"
-                        : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
-                    }`}
-                    aria-pressed={godownFilter === g._id}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 rounded-md bg-blue-100">
-                        <BuildingOfficeIcon className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium flex gap-2 text-gray-900">
-                          {g.name}
-                          <span className="text-[10px] flex justify-center items-center text-gray-700 bg-gray-100 rounded px-1.5 py-0.5">
-                            Orders: {g.orderCount ?? 0}
-                          </span>
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs text-gray-500">
-                            {g.location.city}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {/* All Godowns card */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGodownFilter("");
+                      }}
+                      className={`text-left rounded-lg border p-3 transition-colors ${
+                        godownFilter === ""
+                          ? "border-emerald-500 bg-emerald-50"
+                          : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
+                      }`}
+                      aria-pressed={godownFilter === ""}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-md bg-emerald-100">
+                          <BuildingOfficeIcon className="h-4 w-4 text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm flex items-center gap-2 font-medium text-gray-900">
+                            All Godowns
+                            <span className="text-[10px] text-emerald-700 bg-emerald-100 rounded px-1.5 py-0.5">
+                              Orders:{" "}
+                              {godowns.reduce(
+                                (sum, x) => sum + (x.orderCount || 0),
+                                0
+                              )}
+                            </span>
                           </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-gray-500">
+                              View across locations
+                            </p>
+                          </div>
                         </div>
                       </div>
+                    </button>
+
+                    {godowns.map((g) => (
+                      <button
+                        key={g._id}
+                        type="button"
+                        onClick={() => {
+                          setGodownFilter(g._id);
+                        }}
+                        className={`text-left rounded-lg border p-3 transition-colors ${
+                          godownFilter === g._id
+                            ? "border-emerald-500 bg-emerald-50"
+                            : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
+                        }`}
+                        aria-pressed={godownFilter === g._id}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-md bg-blue-100">
+                            <BuildingOfficeIcon className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium flex gap-2 text-gray-900">
+                              {g.name}
+                              <span className="text-[10px] flex justify-center items-center text-gray-700 bg-gray-100 rounded px-1.5 py-0.5">
+                                Orders: {g.orderCount ?? 0}
+                              </span>
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs text-gray-500">
+                                {g.location.city}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Stats Grid */}
+              {stats && !statsLoading && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                  {[
+                    {
+                      label: "Revenue",
+                      value: `₹${((stats.revenue.today || 0) / 1000).toFixed(
+                        1
+                      )}k`,
+                      subtitle: "Today",
+                      icon: BanknotesIcon,
+                      bgColor: "bg-emerald-500",
+                      trend: stats.revenue.growth,
+                    },
+                    {
+                      label: "Orders",
+                      value: stats.orders.total.toString(),
+                      subtitle: `${stats.orders.totalVisits} visits`,
+                      icon: ClipboardDocumentListIcon,
+                      bgColor: "bg-blue-500",
+                    },
+                    {
+                      label: "Pending",
+                      value: stats.orders.pendingApproval.toString(),
+                      subtitle: "Approval",
+                      icon: ExclamationTriangleIcon,
+                      bgColor: "bg-amber-500",
+                      urgent: stats.orders.pendingApproval > 0,
+                    },
+                    {
+                      label: "Users",
+                      value: stats.users.total.toString(),
+                      subtitle: `${stats.users.active} active`,
+                      icon: UserGroupIcon,
+                      bgColor: "bg-purple-500",
+                    },
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      className={`relative flex items-start gap-3 bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-sm ${
+                        stat.urgent ? "ring-2 ring-amber-200" : ""
+                      }`}
+                    >
+                      <div
+                        className={`${stat.bgColor} rounded-lg p-2 mt-[4px] shrink-0`}
+                      >
+                        <stat.icon className="h-4 w-4 text-white" />
+                      </div>
+
+                      <div className="flex flex-col">
+                        <div className="flex items-baseline gap-2">
+                          <p className="text-xl sm:text-2xl font-bold text-gray-900">
+                            {stat.value}
+                          </p>
+                          {stat.trend !== undefined && (
+                            <span
+                              className={`text-xs ${
+                                stat.trend >= 0
+                                  ? "text-emerald-600"
+                                  : "text-red-600"
+                              }`}
+                            >
+                              {stat.trend >= 0 ? "↑" : "↓"}
+                              {Math.abs(stat.trend)}%
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-600">{stat.label}</p>
+                        <p className="text-[10px] text-gray-400">
+                          {stat.subtitle}
+                        </p>
+                      </div>
+
+                      {stat.urgent && (
+                        <div className="absolute top-2 right-2 h-2 w-2 bg-amber-400 rounded-full animate-pulse"></div>
+                      )}
                     </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+                  ))}
+                </div>
+              )}
+
+              {statsLoading && (
+                <div className="flex items-center justify-center py-4 mb-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                </div>
+              )}
+            </>
           )}
-
-          {/* Stats Grid */}
-          {stats && !statsLoading && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-              {[
-                {
-                  label: "Revenue",
-                  value: `₹${((stats.revenue.today || 0) / 1000).toFixed(1)}k`,
-                  subtitle: "Today",
-                  icon: BanknotesIcon,
-                  bgColor: "bg-emerald-500",
-                  trend: stats.revenue.growth,
-                },
-                {
-                  label: "Orders",
-                  value: stats.orders.total.toString(),
-                  subtitle: `${stats.orders.totalVisits} visits`,
-                  icon: ClipboardDocumentListIcon,
-                  bgColor: "bg-blue-500",
-                },
-                {
-                  label: "Pending",
-                  value: stats.orders.pendingApproval.toString(),
-                  subtitle: "Approval",
-                  icon: ExclamationTriangleIcon,
-                  bgColor: "bg-amber-500",
-                  urgent: stats.orders.pendingApproval > 0,
-                },
-                {
-                  label: "Users",
-                  value: stats.users.total.toString(),
-                  subtitle: `${stats.users.active} active`,
-                  icon: UserGroupIcon,
-                  bgColor: "bg-purple-500",
-                },
-              ].map((stat) => (
-            <div
-  key={stat.label}
-  className={`relative flex items-start gap-3 bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-sm ${
-    stat.urgent ? "ring-2 ring-amber-200" : ""
-  }`}
->
-  <div className={`${stat.bgColor} rounded-lg p-2 mt-[4px] shrink-0`}>
-    <stat.icon className="h-4 w-4 text-white" />
-  </div>
-
-  <div className="flex flex-col">
-    <div className="flex items-baseline gap-2">
-      <p className="text-xl sm:text-2xl font-bold text-gray-900">
-        {stat.value}
-      </p>
-      {stat.trend !== undefined && (
-        <span
-          className={`text-xs ${
-            stat.trend >= 0 ? "text-emerald-600" : "text-red-600"
-          }`}
-        >
-          {stat.trend >= 0 ? "↑" : "↓"}
-          {Math.abs(stat.trend)}%
-        </span>
-      )}
-    </div>
-    <p className="text-xs text-gray-600">{stat.label}</p>
-    <p className="text-[10px] text-gray-400">{stat.subtitle}</p>
-  </div>
-
-  {stat.urgent && (
-    <div className="absolute top-2 right-2 h-2 w-2 bg-amber-400 rounded-full animate-pulse"></div>
-  )}
-</div>
-
-              ))}
-            </div>
-          )}
-
-          {statsLoading && (
-            <div className="flex items-center justify-center py-4 mb-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-            </div>
-          )}
-        </>
-
         {/* Compact Stats for other roles */}
         {!loading &&
           orders.length > 0 &&
