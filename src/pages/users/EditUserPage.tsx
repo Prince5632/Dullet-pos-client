@@ -23,54 +23,72 @@ import RoleAssignment from "../../components/permissions/RoleAssignment";
 import toast from "react-hot-toast";
 import { resolveCapturedImageSrc, resolveProfileImageSrc, resolveDocumentSrc } from "../../utils/image";
 
-// Validation schema (password is optional for updates)
-const editUserSchema = yup.object({
-  firstName: yup
-    .string()
-    .required("First name is required")
-    .min(2, "First name must be at least 2 characters")
-    .max(50, "First name must be less than 50 characters"),
-  lastName: yup
-    .string()
-    .required("Last name is required")
-    .min(2, "Last name must be at least 2 characters")
-    .max(50, "Last name must be less than 50 characters"),
-  email: yup
-    .string()
-    .required("Email is required")
-    .test("valid-email", "Please enter a valid email address", isValidEmail),
-  phone: yup
-    .string()
-    .required("Phone number is required")
-    .test(
-      "valid-phone",
-      "Please enter a valid Indian mobile number",
-      isValidPhone
-    ),
-  roleId: yup.string().required("Role is required"),
-  department: yup.string().required("Department is required"),
-  position: yup
-    .string()
-    .required("Position is required")
-    .min(2, "Position must be at least 2 characters")
-    .max(100, "Position must be less than 100 characters"),
-  aadhaarNumber: yup
-    .string()
-    .nullable()
-    .transform((value) => (value ? value.trim() : undefined))
-    .matches(/^[0-9]{12}$/, {
-      message: "Aadhaar must be 12 digits",
-      excludeEmptyString: true,
-    }),
-  panNumber: yup
-    .string()
-    .nullable()
-    .transform((value) => (value ? value.trim().toUpperCase() : undefined))
-    .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i, {
-      message: "Invalid PAN format",
-      excludeEmptyString: true,
-    }),
-});
+// Validation schema (password not used in edits). Allow email or username.
+const editUserSchema = yup
+  .object({
+    firstName: yup
+      .string()
+      .required("First name is required")
+      .min(2, "First name must be at least 2 characters")
+      .max(50, "First name must be less than 50 characters"),
+    lastName: yup
+      .string()
+      .required("Last name is required")
+      .min(2, "Last name must be at least 2 characters")
+      .max(50, "Last name must be less than 50 characters"),
+    email: yup
+      .string()
+      .nullable()
+      .transform((value) => (value ? value : undefined))
+      .test(
+        "valid-email",
+        "Please enter a valid email address",
+        (val) => !val || isValidEmail(val)
+      ),
+    username: yup
+      .string()
+      .nullable()
+      .transform((value) => (value ? value.trim() : undefined)),
+    phone: yup
+      .string()
+      .required("Phone number is required")
+      .test(
+        "valid-phone",
+        "Please enter a valid Indian mobile number",
+        isValidPhone
+      ),
+    roleId: yup.string().required("Role is required"),
+    department: yup.string().required("Department is required"),
+    position: yup
+      .string()
+      .required("Position is required")
+      .min(2, "Position must be at least 2 characters")
+      .max(100, "Position must be less than 100 characters"),
+    aadhaarNumber: yup
+      .string()
+      .nullable()
+      .transform((value) => (value ? value.trim() : undefined))
+      .matches(/^[0-9]{12}$/, {
+        message: "Aadhaar must be 12 digits",
+        excludeEmptyString: true,
+      }),
+    panNumber: yup
+      .string()
+      .nullable()
+      .transform((value) => (value ? value.trim().toUpperCase() : undefined))
+      .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i, {
+        message: "Invalid PAN format",
+        excludeEmptyString: true,
+      }),
+  })
+  .test(
+    "email-or-username",
+    "Either email or username is required",
+    (obj) => {
+      const o = obj as any;
+      return !!(o?.email || o?.username);
+    }
+  );
 
 type UpdateUserFormInputs = UpdateUserForm & {
   addressLine1?: string;
@@ -178,7 +196,8 @@ const EditUserPage: React.FC = () => {
         reset({
           firstName: userData.firstName,
           lastName: userData.lastName,
-          email: userData.email,
+          email: (userData as any).email || "",
+          username: (userData as any).username || "",
           phone: userData.phone,
           roleId: userData.role?._id || "",
           department: userData.department,
@@ -450,7 +469,8 @@ const EditUserPage: React.FC = () => {
       const userData: UpdateUserForm = {
         firstName: data.firstName,
         lastName: data.lastName,
-        email: data.email,
+        email: data.email || undefined,
+        username: data.username || undefined,
         phone: data.phone,
         roleId: data.roleId || undefined,
         department: data.department,
@@ -692,6 +712,23 @@ const EditUserPage: React.FC = () => {
                     {errors.email.message}
                   </p>
                 )}
+              </div>
+
+              {/* Username */}
+              <div>
+                <label
+                  htmlFor="username"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Username
+                </label>
+                <input
+                  type="text"
+                  id="username"
+                  {...register("username")}
+                  className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm border-gray-300 focus:border-blue-500"
+                  placeholder="Enter username (optional if email provided)"
+                />
               </div>
 
               {/* Phone */}
