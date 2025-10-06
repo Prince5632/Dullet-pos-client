@@ -215,15 +215,32 @@ const QuickOrderPage: React.FC = () => {
       setKg(existing.quantityKg || 0);
       setIsBagSelection(!!existing.isBagSelection);
       setBagPieces(existing.bagPieces || existing.bags || 1);
+      // Set currentBagSize based on existing selection
+      if (existing.isBagSelection && existing.packaging === '5kg Bags') {
+        setCurrentBagSize(5);
+      } else {
+        setCurrentBagSize(product.bagSizeKg || 40);
+      }
     } else {
-      if (product.bagSizeKg === 40) {
+      // Initialize based on product's bagSizeKg from pricing config
+      if (product.bagSizeKg === 5) {
+        // For 5kg products, default to bag selection with 5kg bags
         setIsBagSelection(true);
         setBagPieces(1);
-        setKg(product.bagSizeKg || 0);
+        setKg(5);
+        setCurrentBagSize(5);
+      } else if (product.bagSizeKg === 40) {
+        // For 40kg products, default to bag selection with 40kg bags
+        setIsBagSelection(true);
+        setBagPieces(1);
+        setKg(40);
+        setCurrentBagSize(40);
       } else {
+        // For other products, start with loose selection
         setKg(0);
         setIsBagSelection(false);
         setBagPieces(1);
+        setCurrentBagSize(product.bagSizeKg || 40);
       }
     }
   };
@@ -884,47 +901,83 @@ const QuickOrderPage: React.FC = () => {
                     { label: '10kg', value: 10 },
                     { label: '25kg', value: 25 },
                     { label: '40kg', value: 40 },
-                    { label: '50kg', value: 50 },
-                    // 5kg bag preset with bag selection functionality
-                    { label: '5kg (bag)', value: 5, isBag: true, bagSize: 5 }
+                    { label: '50kg', value: 50 }
                   ];
 
-                   if (activeProduct.bagSizeKg) {
-                     presetOptions.push({
-                       label: `${activeProduct.bagSizeKg}kg (bag)` ,
-                       value: activeProduct.bagSizeKg,
-                       isBag: true
-                     });
-                   }
+                  // Add bag presets based on product type - mutual exclusivity
+                  if (activeProduct.bagSizeKg === 5) {
+                    // For 5kg products, only show 5kg bag option
+                    presetOptions.push({
+                      label: '5kg (bag)',
+                      value: 5,
+                      isBag: true,
+                      bagSize: 5
+                    });
+                  } else if (activeProduct.bagSizeKg === 40) {
+                    // For 40kg products, only show 40kg bag option
+                    presetOptions.push({
+                      label: '40kg (bag)',
+                      value: 40,
+                      isBag: true,
+                      bagSize: 40
+                    });
+                  } else if (activeProduct.bagSizeKg && activeProduct.bagSizeKg !== 5 && activeProduct.bagSizeKg !== 40) {
+                    // For other bag sizes, show the specific bag option
+                    presetOptions.push({
+                      label: `${activeProduct.bagSizeKg}kg (bag)`,
+                      value: activeProduct.bagSizeKg,
+                      isBag: true,
+                      bagSize: activeProduct.bagSizeKg
+                    });
+                  }
 
-                   return presetOptions.map(preset => (
-                    <button
-                      key={`${preset.label}-${preset.value}`}
-                      type="button"
-                      onClick={() => {
-                        setKg(preset.value);
-                        if (preset.isBag) {
-                          // Use custom bagSize for presets like 5kg (bag), or fall back to activeProduct.bagSizeKg
-                          const bagSize = preset.bagSize || activeProduct.bagSizeKg || 40;
-                          setCurrentBagSize(bagSize); // Set the current bag size
-                          const count = preset.value / bagSize;
-                          setBagPieces(!Number.isNaN(count) ? Math.max(1, Math.round(count)) : 1);
-                        } else {
-                          setBagPieces(1);
-                          setCurrentBagSize(40); // Reset to default
-                        }
-                        setIsBagSelection(!!preset.isBag);
-                      }}
-                      className="flex-1 px-2 py-1 text-[10px] border border-gray-200 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-600 active:scale-95"
-                    >
-                      {preset.label}
-                    </button>
-                  ));
+                   return presetOptions.map(preset => {
+                     // Determine if this preset is currently active
+                     const isActive = (() => {
+                       if (preset.isBag) {
+                         // For bag presets, check if we're in bag selection mode with matching bag size and total kg
+                         return isBagSelection && 
+                                currentBagSize === (preset.bagSize || activeProduct.bagSizeKg) &&
+                                kg === preset.value;
+                       } else {
+                         // For regular presets, check if we're not in bag mode and kg matches
+                         return !isBagSelection && kg === preset.value;
+                       }
+                     })();
+
+                     return (
+                      <button
+                        key={`${preset.label}-${preset.value}`}
+                        type="button"
+                        onClick={() => {
+                          setKg(preset.value);
+                          if (preset.isBag) {
+                            // Use custom bagSize for presets like 5kg (bag), or fall back to activeProduct.bagSizeKg
+                            const bagSize = preset.bagSize || activeProduct.bagSizeKg || 40;
+                            setCurrentBagSize(bagSize); // Set the current bag size
+                            const count = preset.value / bagSize;
+                            setBagPieces(!Number.isNaN(count) ? Math.max(1, Math.round(count)) : 1);
+                          } else {
+                            setBagPieces(1);
+                            setCurrentBagSize(activeProduct.bagSizeKg || 40); // Use product's bag size or default
+                          }
+                          setIsBagSelection(!!preset.isBag);
+                        }}
+                        className={`flex-1 px-2 py-1 text-[10px] border rounded-md transition-all duration-200 active:scale-95 ${
+                          isActive
+                            ? 'border-emerald-500 bg-emerald-50 text-emerald-700 font-medium'
+                            : 'border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                   });
                 })()}
                </div>
             </div>
             {isBagSelection && (
-              <div className="mt-3">
+              <div className="my-3">
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">Bag Pieces</label>
                 <div className="flex items-center gap-2">
                   <input
@@ -943,16 +996,10 @@ const QuickOrderPage: React.FC = () => {
                       setBagPieces(count);
                       
                       // Calculate kg based on the current bag size
-                      // For 5kg (bag) preset, we use 5kg per bag
-                      // For 40kg products, we use activeProduct.bagSizeKg
-                      const currentBagSize = (() => {
-                        // Check if we're in 5kg bag mode (when kg is 5 and isBagSelection is true)
-                        if (kg === 5 && isBagSelection) return 5;
-                        // Otherwise use the product's bag size
-                        return activeProduct?.bagSizeKg || 5;
-                      })();
+                      // Use the currentBagSize state which tracks the selected bag size
+                      const currentBagSizeForCalc = currentBagSize || activeProduct?.bagSizeKg || 40;
                       
-                      setKg(count * currentBagSize);
+                      setKg(count * currentBagSizeForCalc);
                     }}
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     placeholder="Number of bags"
