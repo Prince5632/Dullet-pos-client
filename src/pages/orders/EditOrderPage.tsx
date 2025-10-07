@@ -81,6 +81,7 @@ const EditOrderPage: React.FC = () => {
     Record<string, SelectedItem>
   >({});
   const [activeProduct, setActiveProduct] = useState<QuickProduct | null>(null);
+  const [activeItemKey, setActiveItemKey] = useState<string | null>(null);
   const [kg, setKg] = useState(0);
   const [isBagSelection, setIsBagSelection] = useState(false);
   const [bagPieces, setBagPieces] = useState<number>(1);
@@ -263,12 +264,14 @@ const EditOrderPage: React.FC = () => {
 
       const convertedItems: Record<string, SelectedItem> = {};
 
-      orderItems.forEach((item) => {
+      orderItems.forEach((item, index) => {
         console.log("Processing order item:", {
           productName: item.productName,
           quantity: item.quantity,
           packaging: item.packaging,
-          isBagSelection: item.isBagSelection
+          isBagSelection: item.isBagSelection,
+          itemId: item._id,
+          index
         });
 
         // Try to find matching product by name from currentProducts (godown-filtered products)
@@ -326,8 +329,14 @@ const EditOrderPage: React.FC = () => {
             }
           }
 
+          // Create a product object that preserves the original name from the order item
+          const productWithOriginalName = {
+            ...matchingProduct,
+            name: item.productName, // Use original name from order item
+          };
+
           const convertedItem = {
-            product: matchingProduct,
+            product: productWithOriginalName,
             mode: "kg",
             quantityKg: item.quantity,
             packaging: packaging as SelectedItem['packaging'],
@@ -336,8 +345,11 @@ const EditOrderPage: React.FC = () => {
             bags,
           };
 
-          console.log(`Converted item for "${item.productName}":`, convertedItem);
-          convertedItems[matchingProduct.key] = convertedItem;
+          // Create unique key using item ID if available, otherwise use product key + index
+          const uniqueKey = item._id ? `${matchingProduct.key}_${item._id}` : `${matchingProduct.key}_${index}`;
+          
+          console.log(`Converted item for "${item.productName}" with key "${uniqueKey}":`, convertedItem);
+          convertedItems[uniqueKey] = convertedItem;
         }
       });
 
@@ -408,8 +420,25 @@ const EditOrderPage: React.FC = () => {
     }
   };
 
+  const openQtyModalForItem = (itemKey: string, item: SelectedItem) => {
+    setActiveProduct(item.product);
+    setActiveItemKey(itemKey); // Store the specific item key being edited
+    setKg(item.quantityKg || 0);
+    setIsBagSelection(!!item.isBagSelection);
+    setBagPieces(item.bagPieces || item.bags || 1);
+    // Set currentBagSize based on existing selection
+    if (item.isBagSelection && item.packaging === '5kg Bags') {
+      setCurrentBagSize(5);
+    } else if (item.isBagSelection && item.packaging === '40kg Bag') {
+      setCurrentBagSize(40);
+    } else {
+      setCurrentBagSize(item.product.bagSizeKg || 40);
+    }
+  };
+
   const closeQtyModal = () => {
     setActiveProduct(null);
+    setActiveItemKey(null);
     setIsBagSelection(false);
     setBagPieces(1);
     setCurrentBagSize(40); // Reset to default
@@ -461,8 +490,13 @@ const EditOrderPage: React.FC = () => {
       isBagSelection: isBagSelection,
       bagPieces: pieceCount,
     };
-    setSelectedItems(prev => ({ ...prev, [activeProduct.key]: item }));
+
+    // Use activeItemKey if editing existing item, otherwise generate new unique key
+    const itemKey = activeItemKey || `${activeProduct.key}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    setSelectedItems(prev => ({ ...prev, [itemKey]: item }));
     setActiveProduct(null);
+    setActiveItemKey(null);
     setIsBagSelection(false);
     setBagPieces(1);
     setCurrentBagSize(40); // Reset to default
@@ -511,6 +545,11 @@ const EditOrderPage: React.FC = () => {
 
   const itemsArray = useMemo(
     () => Object.values(selectedItems),
+    [selectedItems]
+  );
+
+  const itemsWithKeys = useMemo(
+    () => Object.entries(selectedItems).map(([key, item]) => ({ key, item })),
     [selectedItems]
   );
 
@@ -781,7 +820,68 @@ const EditOrderPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Compact grouped products */}
+                  {/* Show selected items grouped by original product name */}
+                  {Object.keys(selectedItems).length > 0 && (() => {
+                    // Group selected items by their original product name
+                    const selectedItemGroups = Object.entries(selectedItems).reduce((groups, [key, item]) => {
+                      const productName = item.product.name;
+                      if (!groups[productName]) {
+                        groups[productName] = [];
+                      }
+                      groups[productName].push({ key, item });
+                      return groups;
+                    }, {} as Record<string, Array<{ key: string; item: SelectedItem }>>);
+
+                    return (
+                      <div className="mb-4">
+                        <div className="text-xs text-gray-700 font-medium mb-2">Selected Items:</div>
+                        {Object.entries(selectedItemGroups).map(([productName, itemsWithKeys]) => (
+                          <div key={productName} className="mb-3 last:mb-0">
+                            <div className="flex items-center mb-2">
+                              <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                                {productName}
+                              </span>
+                              <div className="h-px bg-gray-200 flex-1 ml-2"></div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                              {itemsWithKeys.map(({ key, item }, index) => (
+                                <button
+                                  type="button"
+                                  key={key}
+                                  onClick={() => openQtyModalForItem(key, item)}
+                                  className="w-full text-left p-2.5 rounded-lg border transition-all duration-200 bg-emerald-50 border-emerald-300"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-1.5">
+                                        <h4 className="text-xs font-semibold text-gray-900 truncate">
+                                          {item.product.name}
+                                          {itemsWithKeys.length > 1 && (
+                                            <span className="text-[10px] text-gray-500 ml-1">
+                                              #{index + 1}
+                                            </span>
+                                          )}
+                                        </h4>
+                                        <span className="text-[10px] text-gray-500 flex-shrink-0">
+                                          ₹{formatNumber(item.product.pricePerKg)}/kg
+                                        </span>
+                                      </div>
+                                      <div className="text-[10px] text-emerald-600 mt-0.5">
+                                        {formatNumber(item.quantityKg || 0)} kg
+                                      </div>
+                                    </div>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Show available products for adding new items */}
                   {currentProducts.length > 0 && (() => {
                     const baseProductGroups = currentProducts.reduce((groups, product) => {
                       const baseName = product.name;
@@ -792,52 +892,47 @@ const EditOrderPage: React.FC = () => {
                       return groups;
                     }, {} as Record<string, QuickProduct[]>);
 
-                    return Object.entries(baseProductGroups).map(([baseName, variants]) => (
-                      <div key={baseName} className="mb-3 last:mb-0">
-                        <div className="flex items-center mb-2">
-                          <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                            {baseName}
-                          </span>
-                          <div className="h-px bg-gray-200 flex-1 ml-2"></div>
+                    return (
+                      <div>
+                        <div className="text-xs text-gray-700 font-medium mb-2">
+                          {Object.keys(selectedItems).length > 0 ? 'Available Products:' : 'Products:'}
                         </div>
+                        {Object.entries(baseProductGroups).map(([baseName, variants]) => (
+                          <div key={baseName} className="mb-3 last:mb-0">
+                            <div className="flex items-center mb-2">
+                              <span className="text-xs font-medium text-gray-700 bg-gray-50 px-2.5 py-0.5 rounded-full border border-gray-200">
+                                {baseName}
+                              </span>
+                              <div className="h-px bg-gray-200 flex-1 ml-2"></div>
+                            </div>
 
-                        <div className="space-y-1.5">
-                          {variants.map(variant => {
-                            const isSelected = !!selectedItems[variant.key];
-                            return (
-                              <button
-                                type="button"
-                                key={variant.key}
-                                onClick={() => openQtyModal(variant)}
-                                className={`w-full text-left p-2.5 rounded-lg border transition-all duration-200 ${
-                                  isSelected
-                                    ? 'bg-emerald-50 border-emerald-300'
-                                    : 'bg-white border-gray-200 hover:border-gray-300 active:scale-[0.99]'
-                                }`}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-1.5">
-                                      <h4 className="text-xs font-semibold text-gray-900 truncate">
-                                        {variant.name}
-                                      </h4>
-                                      <span className="text-[10px] text-gray-500 flex-shrink-0">
-                                        ₹{formatNumber(variant.pricePerKg)}/kg
-                                      </span>
-                                    </div>
-                                    {isSelected && (
-                                      <div className="text-[10px] text-emerald-600 mt-0.5">
-                                        {formatItemQuantity(selectedItems[variant.key])}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
+                            <div className="space-y-1.5">
+                               {variants.map(variant => (
+                                 <button
+                                   type="button"
+                                   key={variant.key}
+                                   onClick={() => openQtyModal(variant)}
+                                   className="w-full text-left p-2.5 rounded-lg border transition-all duration-200 bg-white border-gray-200 hover:border-gray-300 active:scale-[0.99]"
+                                 >
+                                   <div className="flex items-center justify-between">
+                                     <div className="flex-1 min-w-0">
+                                       <div className="flex items-center gap-1.5">
+                                         <h4 className="text-xs font-semibold text-gray-900 truncate">
+                                           {variant.name}
+                                         </h4>
+                                         <span className="text-[10px] text-gray-500 flex-shrink-0">
+                                           ₹{formatNumber(variant.pricePerKg)}/kg
+                                         </span>
+                                       </div>
+                                     </div>
+                                   </div>
+                                 </button>
+                               ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ));
+                    );
                   })()}
 
                   {/* No products message */}
@@ -879,13 +974,13 @@ const EditOrderPage: React.FC = () => {
                     </h3>
 
                     <div className="space-y-2">
-                      {itemsArray.map((item, index) => {
+                      {itemsWithKeys.map(({ key, item }) => {
                         const kg = computeItemKg(item);
                         const lineTotal = kg * item.product.pricePerKg;
 
                         return (
                           <div
-                            key={index}
+                            key={key}
                             className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
                           >
                             <div className="flex-1 min-w-0">
@@ -903,7 +998,7 @@ const EditOrderPage: React.FC = () => {
                               </span>
                               <button
                                 type="button"
-                                onClick={() => openQtyModal(item.product)}
+                                onClick={() => openQtyModalForItem(key, item)}
                                 className="p-1 text-gray-400 hover:text-emerald-600 transition-colors"
                               >
                                 <svg
@@ -922,7 +1017,7 @@ const EditOrderPage: React.FC = () => {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => removeItem(item.product.key)}
+                                onClick={() => removeItem(key)}
                                 className="p-1 text-gray-400 hover:text-red-600 transition-colors"
                               >
                                 <XMarkIcon className="h-3 w-3" />

@@ -447,7 +447,7 @@ const DashboardPage: React.FC = () => {
                 {
                   label: "Revenue",
                   value: `₹${((stats.revenue.today || 0) / 1000).toFixed(1)}k`,
-                  subtitle: "Today",
+                  subtitle: "",
                   icon: BanknotesIcon,
                   bgColor: "bg-emerald-500",
                   link: "/reports/sales-executives",
