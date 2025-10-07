@@ -11,6 +11,7 @@ import {
   EyeIcon,
   ClipboardDocumentListIcon,
   MapPinIcon,
+  BuildingOfficeIcon,
 } from "@heroicons/react/24/outline";
 import { getSalesExecutiveReports } from "../../services/reportService";
 import { godownService } from "../../services/godownService";
@@ -46,6 +47,14 @@ const SalesExecutiveReportsPage: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('salesExecutiveReportType', reportType);
   }, [reportType]);
+
+  useEffect(() => {
+    fetchReports();
+  }, [godownId]);
+
+  useEffect(() => {
+    fetchReports();
+  }, [department]);
 
   const fetchReports = async () => {
     try {
@@ -454,6 +463,104 @@ const SalesExecutiveReportsPage: React.FC = () => {
           </div>
         )}
 
+        {/* Godown Selector - Cards (matches OrdersPage design) */}
+        {godowns.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 p-3 mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <BuildingOfficeIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              <span className="text-sm font-semibold text-gray-700">
+                {reportType === "orders" ? "Orders on Godown" : "Visits on Godown"}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              {/* All Godowns card */}
+              <button
+                type="button"
+                onClick={() => {
+                  setGodownId("");
+                }}
+                className={`text-left rounded-lg border p-3 transition-colors ${
+                  godownId === ""
+                    ? "border-emerald-500 bg-emerald-50"
+                    : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
+                }`}
+                aria-pressed={godownId === ""}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-md bg-emerald-100">
+                    <BuildingOfficeIcon className="h-4 w-4 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm flex items-center gap-2 font-medium text-gray-900">
+                      All {reportType === "orders" ? "Orders" : "Visits"}
+                      {reportType === "orders" ? (
+                        <span className="text-[10px] text-blue-700 bg-blue-100 rounded px-1.5 py-0.5">
+                          Orders:{" "}
+                          {godowns.reduce(
+                            (sum, x) => sum + (x?.orderCount || 0),
+                            0
+                          )}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-emerald-700 bg-emerald-100 rounded px-1.5 py-0.5">
+                          Visits:{" "}
+                          {godowns.reduce(
+                            (sum, x) => sum + (x?.visitCount || 0),
+                            0
+                          )}
+                        </span>
+                      )}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-gray-500">
+                        View across locations
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              {godowns.map((g) => (
+                <button
+                  key={g._id}
+                  type="button"
+                  onClick={() => {
+                    setGodownId(g._id);
+                  }}
+                  className={`text-left rounded-lg border p-3 transition-colors ${
+                    godownId === g._id
+                      ? "border-emerald-500 bg-emerald-50"
+                      : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
+                  }`}
+                  aria-pressed={godownId === g._id}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-md bg-blue-100">
+                      <BuildingOfficeIcon className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                       <p className="text-sm font-medium flex gap-2 text-gray-900">
+                         {g.name}
+                         <span className="text-[10px] flex justify-center items-center text-gray-700 bg-gray-100 rounded px-1.5 py-0.5">
+                           {reportType === "orders" ? "Orders" : "Visits"}:{" "}
+                           {(reportType === "orders"
+                             ? g.orderCount
+                             : g.visitCount) || 0}
+                         </span>
+                       </p>
+                       <div className="flex items-center gap-2">
+                         <p className="text-xs text-gray-500">
+                           {g.location?.city || 'Location'}
+                         </p>
+                       </div>
+                     </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Filter Toggle Button */}
         <div className="mb-4">
           <button
@@ -466,7 +573,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
           >
             <FunnelIcon className="h-4 w-4" />
             {showFilters ? "Hide Filters" : "Show Filters"}
-            {(startDate || endDate || godownId || department !== "Sales") && (
+            {(startDate || endDate || department !== "Sales") && (
               <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-medium text-white bg-blue-600 rounded-full">
                 !
               </span>
@@ -519,7 +626,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Department & Godown */}
+              {/* Department */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -536,23 +643,6 @@ const SalesExecutiveReportsPage: React.FC = () => {
                     <option value="Admin">Admin</option>
                     <option value="Warehouse">Warehouse</option>
                     <option value="Finance">Finance</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Godown
-                  </label>
-                  <select
-                    value={godownId}
-                    onChange={(e) => setGodownId(e.target.value)}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">All Godowns</option>
-                    {godowns.map((g) => (
-                      <option key={g._id} value={g._id}>
-                        {g.name}
-                      </option>
-                    ))}
                   </select>
                 </div>
               </div>
