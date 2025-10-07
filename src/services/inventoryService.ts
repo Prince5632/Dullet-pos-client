@@ -23,19 +23,19 @@ class InventoryService {
     });
 
     const response = await apiService.get(`${API_CONFIG.ENDPOINTS.INVENTORY}?${queryParams.toString()}`);
-    return response.data;
+    return response;
   }
 
   // Get inventory by ID
   async getInventoryById(id: string): Promise<ApiResponse<Inventory>> {
     const response = await apiService.get(API_CONFIG.ENDPOINTS.INVENTORY_BY_ID(id));
-    return response.data;
+    return response;
   }
 
   // Create new inventory
   async createInventory(data: CreateInventoryForm): Promise<ApiResponse<Inventory>> {
     const response = await apiService.post(API_CONFIG.ENDPOINTS.INVENTORY, data);
-    return response.data;
+    return response;
   }
 
   // Update inventory
@@ -158,15 +158,41 @@ class InventoryService {
     return `₹${price.toFixed(2)}`;
   }
 
-  // Calculate total value
-  calculateTotalValue(quantity: number, pricePerKg?: number): number {
+  // Calculate total value with unit conversion
+  calculateTotalValue(quantity: number, pricePerKg?: number, unit?: string): number {
     if (!pricePerKg) return 0;
-    return quantity * pricePerKg;
+    
+    // Convert quantity to kg based on unit
+    let quantityInKg = quantity;
+    if (unit) {
+      switch (unit.toLowerCase()) {
+        case 'quintal':
+          quantityInKg = quantity * 100; // 1 quintal = 100 kg
+          break;
+        case 'kg':
+        case 'kilogram':
+          quantityInKg = quantity; // already in kg
+          break;
+        case 'g':
+        case 'gram':
+          quantityInKg = quantity / 1000; // 1000 g = 1 kg
+          break;
+        case 'ton':
+          quantityInKg = quantity * 1000; // 1 ton = 1000 kg
+          break;
+        default:
+          // For other units (bag, piece, liter, ml), use quantity as is
+          quantityInKg = quantity;
+          break;
+      }
+    }
+    
+    return quantityInKg * pricePerKg;
   }
 
-  // Format total value for display
-  formatTotalValue(quantity: number, pricePerKg?: number): string {
-    const total = this.calculateTotalValue(quantity, pricePerKg);
+  // Format total value for display with unit conversion
+  formatTotalValue(quantity: number, pricePerKg?: number, unit?: string): string {
+    const total = this.calculateTotalValue(quantity, pricePerKg, unit);
     return total > 0 ? `₹${total.toFixed(2)}` : 'N/A';
   }
 }

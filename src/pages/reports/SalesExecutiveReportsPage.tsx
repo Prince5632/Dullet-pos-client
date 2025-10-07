@@ -387,7 +387,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
       <div className="px-3 sm:px-4 py-3">
         {/* Summary Cards - Mobile Grid */}
         {summary && (
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
             <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
@@ -472,7 +472,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
                 {reportType === "orders" ? "Orders on Godown" : "Visits on Godown"}
               </span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-2">
               {/* All Godowns card */}
               <button
                 type="button"

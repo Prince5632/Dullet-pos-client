@@ -116,6 +116,7 @@ export interface Godown {
   isActive: boolean;
   orderCount?: number;
   visitCount?: number;
+  inventoryCount?: number;
 }
 
 // Attendance Types

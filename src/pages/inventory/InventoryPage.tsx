@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { inventoryService } from '../../services/inventoryService';
 import { apiService } from '../../services/api';
+import { API_CONFIG } from '../../config/api';
 import type { Inventory, TableColumn, Godown, InventoryListParams } from '../../types';
-import { MagnifyingGlassIcon, PlusIcon, FunnelIcon, XMarkIcon, CubeIcon, TrashIcon, EyeIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, PlusIcon, FunnelIcon, XMarkIcon, CubeIcon, TrashIcon, EyeIcon, PencilIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import Table from '../../components/ui/Table';
 import Pagination from '../../components/ui/Pagination';
 import Avatar from '../../components/ui/Avatar';
@@ -39,9 +40,9 @@ const InventoryPage: React.FC = () => {
 
   const loadGodowns = async () => {
     try {
-      const response = await apiService.get("/godowns");
-      if (response.data?.success && response.data?.data) {
-        setGodowns(response.data.data);
+      const response = await apiService.get<{ godowns: Godown[] }>(API_CONFIG.ENDPOINTS.GODOWNS);
+      if (response.success && response.data) {
+        setGodowns(response.data.godowns);
       }
     } catch (err) {
       console.error("Failed to load godowns:", err);
@@ -71,9 +72,9 @@ const InventoryPage: React.FC = () => {
 
       const res = await inventoryService.getInventories(params);
       if (res.success && res.data) {
-        setInventory(res.data.data || []);
-        setTotalPages(res.data.pagination?.totalPages || 1);
-        setTotalInventory(res.data.pagination?.totalItems || 0);
+        setInventory(res.data?.inventory || []);
+        setTotalPages(res.data?.pagination?.totalPages || 1);
+        setTotalInventory(res.data?.pagination?.totalRecords || 0);
       }
     } catch (error) {
       console.error('Failed to load inventory:', error);
@@ -153,12 +154,13 @@ const InventoryPage: React.FC = () => {
     {
       key: 'loggedBy',
       label: 'Logged By',
-      render: (value) => (
+      render: (value) => {
+        return(
         <div className="flex items-center gap-2">
-          <Avatar name={value?.name || 'User'} size="sm" />
-          <span className="text-xs text-gray-700">{value?.name || 'Unknown'}</span>
+          <Avatar name={value?.firstName + " " + value?.lastName || 'User'} size="sm" />
+          <span className="text-xs text-gray-700">{value?.firstName + " " + value?.lastName|| 'Unknown'}</span>
         </div>
-      ),
+      )},
     },
     {
       key: 'actions',
@@ -169,7 +171,7 @@ const InventoryPage: React.FC = () => {
             <Link to={`/inventory/${item._id}`} className="px-2 py-1 text-blue-600 hover:bg-blue-50 rounded-md text-xs">View</Link>
           )}
           {hasPermission("stock.update") && (
-            <Link to={`/inventory/${item._id}/edit`} className="px-2 py-1 text-gray-700 hover:bg-gray-50 rounded-md text-xs">Edit</Link>
+            <Link to={`/inventory/edit/${item._id}`} className="px-2 py-1 text-gray-700 hover:bg-gray-50 rounded-md text-xs">Edit</Link>
           )}
           {hasPermission("stock.delete") && (
             <button
@@ -214,7 +216,7 @@ const InventoryPage: React.FC = () => {
               </div>
             </div>
             {hasPermission("stock.create") && (
-              <Link to="/inventory/create" className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 transition-colors">
+              <Link to="/inventory/add" className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 transition-colors">
                 <PlusIcon className="h-4 w-4 mr-1" />
                 <span className="hidden sm:inline">Add Stock</span>
                 <span className="sm:hidden">Add</span>
@@ -277,6 +279,92 @@ const InventoryPage: React.FC = () => {
           </div>
         </div>
 
+        {(currentUser?.role?.name?.toLowerCase() === "super admin" ||
+          currentUser?.role?.name?.toLowerCase() === "admin") && (
+          <>
+            {/* Godown Selector - Cards (matches OrdersPage design) */}
+            {godowns.length > 0 && (
+              <div className="bg-white rounded-xl border border-gray-200 p-3 mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <BuildingOfficeIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                  <span className="text-sm font-semibold text-gray-700">
+                    Select Godown
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                  {/* All Godowns card */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGodownFilter("");
+                    }}
+                    className={`text-left rounded-lg border p-3 transition-colors ${
+                      godownFilter === ""
+                        ? "border-emerald-500 bg-emerald-50"
+                        : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
+                    }`}
+                    aria-pressed={godownFilter === ""}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-md bg-emerald-100">
+                        <BuildingOfficeIcon className="h-4 w-4 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm flex items-center gap-2 font-medium text-gray-900">
+                          All Inventory
+                          <span className="text-[10px] text-emerald-700 bg-emerald-100 rounded px-1.5 py-0.5">
+                            Stock: {totalInventory}
+                          </span>
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-gray-500">
+                            View across locations
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+
+                  {godowns.map((g) => (
+                    <button
+                      key={g._id}
+                      type="button"
+                      onClick={() => {
+                        setGodownFilter(g._id);
+                      }}
+                      className={`text-left rounded-lg border p-3 transition-colors ${
+                        godownFilter === g._id
+                          ? "border-emerald-500 bg-emerald-50"
+                          : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
+                      }`}
+                      aria-pressed={godownFilter === g._id}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-md bg-blue-100">
+                          <BuildingOfficeIcon className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium flex gap-2 text-gray-900">
+                            {g.name}
+                            <span className="text-[10px] flex justify-center items-center text-gray-700 bg-gray-100 rounded px-1.5 py-0.5">
+                              Stock: {g.inventoryCount || 0}
+                            </span>
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-gray-500">
+                              {g.location.city}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
         <div className="grid grid-cols-2 gap-2 mb-4">
           <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
             <div className="text-xs text-gray-500">Total Inventory</div>
@@ -338,7 +426,7 @@ const InventoryPage: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-2 text-xs">
                           <span className="text-gray-500 w-16">Logged By:</span>
-                          <span className="text-gray-900">{item.loggedBy?.name || 'Unknown'}</span>
+                          <span className="text-gray-900">{item.loggedBy?.firstName + " " + item?.loggedBy?.lastName || 'Unknown'}</span>
                         </div>
                       </div>
                       
@@ -353,7 +441,7 @@ const InventoryPage: React.FC = () => {
                         )}
                         {hasPermission("stock.update") && (
                           <Link 
-                            to={`/inventory/${item._id}/edit`} 
+                            to={`/inventory/edit/${item._id}`} 
                             className="flex-1 text-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
                           >
                             Edit
