@@ -1440,7 +1440,7 @@ const EditOrderPage: React.FC = () => {
                   if (activeProduct.bagSizeKg === 5) {
                     // For 5kg products, only show 5kg bag option
                     presetOptions.push({
-                      label: "5kg Bags",
+                      label: "5kg (bag)",
                       value: 5,
                       isBag: true,
                       bagSize: 5,
@@ -1449,7 +1449,7 @@ const EditOrderPage: React.FC = () => {
                   if (activeProduct.bagSizeKg === 40 ||activeProduct.bagSizeKg === 5) {
                     // For 40kg products, only show 40kg bag option
                     presetOptions.push({
-                      label: "40kg Bag",
+                      label: "40kg (bag)",
                       value: 40,
                       isBag: true,
                       bagSize: 40,
