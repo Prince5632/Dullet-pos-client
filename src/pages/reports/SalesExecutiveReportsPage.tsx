@@ -56,13 +56,36 @@ const SalesExecutiveReportsPage: React.FC = () => {
     fetchReports();
   }, [department]);
 
-  const fetchReports = async () => {
+  const fetchGodowns = async (overrideDates?: { startDate?: string; endDate?: string }) => {
+    try {
+      // Build filter parameters for godown counts
+      const params: any = {};
+      const effectiveStartDate = overrideDates?.startDate !== undefined ? overrideDates.startDate : startDate;
+      const effectiveEndDate = overrideDates?.endDate !== undefined ? overrideDates.endDate : endDate;
+      
+      if (effectiveStartDate) params.dateFrom = effectiveStartDate;
+      if (effectiveEndDate) params.dateTo = effectiveEndDate;
+      // Note: Don't pass godownId here as we want counts for all godowns
+      // Don't pass department filter to godowns as it's user-specific, not order-specific
+      
+      const resp = await godownService.getGodowns(params);
+      setGodowns(resp.data?.godowns || []);
+    } catch (error) {
+      console.error("Error fetching godowns:", error);
+    }
+  };
+
+  const fetchReports = async (overrideParams?: any) => {
     try {
       setLoading(true);
-      const params: any = { sortBy, sortOrder, department };
-      if (startDate) params.startDate = startDate;
-      if (endDate) params.endDate = endDate;
-      if (godownId) params.godownId = godownId;
+      const params: any = overrideParams || { 
+        sortBy, 
+        sortOrder, 
+        department,
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
+        ...(godownId && { godownId })
+      };
 
       // Add type filter for orders vs visits
       params.type = reportType === "orders" ? "order" : "visit";
@@ -77,17 +100,18 @@ const SalesExecutiveReportsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    // Load godowns for filter
-    (async () => {
-      try {
-        const resp = await godownService.getGodowns();
-        setGodowns(resp.data?.godowns || []);
-      } catch {}
-    })();
+    // Load godowns for filter on component mount
+    fetchGodowns();
   }, []);
+
+  useEffect(() => {
+    // Refetch godowns when date filters change to update counts
+    fetchGodowns();
+  }, [startDate, endDate, reportType]);
 
   const handleApplyFilters = () => {
     fetchReports();
+    fetchGodowns(); // Update godown counts with applied filters
     setShowFilters(false);
   };
 
@@ -98,6 +122,16 @@ const SalesExecutiveReportsPage: React.FC = () => {
     setSortOrder("desc");
     setDepartment("Sales");
     setGodownId("");
+    
+    // Fetch reports with reset values immediately
+    const resetParams = {
+      sortBy: "totalRevenue",
+      sortOrder: "desc",
+      department: "Sales"
+      // startDate, endDate, and godownId are intentionally omitted (reset to empty)
+    };
+    fetchReports(resetParams);
+    fetchGodowns({ startDate: "", endDate: "" });
   };
 
   const exportToCSV = () => {
