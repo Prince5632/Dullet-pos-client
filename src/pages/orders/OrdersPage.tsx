@@ -290,7 +290,7 @@ const OrdersPage: React.FC = () => {
           today: orderStats?.monthlyRevenue || 0,
           thisWeek: orderStats?.monthlyRevenue || 0,
           thisMonth: orderStats?.monthlyRevenue || 0,
-          growth: 5.2,
+          // growth: 5.2,
         },
       });
     } catch (error) {
@@ -1066,10 +1066,10 @@ const OrdersPage: React.FC = () => {
                     value: `₹${((stats.revenue.today || 0) / 1000).toFixed(
                       1
                     )}k`,
-                    subtitle: "Today",
+                    // subtitle: "Today",
                     icon: BanknotesIcon,
                     bgColor: "bg-emerald-500",
-                    trend: stats.revenue.growth,
+                    // trend: stats.revenue.growth,
                   },
                   {
                     label: "Orders",
