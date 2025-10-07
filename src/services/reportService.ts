@@ -117,6 +117,7 @@ export const getSalesExecutiveReports = async (params?: {
   sortOrder?: string;
   department?: string;
   godownId?: string;
+  type?: string;
 }): Promise<SalesExecutiveReportResponse> => {
   const response = await axiosInstance.get<ApiResponse<SalesExecutiveReportResponse>>(
     '/api/reports/sales-executives',
@@ -153,7 +154,7 @@ export const getInactiveCustomers = async (days: number = 7): Promise<InactiveCu
 // Get Executive Performance Detail
 export const getExecutivePerformanceDetail = async (
   userId: string,
-  params?: { startDate?: string; endDate?: string }
+  params?: { startDate?: string; endDate?: string; type?: string }
 ) => {
   const response = await axiosInstance.get<ApiResponse<any>>(
     `/api/reports/sales-executives/${userId}`,

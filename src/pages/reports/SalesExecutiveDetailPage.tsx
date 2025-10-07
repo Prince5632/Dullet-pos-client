@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeftIcon,
   ChartBarIcon,
@@ -17,6 +17,8 @@ import { formatCurrency, formatDate } from '../../utils';
 const SalesExecutiveDetailPage: React.FC = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const reportType = searchParams.get('type') || 'orders';
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [startDate, setStartDate] = useState('');
@@ -30,6 +32,8 @@ const SalesExecutiveDetailPage: React.FC = () => {
       const params: any = {};
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
+      // Pass the report type (convert 'orders' to 'order' and 'visits' to 'visit')
+      params.type = reportType === 'orders' ? 'order' : 'visit';
       const detail = await getExecutivePerformanceDetail(userId, params);
       setData(detail);
     } finally {
@@ -80,7 +84,9 @@ const SalesExecutiveDetailPage: React.FC = () => {
               <ArrowLeftIcon className="h-5 w-5" />
             </button>
             <div className="flex-1 min-w-0">
-              <h1 className="text-lg font-semibold text-gray-900 truncate">{executive.name}</h1>
+              <h1 className="text-lg font-semibold text-gray-900 truncate">
+                {executive.name} - {reportType === 'visits' ? 'Visit' : 'Order'} Details
+              </h1>
               <p className="text-xs text-gray-500 truncate">
                 {executive.employeeId} • {executive.department} • {executive.position}
               </p>
@@ -162,84 +168,118 @@ const SalesExecutiveDetailPage: React.FC = () => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-gray-500">Orders</p>
+              <p className="text-xs text-gray-500">{reportType === 'visits' ? 'Visits' : 'Orders'}</p>
               <ShoppingBagIcon className="h-5 w-5 text-blue-500" />
             </div>
             <p className="text-xl font-bold text-gray-900 truncate">{metrics.totalOrders}</p>
           </div>
-          <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-gray-500">Revenue</p>
-              <CurrencyDollarIcon className="h-5 w-5 text-green-500" />
-            </div>
-            <p className="text-xl font-bold text-green-600 truncate">{formatCurrency(metrics.totalRevenue)}</p>
-          </div>
-          <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-gray-500">Avg Order</p>
-              <ChartBarIcon className="h-5 w-5 text-blue-500" />
-            </div>
-            <p className="text-xl font-bold text-blue-600 truncate">{formatCurrency(metrics.avgOrderValue)}</p>
-          </div>
-          <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-gray-500">Max Order</p>
-              <ChartBarIcon className="h-5 w-5 text-purple-500" />
-            </div>
-            <p className="text-xl font-bold text-gray-900 truncate">{formatCurrency(metrics.maxOrderValue)}</p>
-          </div>
-        </div>
-
-        {/* Aata Sales Summary */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 mb-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Aata Sales Summary</h3>
-          
-          {/* Summary Metrics */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            <div className="bg-gray-50 p-2 rounded text-center">
-              <p className="text-xs text-gray-500 mb-1">Total KG</p>
-              <p className="text-lg font-bold text-gray-900">
-                {attaSummary?.totalKg?.toFixed ? attaSummary.totalKg.toFixed(2) : attaSummary?.totalKg || 0}
-              </p>
-            </div>
-            <div className="bg-green-50 p-2 rounded text-center">
-              <p className="text-xs text-green-600 mb-1">Amount</p>
-              <p className="text-lg font-bold text-green-700 truncate">
-                {formatCurrency(attaSummary?.totalAmount || 0)}
-              </p>
-            </div>
-            <div className="bg-blue-50 p-2 rounded text-center">
-              <p className="text-xs text-blue-600 mb-1">Avg ₹/Kg</p>
-              <p className="text-lg font-bold text-blue-700 truncate">
-                {formatCurrency(attaSummary?.avgPricePerKg || 0)}
-              </p>
-            </div>
-          </div>
-
-          {/* By Grade */}
-          <h4 className="text-xs font-semibold text-gray-700 mb-2">By Grade</h4>
-          <div className="space-y-2">
-            {(attaSummary?.byGrade || []).map((g: any) => (
-              <div key={g.grade || 'NA'} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-gray-900 truncate">{g.grade || 'Standard'}</div>
-                  <div className="text-gray-500">{(g.kg || 0).toFixed(2)} kg</div>
+          {reportType === 'orders' ? (
+            <>
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-gray-500">Revenue</p>
+                  <CurrencyDollarIcon className="h-5 w-5 text-green-500" />
                 </div>
-                <div className="text-right flex-shrink-0 ml-2">
-                  <div className="font-medium text-green-600">{formatCurrency(g.amount || 0)}</div>
-                  <div className="text-gray-500">{formatCurrency(g.avgPricePerKg || 0)}/kg</div>
-                </div>
+                <p className="text-xl font-bold text-green-600 truncate">{formatCurrency(metrics.totalRevenue)}</p>
               </div>
-            ))}
-            {(!attaSummary || (attaSummary.byGrade || []).length === 0) && (
-              <div className="text-xs text-gray-500 text-center py-4">No Aata items found</div>
-            )}
-          </div>
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-gray-500">Avg Order</p>
+                  <ChartBarIcon className="h-5 w-5 text-blue-500" />
+                </div>
+                <p className="text-xl font-bold text-blue-600 truncate">{formatCurrency(metrics.avgOrderValue)}</p>
+              </div>
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-gray-500">Max Order</p>
+                  <ChartBarIcon className="h-5 w-5 text-purple-500" />
+                </div>
+                <p className="text-xl font-bold text-gray-900 truncate">{formatCurrency(metrics.maxOrderValue)}</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-gray-500">Locations</p>
+                  <CurrencyDollarIcon className="h-5 w-5 text-green-500" />
+                </div>
+                <p className="text-xl font-bold text-green-600 truncate">{metrics.uniqueLocations || 0}</p>
+              </div>
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-gray-500">Completed</p>
+                  <ChartBarIcon className="h-5 w-5 text-blue-500" />
+                </div>
+                <p className="text-xl font-bold text-blue-600 truncate">{metrics.completedVisits || 0}</p>
+              </div>
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-gray-500">Success Rate</p>
+                  <ChartBarIcon className="h-5 w-5 text-purple-500" />
+                </div>
+                <p className="text-xl font-bold text-gray-900 truncate">
+                  {metrics.totalOrders > 0 ? Math.round(((metrics.completedVisits || 0) / metrics.totalOrders) * 100) : 0}%
+                </p>
+              </div>
+            </>
+          )}
         </div>
+
+        {/* Aata Sales Summary - Only for Orders */}
+        {reportType === 'orders' && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 mb-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Aata Sales Summary</h3>
+            
+            {/* Summary Metrics */}
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="bg-gray-50 p-2 rounded text-center">
+                <p className="text-xs text-gray-500 mb-1">Total KG</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {attaSummary?.totalKg?.toFixed ? attaSummary.totalKg.toFixed(2) : attaSummary?.totalKg || 0}
+                </p>
+              </div>
+              <div className="bg-green-50 p-2 rounded text-center">
+                <p className="text-xs text-green-600 mb-1">Amount</p>
+                <p className="text-lg font-bold text-green-700 truncate">
+                  {formatCurrency(attaSummary?.totalAmount || 0)}
+                </p>
+              </div>
+              <div className="bg-blue-50 p-2 rounded text-center">
+                <p className="text-xs text-blue-600 mb-1">Avg ₹/Kg</p>
+                <p className="text-lg font-bold text-blue-700 truncate">
+                  {formatCurrency(attaSummary?.avgPricePerKg || 0)}
+                </p>
+              </div>
+            </div>
+
+            {/* By Grade */}
+            <h4 className="text-xs font-semibold text-gray-700 mb-2">By Grade</h4>
+            <div className="space-y-2">
+              {(attaSummary?.byGrade || []).map((g: any) => (
+                <div key={g.grade || 'NA'} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-900 truncate">{g.grade || 'Standard'}</div>
+                    <div className="text-gray-500">{(g.kg || 0).toFixed(2)} kg</div>
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-2">
+                    <div className="font-medium text-green-600">{formatCurrency(g.amount || 0)}</div>
+                    <div className="text-gray-500">{formatCurrency(g.avgPricePerKg || 0)}/kg</div>
+                  </div>
+                </div>
+              ))}
+              {(!attaSummary || (attaSummary.byGrade || []).length === 0) && (
+                <div className="text-xs text-gray-500 text-center py-4">No Aata items found</div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Top Customers */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 mb-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Top Customers</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">
+            {reportType === 'visits' ? 'Top Locations' : 'Top Customers'}
+          </h3>
           <div className="space-y-2">
             {topCustomers.map((c: any) => (
               <div key={c._id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
@@ -247,15 +287,19 @@ const SalesExecutiveDetailPage: React.FC = () => {
                   <div className="text-sm font-medium text-gray-900 truncate">
                     {c.customerInfo?.businessName}
                   </div>
-                  <div className="text-xs text-gray-500">Orders: {c.totalOrders}</div>
+                  <div className="text-xs text-gray-500">
+                    {reportType === 'visits' ? `Visits: ${c.totalOrders}` : `Orders: ${c.totalOrders}`}
+                  </div>
                 </div>
                 <div className="text-sm font-semibold text-green-600 flex-shrink-0 ml-2">
-                  {formatCurrency(c.totalSpent)}
+                  {reportType === 'visits' ? `${c.totalOrders} visits` : formatCurrency(c.totalSpent)}
                 </div>
               </div>
             ))}
             {topCustomers.length === 0 && (
-              <div className="text-xs text-gray-500 text-center py-4">No customer data</div>
+              <div className="text-xs text-gray-500 text-center py-4">
+                {reportType === 'visits' ? 'No location data' : 'No customer data'}
+              </div>
             )}
           </div>
         </div>
@@ -267,9 +311,11 @@ const SalesExecutiveDetailPage: React.FC = () => {
             {monthlyTrend.map((m: any) => (
               <div key={`${m._id.year}-${m._id.month}`} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
                 <div className="font-medium text-gray-700 w-16">{m._id.month}/{m._id.year}</div>
-                <div className="text-gray-600">Orders: {m.orders}</div>
+                <div className="text-gray-600">
+                  {reportType === 'visits' ? `Visits: ${m.orders}` : `Orders: ${m.orders}`}
+                </div>
                 <div className="font-medium text-green-600 flex-shrink-0 ml-2">
-                  {formatCurrency(m.revenue)}
+                  {reportType === 'visits' ? `${m.orders} visits` : formatCurrency(m.revenue)}
                 </div>
               </div>
             ))}
@@ -279,9 +325,11 @@ const SalesExecutiveDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Recent Orders - Mobile Cards */}
+        {/* Recent Orders/Visits - Mobile Cards */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Recent Orders</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">
+            {reportType === 'visits' ? 'Recent Visits' : 'Recent Orders'}
+          </h3>
           
           {/* Mobile Card View */}
           <div className="block lg:hidden space-y-3">
@@ -296,21 +344,39 @@ const SalesExecutiveDetailPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0 ml-2">
-                    <div className="text-sm font-semibold text-green-600">
-                      {formatCurrency(o.totalAmount)}
+                    {reportType === 'orders' ? (
+                      <div className="text-sm font-semibold text-green-600">
+                        {formatCurrency(o.totalAmount)}
+                      </div>
+                    ) : (
+                      <div className="text-sm font-semibold text-blue-600">
+                        {o.status || 'Pending'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {reportType === 'orders' && (
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                    <div className="text-xs text-gray-500">Aata KG</div>
+                    <div className="text-xs font-medium text-gray-900">
+                      {(o.attaKg ?? 0).toFixed(2)} kg
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-                  <div className="text-xs text-gray-500">Aata KG</div>
-                  <div className="text-xs font-medium text-gray-900">
-                    {(o.attaKg ?? 0).toFixed(2)} kg
+                )}
+                {reportType === 'visits' && (
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                    <div className="text-xs text-gray-500">Purpose</div>
+                    <div className="text-xs font-medium text-gray-900">
+                      {o.purpose || 'General Visit'}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ))}
             {recentOrders.length === 0 && (
-              <div className="text-xs text-gray-500 text-center py-8">No recent orders</div>
+              <div className="text-xs text-gray-500 text-center py-8">
+                {reportType === 'visits' ? 'No recent visits' : 'No recent orders'}
+              </div>
             )}
           </div>
 
@@ -319,11 +385,24 @@ const SalesExecutiveDetailPage: React.FC = () => {
             <table className="min-w-full divide-y divide-gray-200 text-sm">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">Order No</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">
+                    {reportType === 'visits' ? 'Visit No' : 'Order No'}
+                  </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">Date</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">Customer</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-700">Aata KG</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-700">Amount</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">
+                    {reportType === 'visits' ? 'Location' : 'Customer'}
+                  </th>
+                  {reportType === 'orders' ? (
+                    <>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-700">Aata KG</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-700">Amount</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">Notes</th>
+                      {/* <th className="px-3 py-2 text-right text-xs font-medium text-gray-700">Status</th> */}
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -332,16 +411,27 @@ const SalesExecutiveDetailPage: React.FC = () => {
                     <td className="px-3 py-2 text-sm">{o.orderNumber}</td>
                     <td className="px-3 py-2 text-sm">{formatDate(o.orderDate)}</td>
                     <td className="px-3 py-2 text-sm">{o.customer?.businessName}</td>
-                    <td className="px-3 py-2 text-right text-sm">{(o.attaKg ?? 0).toFixed(2)}</td>
-                    <td className="px-3 py-2 text-right text-sm font-medium text-green-600">
-                      {formatCurrency(o.totalAmount)}
-                    </td>
+                    {reportType === 'orders' ? (
+                      <>
+                        <td className="px-3 py-2 text-right text-sm">{(o.attaKg ?? 0).toFixed(2)}</td>
+                        <td className="px-3 py-2 text-right text-sm font-medium text-green-600">
+                          {formatCurrency(o.totalAmount)}
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-3 py-2 text-sm">{o?.notes || 'General Visit'}</td>
+                        {/* <td className="px-3 py-2 text-right text-sm font-medium text-blue-600">
+                          {o.status || 'Pending'}
+                        </td> */}
+                      </>
+                    )}
                   </tr>
                 ))}
                 {recentOrders.length === 0 && (
                   <tr>
                     <td className="px-3 py-4 text-center text-sm text-gray-500" colSpan={5}>
-                      No recent orders
+                      {reportType === 'visits' ? 'No recent visits' : 'No recent orders'}
                     </td>
                   </tr>
                 )}

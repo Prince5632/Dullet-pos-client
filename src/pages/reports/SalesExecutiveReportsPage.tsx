@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   ChartBarIcon,
   UserGroupIcon,
@@ -9,30 +9,36 @@ import {
   FunnelIcon,
   XMarkIcon,
   EyeIcon,
-} from '@heroicons/react/24/outline';
-import { getSalesExecutiveReports } from '../../services/reportService';
-import { godownService } from '../../services/godownService';
-import type { SalesExecutiveReportResponse } from '../../services/reportService';
-import LoadingSpinner from '../../components/common/LoadingSpinner';
-import Table from '../../components/ui/Table';
-import Badge from '../../components/ui/Badge';
-import { formatCurrency, formatDate } from '../../utils';
+  ClipboardDocumentListIcon,
+  MapPinIcon,
+} from "@heroicons/react/24/outline";
+import { getSalesExecutiveReports } from "../../services/reportService";
+import { godownService } from "../../services/godownService";
+import type { SalesExecutiveReportResponse } from "../../services/reportService";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
+import Table from "../../components/ui/Table";
+import Badge from "../../components/ui/Badge";
+import { formatCurrency, formatDate } from "../../utils";
+
+type ReportType = "orders" | "visits";
 
 const SalesExecutiveReportsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
-  const [reportData, setReportData] = useState<SalesExecutiveReportResponse | null>(null);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [sortBy, setSortBy] = useState('totalRevenue');
-  const [sortOrder, setSortOrder] = useState('desc');
-  const [department, setDepartment] = useState('Sales');
+  const [reportData, setReportData] =
+    useState<SalesExecutiveReportResponse | null>(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [sortBy, setSortBy] = useState("totalRevenue");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [department, setDepartment] = useState("Sales");
   const [godowns, setGodowns] = useState<any[]>([]);
-  const [godownId, setGodownId] = useState('');
+  const [godownId, setGodownId] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [reportType, setReportType] = useState<ReportType>("orders");
 
   useEffect(() => {
     fetchReports();
-  }, []);
+  }, [reportType]);
 
   const fetchReports = async () => {
     try {
@@ -42,10 +48,13 @@ const SalesExecutiveReportsPage: React.FC = () => {
       if (endDate) params.endDate = endDate;
       if (godownId) params.godownId = godownId;
 
+      // Add type filter for orders vs visits
+      params.type = reportType === "orders" ? "order" : "visit";
+
       const data = await getSalesExecutiveReports(params);
       setReportData(data);
     } catch (error) {
-      console.error('Error fetching sales executive reports:', error);
+      console.error("Error fetching sales executive reports:", error);
     } finally {
       setLoading(false);
     }
@@ -67,34 +76,34 @@ const SalesExecutiveReportsPage: React.FC = () => {
   };
 
   const handleResetFilters = () => {
-    setStartDate('');
-    setEndDate('');
-    setSortBy('totalRevenue');
-    setSortOrder('desc');
-    setDepartment('Sales');
-    setGodownId('');
+    setStartDate("");
+    setEndDate("");
+    setSortBy("totalRevenue");
+    setSortOrder("desc");
+    setDepartment("Sales");
+    setGodownId("");
   };
 
   const exportToCSV = () => {
     if (!reportData?.reports) return;
 
     const headers = [
-      'Employee ID',
-      'Name',
-      'Department',
-      'Position',
-      'Role',
-      'Total Orders',
-      'Total Revenue',
-      'Total Paid',
-      'Outstanding',
-      'Avg Order Value',
-      'Unique Customers',
-      'Conversion Rate',
-      'Pending',
-      'Approved',
-      'Delivered',
-      'Completed',
+      "Employee ID",
+      "Name",
+      "Department",
+      "Position",
+      "Role",
+      "Total Orders",
+      "Total Revenue",
+      "Total Paid",
+      "Outstanding",
+      "Avg Order Value",
+      "Unique Customers",
+      "Conversion Rate",
+      "Pending",
+      "Approved",
+      "Delivered",
+      "Completed",
     ];
 
     const rows = reportData.reports.map((report) => [
@@ -117,14 +126,16 @@ const SalesExecutiveReportsPage: React.FC = () => {
     ]);
 
     const csvContent = [
-      headers.join(','),
-      ...rows.map((row) => row.join(',')),
-    ].join('\n');
+      headers.join(","),
+      ...rows.map((row) => row.join(",")),
+    ].join("\n");
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `sales-executive-reports-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `sales-executive-reports-${
+      new Date().toISOString().split("T")[0]
+    }.csv`;
     link.click();
   };
 
@@ -135,90 +146,119 @@ const SalesExecutiveReportsPage: React.FC = () => {
   const summary = reportData?.summary;
   const reports = reportData?.reports || [];
 
-  const columns = [
-    {
-      key: 'executiveName',
-      label: 'Sales Executive',
-      render: (value: string, row: any) => (
-        <Link to={`/reports/sales-executives/${row._id}`} className="hover:underline">
-          <div className="font-medium text-gray-900">{value}</div>
-          <div className="text-sm text-gray-500">{row.employeeId}</div>
-        </Link>
-      ),
-    },
-    {
-      key: 'department',
-      label: 'Department',
-      render: (value: string, row: any) => (
-        <div>
-          <div className="text-sm text-gray-900">{value}</div>
-          <div className="text-xs text-gray-500">{row.position}</div>
-        </div>
-      ),
-    },
-    {
-      key: 'totalOrders',
-      label: 'Orders',
-      render: (value: number) => (
-        <span className="font-medium text-gray-900">{value}</span>
-      ),
-    },
-    {
-      key: 'totalRevenue',
-      label: 'Total Revenue',
-      render: (value: number) => (
-        <span className="font-semibold text-green-600">{formatCurrency(value)}</span>
-      ),
-    },
-    {
-      key: 'totalOutstanding',
-      label: 'Outstanding',
-      render: (value: number) => (
-        <span className={`font-medium ${value > 0 ? 'text-orange-600' : 'text-gray-500'}`}>
-          {formatCurrency(value)}
-        </span>
-      ),
-    },
-    {
-      key: 'avgOrderValue',
-      label: 'Avg Order',
-      render: (value: number) => (
-        <span className="text-gray-700">{formatCurrency(value)}</span>
-      ),
-    },
-    {
-      key: 'uniqueCustomersCount',
-      label: 'Customers',
-      render: (value: number) => (
-        <span className="text-gray-900">{value}</span>
-      ),
-    },
-    // {
-    //   key: 'conversionRate',
-    //   label: 'Conversion',
-    //   render: (value: number) => (
-    //     <Badge variant={value >= 70 ? 'success' : value >= 40 ? 'warning' : 'error'}>
-    //       {value}%
-    //     </Badge>
-    //   ),
-    // },
-    {
-      key: 'status',
-      label: 'Order Status',
-      render: (_: any, row: any) => (
-        <div className="text-xs space-y-1">
-          <div className="flex justify-between">
-            <span className="text-gray-500">Pending:</span>
-            <span className="font-medium">{row.pendingOrders}</span>
+  const getColumns = () => {
+    const baseColumns = [
+      {
+        key: "executiveName",
+        label: "Sales Executive",
+        render: (value: string, row: any) => (
+          <Link
+            to={`/reports/sales-executives/${row._id}?type=${reportType}`}
+            className="hover:underline"
+          >
+            <div className="font-medium text-gray-900">{value}</div>
+            <div className="text-sm text-gray-500">{row.employeeId}</div>
+          </Link>
+        ),
+      },
+      {
+        key: "department",
+        label: "Department",
+        render: (value: string, row: any) => (
+          <div>
+            <div className="text-sm text-gray-900">{value}</div>
+            <div className="text-xs text-gray-500">{row.position}</div>
           </div>
-          {/* <div className="flex justify-between">
-            <span className="text-gray-500">Completed:</span>
-            <span className="font-medium text-green-600">{row.completedOrders}</span>
-          </div> */}
-        </div>
-      ),
-    },
-  ];
+        ),
+      },
+      {
+        key: "totalOrders",
+        label: reportType === "orders" ? "Orders" : "Visits",
+        render: (value: number) => (
+          <span className="font-medium text-gray-900">{value}</span>
+        ),
+      },
+    ];
+
+    if (reportType === "orders") {
+      return [
+        ...baseColumns,
+        {
+          key: "totalRevenue",
+          label: "Total Revenue",
+          render: (value: number) => (
+            <span className="font-semibold text-green-600">
+              {formatCurrency(value)}
+            </span>
+          ),
+        },
+        {
+          key: "totalOutstanding",
+          label: "Outstanding",
+          render: (value: number) => (
+            <span
+              className={`font-medium ${
+                value > 0 ? "text-orange-600" : "text-gray-500"
+              }`}
+            >
+              {formatCurrency(value)}
+            </span>
+          ),
+        },
+        {
+          key: "avgOrderValue",
+          label: "Avg Order",
+          render: (value: number) => (
+            <span className="text-gray-700">{formatCurrency(value)}</span>
+          ),
+        },
+        {
+          key: "uniqueCustomersCount",
+          label: "Customers",
+          render: (value: number) => (
+            <span className="text-gray-900">{value}</span>
+          ),
+        },
+        {
+          key: "status",
+          label: "Order Status",
+          render: (_: any, row: any) => (
+            <div className="text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Pending:</span>
+                <span className="font-medium">{row.pendingOrders}</span>
+              </div>
+            </div>
+          ),
+        },
+      ];
+    } else {
+      return [
+        ...baseColumns,
+        {
+          key: "uniqueCustomersCount",
+          label: "Locations",
+          render: (value: number) => (
+            <span className="text-gray-900">{value}</span>
+          ),
+        },
+        // {
+        //   key: 'status',
+        //   label: 'Visit Status',
+        //   render: (_: any, row: any) => (
+        //     <div className="text-xs space-y-1">
+        //       <div className="flex justify-between">
+        //         <span className="text-gray-500">Pending:</span>
+        //         <span className="font-medium">{row.pendingOrders}</span>
+        //       </div>
+        //     </div>
+        //   ),
+        // },
+      ];
+    }
+  };
+
+  const columns = getColumns();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -232,10 +272,12 @@ const SalesExecutiveReportsPage: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-lg font-semibold text-gray-900">Reports</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">Track performance insights</p>
+                <p className="text-xs text-gray-500 hidden sm:block">
+                  Track performance insights
+                </p>
               </div>
             </div>
-            
+
             <button
               onClick={exportToCSV}
               className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -245,8 +287,8 @@ const SalesExecutiveReportsPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Tabs Navigation - Mobile Optimized */}
-          <nav className="flex space-x-4 overflow-x-auto no-scrollbar">
+          {/* Main Tabs Navigation */}
+          <nav className="flex space-x-4 overflow-x-auto no-scrollbar mb-3">
             <Link
               to="/reports/sales-executives"
               className="flex items-center gap-1.5 px-3 py-2 border-b-2 border-blue-500 text-blue-600 font-medium text-sm whitespace-nowrap"
@@ -262,6 +304,32 @@ const SalesExecutiveReportsPage: React.FC = () => {
               <span>Customers</span>
             </Link>
           </nav>
+
+          {/* Sub-tabs for Orders vs Visits */}
+          <div className="flex space-x-2 bg-gray-100 p-1 rounded-lg w-fit">
+            <button
+              onClick={() => setReportType("orders")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                reportType === "orders"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <ShoppingBagIcon className="h-4 w-4" />
+              <span>Orders</span>
+            </button>
+            <button
+              onClick={() => setReportType("visits")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                reportType === "visits"
+                  ? "bg-white text-purple-600 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <ClipboardDocumentListIcon className="h-4 w-4" />
+              <span>Visits</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -273,7 +341,9 @@ const SalesExecutiveReportsPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-gray-500 mb-1">Executives</p>
-                  <p className="text-xl font-bold text-gray-900 truncate">{summary.totalExecutives}</p>
+                  <p className="text-xl font-bold text-gray-900 truncate">
+                    {summary.totalExecutives}
+                  </p>
                 </div>
                 <UserGroupIcon className="h-8 w-8 text-blue-500 flex-shrink-0" />
               </div>
@@ -282,24 +352,51 @@ const SalesExecutiveReportsPage: React.FC = () => {
             <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500 mb-1">Orders</p>
-                  <p className="text-xl font-bold text-gray-900 truncate">{summary.totalOrdersAll}</p>
+                  <p className="text-xs text-gray-500 mb-1">
+                    {reportType === "orders" ? "Orders" : "Visits"}
+                  </p>
+                  <p className="text-xl font-bold text-gray-900 truncate">
+                    {summary.totalOrdersAll}
+                  </p>
                 </div>
-                <ShoppingBagIcon className="h-8 w-8 text-purple-500 flex-shrink-0" />
+                {reportType === "orders" ? (
+                  <ShoppingBagIcon className="h-8 w-8 text-purple-500 flex-shrink-0" />
+                ) : (
+                  <ClipboardDocumentListIcon className="h-8 w-8 text-purple-500 flex-shrink-0" />
+                )}
               </div>
             </div>
 
-            <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500 mb-1">Revenue</p>
-                  <p className="text-xl font-bold text-green-600 truncate">
-                    {formatCurrency(summary.totalRevenueAll)}
-                  </p>
+            {reportType === "orders" && (
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 mb-1">Revenue</p>
+                    <p className="text-xl font-bold text-green-600 truncate">
+                      {formatCurrency(summary.totalRevenueAll)}
+                    </p>
+                  </div>
+                  <CurrencyDollarIcon className="h-8 w-8 text-green-500 flex-shrink-0" />
                 </div>
-                <CurrencyDollarIcon className="h-8 w-8 text-green-500 flex-shrink-0" />
               </div>
-            </div>
+            )}
+
+            {reportType === "visits" && (
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 mb-1">Locations</p>
+                    <p className="text-xl font-bold text-blue-600 truncate">
+                      {reports.reduce(
+                        (sum, r) => sum + r.uniqueCustomersCount,
+                        0
+                      )}
+                    </p>
+                  </div>
+                  <MapPinIcon className="h-8 w-8 text-blue-500 flex-shrink-0" />
+                </div>
+              </div>
+            )}
 
             <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
               <div className="flex items-center justify-between">
@@ -320,14 +417,14 @@ const SalesExecutiveReportsPage: React.FC = () => {
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
-              showFilters 
-                ? 'bg-blue-50 text-blue-700 border-blue-200' 
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              showFilters
+                ? "bg-blue-50 text-blue-700 border-blue-200"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
             }`}
           >
             <FunnelIcon className="h-4 w-4" />
-            {showFilters ? 'Hide Filters' : 'Show Filters'}
-            {(startDate || endDate || godownId || department !== 'Sales') && (
+            {showFilters ? "Hide Filters" : "Show Filters"}
+            {(startDate || endDate || godownId || department !== "Sales") && (
               <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-medium text-white bg-blue-600 rounded-full">
                 !
               </span>
@@ -341,7 +438,9 @@ const SalesExecutiveReportsPage: React.FC = () => {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <FunnelIcon className="h-4 w-4 text-gray-400" />
-                <span className="text-sm font-medium text-gray-900">Filters</span>
+                <span className="text-sm font-medium text-gray-900">
+                  Filters
+                </span>
               </div>
               <button
                 onClick={() => setShowFilters(false)}
@@ -355,7 +454,9 @@ const SalesExecutiveReportsPage: React.FC = () => {
               {/* Date Range */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">From Date</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    From Date
+                  </label>
                   <input
                     type="date"
                     value={startDate}
@@ -364,7 +465,9 @@ const SalesExecutiveReportsPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">To Date</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    To Date
+                  </label>
                   <input
                     type="date"
                     value={endDate}
@@ -377,7 +480,9 @@ const SalesExecutiveReportsPage: React.FC = () => {
               {/* Department & Godown */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Department</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Department
+                  </label>
                   <select
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
@@ -392,7 +497,9 @@ const SalesExecutiveReportsPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Godown</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Godown
+                  </label>
                   <select
                     value={godownId}
                     onChange={(e) => setGodownId(e.target.value)}
@@ -400,7 +507,9 @@ const SalesExecutiveReportsPage: React.FC = () => {
                   >
                     <option value="">All Godowns</option>
                     {godowns.map((g) => (
-                      <option key={g._id} value={g._id}>{g.name}</option>
+                      <option key={g._id} value={g._id}>
+                        {g.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -408,31 +517,51 @@ const SalesExecutiveReportsPage: React.FC = () => {
 
               {/* Sort Options */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Sort By</label>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="totalRevenue">Total Revenue</option>
-                    <option value="totalOrders">Total Orders</option>
-                    <option value="avgOrderValue">Avg Order Value</option>
-                    <option value="conversionRate">Conversion Rate</option>
-                    <option value="uniqueCustomersCount">Unique Customers</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Order</label>
-                  <select
-                    value={sortOrder}
-                    onChange={(e) => setSortOrder(e.target.value)}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="desc">Descending</option>
-                    <option value="asc">Ascending</option>
-                  </select>
-                </div>
+                {reportType === "orders" ? (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Sort By
+                    </label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {/* {reportType === 'orders' ? (
+                      <> */}
+                      <option value="totalRevenue">Total Revenue</option>
+                      <option value="totalOrders">Total Orders</option>
+                      <option value="avgOrderValue">Avg Order Value</option>
+                      <option value="conversionRate">Conversion Rate</option>
+                      <option value="uniqueCustomersCount">
+                        Unique Customers
+                      </option>
+                      {/* </>
+                    ) : (
+                      <>
+                        <option value="totalOrders">Total Visits</option>
+                        <option value="uniqueCustomersCount">Unique Locations</option>
+                        <option value="conversionRate">Completion Rate</option>
+                      </>
+                    )} */}
+                    </select>
+                  </div>
+                ) : null}
+                {reportType === "orders" ? (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Order
+                    </label>
+                    <select
+                      value={sortOrder}
+                      onChange={(e) => setSortOrder(e.target.value)}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="desc">Descending</option>
+                      <option value="asc">Ascending</option>
+                    </select>
+                  </div>
+                ) : null}
               </div>
 
               {/* Action Buttons */}
@@ -457,22 +586,27 @@ const SalesExecutiveReportsPage: React.FC = () => {
         {/* Mobile Cards View */}
         <div className="block lg:hidden space-y-3 mb-4">
           {reports.map((report) => (
-            <div key={report._id} className="bg-white rounded-lg border border-gray-200 p-3">
+            <div
+              key={report._id}
+              className="bg-white rounded-lg border border-gray-200 p-3"
+            >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">
-                  <Link 
-                    to={`/reports/sales-executives/${report._id}`}
+                  <Link
+                    to={`/reports/sales-executives/${report._id}?type=${reportType}`}
                     className="font-medium text-gray-900 hover:text-blue-600 truncate block"
                   >
                     {report.executiveName}
                   </Link>
-                  <div className="text-xs text-gray-500 mt-0.5">{report.employeeId}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    {report.employeeId}
+                  </div>
                   <div className="text-xs text-gray-600 mt-1">
                     {report.department} • {report.position}
                   </div>
                 </div>
                 <Link
-                  to={`/reports/sales-executives/${report._id}`}
+                  to={`/reports/sales-executives/${report._id}?type=${reportType}`}
                   className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors flex-shrink-0"
                 >
                   <EyeIcon className="h-4 w-4" />
@@ -481,40 +615,74 @@ const SalesExecutiveReportsPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-2 mb-3">
                 <div className="bg-gray-50 p-2 rounded">
-                  <div className="text-xs text-gray-500">Orders</div>
-                  <div className="text-sm font-semibold text-gray-900">{report.totalOrders}</div>
+                  <div className="text-xs text-gray-500">
+                    {reportType === "orders" ? "Orders" : "Visits"}
+                  </div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    {report.totalOrders}
+                  </div>
                 </div>
                 <div className="bg-gray-50 p-2 rounded">
-                  <div className="text-xs text-gray-500">Customers</div>
-                  <div className="text-sm font-semibold text-gray-900">{report.uniqueCustomersCount}</div>
+                  <div className="text-xs text-gray-500">
+                    {reportType === "orders" ? "Customers" : "Locations"}
+                  </div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    {report.uniqueCustomersCount}
+                  </div>
                 </div>
-                <div className="bg-green-50 p-2 rounded">
-                  <div className="text-xs text-green-600">Revenue</div>
-                  <div className="text-sm font-semibold text-green-700">{formatCurrency(report.totalRevenue)}</div>
-                </div>
-                <div className="bg-orange-50 p-2 rounded">
-                  <div className="text-xs text-orange-600">Outstanding</div>
-                  <div className="text-sm font-semibold text-orange-700">{formatCurrency(report.totalOutstanding)}</div>
-                </div>
+                {reportType === "orders" && (
+                  <>
+                    <div className="bg-green-50 p-2 rounded">
+                      <div className="text-xs text-green-600">Revenue</div>
+                      <div className="text-sm font-semibold text-green-700">
+                        {formatCurrency(report.totalRevenue)}
+                      </div>
+                    </div>
+                    <div className="bg-orange-50 p-2 rounded">
+                      <div className="text-xs text-orange-600">Outstanding</div>
+                      <div className="text-sm font-semibold text-orange-700">
+                        {formatCurrency(report.totalOutstanding)}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-                <div className="text-xs text-gray-600">
-                  Avg: {formatCurrency(report.avgOrderValue)}
+              {reportType === "orders" && (
+                <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                  <div className="text-xs text-gray-600">
+                    Avg: {formatCurrency(report.avgOrderValue)}
+                  </div>
+                  <Badge
+                    variant={
+                      report.conversionRate >= 70
+                        ? "success"
+                        : report.conversionRate >= 40
+                        ? "warning"
+                        : "error"
+                    }
+                  >
+                    {report.conversionRate}%
+                  </Badge>
                 </div>
-                <Badge variant={report.conversionRate >= 70 ? 'success' : report.conversionRate >= 40 ? 'warning' : 'error'}>
-                  {report.conversionRate}%
-                </Badge>
-              </div>
+              )}
 
               <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Pending:</span>
+                  <span className="text-gray-500">
+                    {reportType === "orders" ? "Pending:" : "Pending Visits:"}
+                  </span>
                   <span className="font-medium">{report.pendingOrders}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Completed:</span>
-                  <span className="font-medium text-green-600">{report.completedOrders}</span>
+                  <span className="text-gray-500">
+                    {reportType === "orders"
+                      ? "Completed:"
+                      : "Completed Visits:"}
+                  </span>
+                  <span className="font-medium text-green-600">
+                    {report.completedOrders}
+                  </span>
                 </div>
               </div>
             </div>
@@ -523,8 +691,12 @@ const SalesExecutiveReportsPage: React.FC = () => {
           {reports.length === 0 && (
             <div className="text-center py-8 bg-white rounded-lg border border-gray-200">
               <ChartBarIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <h3 className="text-sm font-medium text-gray-900 mb-1">No Reports Found</h3>
-              <p className="text-xs text-gray-500">Try adjusting your filters</p>
+              <h3 className="text-sm font-medium text-gray-900 mb-1">
+                No Reports Found
+              </h3>
+              <p className="text-xs text-gray-500">
+                Try adjusting your filters
+              </p>
             </div>
           )}
         </div>

@@ -129,8 +129,8 @@ export const generateDeliveryNotePDF = (order: Order, downloadDirectly: boolean 
 
   yPos += 5;
 
-  // Check if all items have "5kg Bags" packaging
-  const allItemsHave5kgBags = (order.items || []).every(item => 
+  // Check if any item has "5kg Bags" packaging
+  const anyItemHas5kgBags = (order.items || []).some(item => 
     item.packaging === '5kg Bags'
   );
 
@@ -141,9 +141,9 @@ export const generateDeliveryNotePDF = (order: Order, downloadDirectly: boolean 
       item.productName || 'N/A',
     ];
     
-    if (!allItemsHave5kgBags) {
-      baseData.push(item.packaging || 'N/A');
-    }
+    if (!anyItemHas5kgBags) {
+       baseData.push(item.packaging || 'N/A');
+     }
     
     baseData.push(
       `${Number(item.quantity || 0).toFixed(2)} ${item.unit || 'KG'}`,
@@ -156,7 +156,7 @@ export const generateDeliveryNotePDF = (order: Order, downloadDirectly: boolean 
 
   // Prepare table headers conditionally
   const tableHeaders = ['#', 'Product'];
-  if (!allItemsHave5kgBags) {
+  if (!anyItemHas5kgBags) {
     tableHeaders.push('Packaging');
   }
   tableHeaders.push('Quantity', 'Rate', 'Amount');
@@ -166,7 +166,7 @@ export const generateDeliveryNotePDF = (order: Order, downloadDirectly: boolean 
     0: { cellWidth: 10 },
   };
 
-  if (allItemsHave5kgBags) {
+  if (anyItemHas5kgBags) {
     // Without packaging column - redistribute widths
     columnStyles[1] = { cellWidth: 65 }; // Product column wider
     columnStyles[2] = { cellWidth: 35 }; // Quantity
