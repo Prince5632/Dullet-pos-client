@@ -1079,7 +1079,7 @@ const OrdersPage: React.FC = () => {
                     Select Godown
                   </span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                   {/* All Godowns card */}
                   <button
                     type="button"
@@ -1171,7 +1171,7 @@ const OrdersPage: React.FC = () => {
 
             {/* Stats Grid */}
             {stats && !statsLoading && viewType === "orders" && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
                 {[
                   {
                     label: "Revenue",

@@ -43,6 +43,12 @@ const CustomerDetailsPage = lazy(() => import('../pages/customers/CustomerDetail
 const AttendancePage = lazy(() => import('../pages/attendance/AttendancePage'));
 const AttendanceDetailsPage = lazy(() => import('../pages/attendance/AttendanceDetailsPage'));
 
+// Inventory Management Pages
+const InventoryPage = lazy(() => import('../pages/inventory/InventoryPage'));
+const AddInventoryPage = lazy(() => import('../pages/inventory/AddInventoryPage'));
+const EditInventoryPage = lazy(() => import('../pages/inventory/EditInventoryPage'));
+const ViewInventoryPage = lazy(() => import('../pages/inventory/ViewInventoryPage'));
+
 // Report Pages
 const SalesExecutiveReportsPage = lazy(() => import('../pages/reports/SalesExecutiveReportsPage'));
 const CustomerReportsPage = lazy(() => import('../pages/reports/CustomerReportsPage'));
@@ -318,6 +324,45 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute requiredPermission="attendance.read">
                 <AttendanceDetailsPage />
+              </ProtectedRoute>
+            ),
+          },
+        ],
+      },
+
+      // Inventory Management
+      {
+        path: 'inventory',
+        children: [
+          {
+            index: true,
+            element: (
+              <ProtectedRoute requiredPermission="stock.read">
+                <InventoryPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'add',
+            element: (
+              <ProtectedRoute requiredPermission="stock.create">
+                <AddInventoryPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'edit/:id',
+            element: (
+              <ProtectedRoute requiredPermission="stock.update">
+                <EditInventoryPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: ':id',
+            element: (
+              <ProtectedRoute requiredPermission="stock.read">
+                <ViewInventoryPage />
               </ProtectedRoute>
             ),
           },
