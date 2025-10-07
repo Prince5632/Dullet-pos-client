@@ -11,6 +11,7 @@ import {
   CalendarDaysIcon,
   ChartBarIcon,
   BuildingOfficeIcon,
+  CubeIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../contexts/AuthContext";
 import type { NavItem } from "../../types";
@@ -47,6 +48,12 @@ const navigationItems: NavItem[] = [
     href: "/attendance",
     icon: CalendarDaysIcon,
     permission: "attendance.read",
+  },
+  {
+    name: "Inventory",
+    href: "/inventory",
+    icon: CubeIcon,
+    permission: "stock.read",
   },
   {
     name: "Reports",

@@ -515,7 +515,58 @@ export interface NavItem {
   children?: NavItem[];
 }
 
-// Table Types
+// Inventory Types
+export interface Inventory {
+  _id: string;
+  stockId: string;
+  inventoryType: 'New Stock' | 'Stock Sold' | 'Damaged / Return';
+  dateOfStock: string;
+  quantity: number;
+  unit: 'Kg' | 'Quintal';
+  godown?: Godown;
+  pricePerKg?: number;
+  additionalNotes?: string;
+  loggedBy: User;
+  createdAt: string;
+  updatedAt?: string;
+  quantityWithUnit?: string;
+}
+
+export interface CreateInventoryForm {
+  inventoryType: 'New Stock' | 'Stock Sold' | 'Damaged / Return';
+  dateOfStock: string;
+  quantity: number;
+  unit: 'Kg' | 'Quintal';
+  godown?: string;
+  pricePerKg?: number;
+  additionalNotes?: string;
+}
+
+export interface UpdateInventoryForm extends Partial<CreateInventoryForm> {}
+
+export interface InventoryListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  inventoryType?: string;
+  godownId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  loggedBy?: string;
+}
+
+export interface InventoryStats {
+  totalStock: number;
+  totalQuantity: number;
+  averagePrice: number;
+  newStock: number;
+  stockSold: number;
+  damagedReturns: number;
+}
+
+// Table Column Types
 export interface TableColumn<T = any> {
   key: keyof T | string;
   label: string;
@@ -546,10 +597,4 @@ export interface ChartData {
   color?: string;
 }
 
-// Table Types
-export interface TableColumn<T = any> {
-  key: keyof T | string;
-  label: string;
-  sortable?: boolean;
-  render?: (value: any, item: T) => React.ReactNode;
-}
+// Table Types (moved to avoid duplication)

@@ -43,6 +43,9 @@ const CustomerDetailsPage = lazy(() => import('../pages/customers/CustomerDetail
 const AttendancePage = lazy(() => import('../pages/attendance/AttendancePage'));
 const AttendanceDetailsPage = lazy(() => import('../pages/attendance/AttendanceDetailsPage'));
 
+// Inventory Management Pages
+const InventoryPage = lazy(() => import('../pages/inventory/InventoryPage'));
+
 // Report Pages
 const SalesExecutiveReportsPage = lazy(() => import('../pages/reports/SalesExecutiveReportsPage'));
 const CustomerReportsPage = lazy(() => import('../pages/reports/CustomerReportsPage'));
@@ -318,6 +321,21 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute requiredPermission="attendance.read">
                 <AttendanceDetailsPage />
+              </ProtectedRoute>
+            ),
+          },
+        ],
+      },
+
+      // Inventory Management
+      {
+        path: 'inventory',
+        children: [
+          {
+            index: true,
+            element: (
+              <ProtectedRoute requiredPermission="stock.read">
+                <InventoryPage />
               </ProtectedRoute>
             ),
           },

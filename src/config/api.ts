@@ -1,7 +1,7 @@
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_URL || 'https://dullet.sensationsolutions.in',
-  // BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
+  // BASE_URL: import.meta.env.VITE_API_URL || 'https://dullet.sensationsolutions.in',
+  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
   ENDPOINTS: {
     // Auth endpoints
     LOGIN: '/api/auth/login',
@@ -51,6 +51,12 @@ export const API_CONFIG = {
   // Godown endpoints
   GODOWNS: '/api/godowns',
   GODOWN_BY_ID: (id: string) => `/api/godowns/${id}`,
+
+  // Inventory endpoints
+  INVENTORY: '/api/inventory',
+  INVENTORY_BY_ID: (id: string) => `/api/inventory/${id}`,
+  INVENTORY_STATS: '/api/inventory/stats/summary',
+  INVENTORY_BY_GODOWN: (godownId: string) => `/api/inventory/godown/${godownId}`,
 
   // Attendance endpoints
   ATTENDANCE: '/api/attendance',
