@@ -41,7 +41,7 @@ type SelectedItem = {
     | "25kg Bags"
     | "50kg Bags"
     | "Loose"
-    | "40kg Bag";
+    | "40kg Bags";
   isBagSelection?: boolean;
   bagPieces?: number;
 };
@@ -82,6 +82,7 @@ const EditOrderPage: React.FC = () => {
   >({});
   const [activeProduct, setActiveProduct] = useState<QuickProduct | null>(null);
   const [activeItemKey, setActiveItemKey] = useState<string | null>(null);
+  const [editingItemKey, setEditingItemKey] = useState<string | null>(null); // Track which item is being edited
   const [kg, setKg] = useState(0);
   const [isBagSelection, setIsBagSelection] = useState(false);
   const [bagPieces, setBagPieces] = useState<number>(1);
@@ -319,7 +320,7 @@ const EditOrderPage: React.FC = () => {
             if (packaging === "5kg Bags") {
               bagPieces = Math.round(item.quantity / 5);
               bags = bagPieces;
-            } else if (packaging === "40kg Bag") {
+            } else if (packaging === "40kg Bags") {
               bagPieces = Math.round(item.quantity / 40);
               bags = bagPieces;
             } else if (matchingProduct.bagSizeKg) {
@@ -391,7 +392,7 @@ const EditOrderPage: React.FC = () => {
       // Set currentBagSize based on existing selection
       if (existing.isBagSelection && existing.packaging === '5kg Bags') {
         setCurrentBagSize(5);
-      } else if (existing.isBagSelection && existing.packaging === '40kg Bag') {
+      } else if (existing.isBagSelection && existing.packaging === '40kg Bags') {
         setCurrentBagSize(40);
       } else {
         setCurrentBagSize(product.bagSizeKg || 40);
@@ -429,7 +430,7 @@ const EditOrderPage: React.FC = () => {
     // Set currentBagSize based on existing selection
     if (item.isBagSelection && item.packaging === '5kg Bags') {
       setCurrentBagSize(5);
-    } else if (item.isBagSelection && item.packaging === '40kg Bag') {
+    } else if (item.isBagSelection && item.packaging === '40kg Bags') {
       setCurrentBagSize(40);
     } else {
       setCurrentBagSize(item.product.bagSizeKg || 40);
@@ -439,9 +440,62 @@ const EditOrderPage: React.FC = () => {
   const closeQtyModal = () => {
     setActiveProduct(null);
     setActiveItemKey(null);
+    setEditingItemKey(null); // Clear editing item key
     setIsBagSelection(false);
     setBagPieces(1);
     setCurrentBagSize(40); // Reset to default
+  };
+
+  // Function to open quantity modal for adding new items (ignores existing selections)
+  const openQtyModalForNewItem = (product: QuickProduct) => {
+    setActiveProduct(product);
+    setActiveItemKey(null);
+    setEditingItemKey(null); // Not editing an existing item
+    
+    // Always initialize fresh values for new items
+    if (product.bagSizeKg === 5) {
+      // For 5kg products, default to bag selection with 5kg bags
+      setIsBagSelection(true);
+      setBagPieces(1);
+      setKg(5);
+      setCurrentBagSize(5);
+    } else if (product.bagSizeKg === 40) {
+      // For 40kg products, default to bag selection with 40kg bags
+      setIsBagSelection(true);
+      setBagPieces(1);
+      setKg(40);
+      setCurrentBagSize(40);
+    } else {
+      // For other products, start with loose selection
+      setKg(0);
+      setIsBagSelection(false);
+      setBagPieces(1);
+      setCurrentBagSize(product.bagSizeKg || 40);
+    }
+  };
+
+  // Function to open quantity modal for editing existing items
+  const openQtyModalForExistingItem = (itemKey: string, item: SelectedItem) => {
+    setActiveProduct(item.product);
+    setActiveItemKey(null); // Not using activeItemKey for editing
+    setEditingItemKey(itemKey); // Track which item is being edited
+    setKg(item.quantityKg || 0);
+    setIsBagSelection(!!item.isBagSelection);
+    setBagPieces(item.bagPieces || item.bags || 1);
+    // Set currentBagSize based on existing selection
+    if (item.isBagSelection && item.packaging === '5kg Bags') {
+      setCurrentBagSize(5);
+    } else if (item.isBagSelection && item.packaging === '10kg Bags') {
+      setCurrentBagSize(10);
+    } else if (item.isBagSelection && item.packaging === '25kg Bags') {
+      setCurrentBagSize(25);
+    } else if (item.isBagSelection && item.packaging === '40kg Bags') {
+      setCurrentBagSize(40);
+    } else if (item.isBagSelection && item.packaging === '50kg Bags') {
+      setCurrentBagSize(50);
+    } else {
+      setCurrentBagSize(item.product.bagSizeKg || 40);
+    }
   };
 
   const confirmQty = () => {
@@ -472,8 +526,14 @@ const EditOrderPage: React.FC = () => {
       // Determine packaging based on current bag size
       if (currentBagSize === 5) {
         packaging = '5kg Bags';
+      } else if (currentBagSize === 10) {
+        packaging = '10kg Bags';
+      } else if (currentBagSize === 25) {
+        packaging = '25kg Bags';
       } else if (currentBagSize === 40) {
-        packaging = '40kg Bag';
+        packaging = '40kg Bags';
+      } else if (currentBagSize === 50) {
+        packaging = '50kg Bags';
       } else if (activeProduct.defaultPackaging && activeProduct.defaultPackaging !== 'Loose') {
         packaging = activeProduct.defaultPackaging as typeof packaging;
       } else {
@@ -491,12 +551,30 @@ const EditOrderPage: React.FC = () => {
       bagPieces: pieceCount,
     };
 
-    // Use activeItemKey if editing existing item, otherwise generate new unique key
-    const itemKey = activeItemKey || `${activeProduct.key}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    let itemKey: string;
+    
+    if (editingItemKey) {
+      // If editing an existing item, use the existing key
+      itemKey = editingItemKey;
+    } else {
+      // If adding a new item, generate unique key for multiple items of same product
+      const existingItem = selectedItems[activeProduct.key];
+      itemKey = activeProduct.key;
+      
+      if (existingItem) {
+        // If item already exists, create a new unique key
+        let counter = 1;
+        while (selectedItems[`${activeProduct.key}_${counter}`]) {
+          counter++;
+        }
+        itemKey = `${activeProduct.key}_${counter}`;
+      }
+    }
     
     setSelectedItems(prev => ({ ...prev, [itemKey]: item }));
     setActiveProduct(null);
     setActiveItemKey(null);
+    setEditingItemKey(null); // Clear editing item key
     setIsBagSelection(false);
     setBagPieces(1);
     setCurrentBagSize(40); // Reset to default
@@ -520,8 +598,14 @@ const EditOrderPage: React.FC = () => {
       let actualBagSize: number;
       if (it.packaging === '5kg Bags') {
         actualBagSize = 5;
-      } else if (it.packaging === '40kg Bag') {
+      } else if (it.packaging === '10kg Bags') {
+        actualBagSize = 10;
+      } else if (it.packaging === '25kg Bags') {
+        actualBagSize = 25;
+      } else if (it.packaging === '40kg Bags') {
         actualBagSize = 40;
+      } else if (it.packaging === '50kg Bags') {
+        actualBagSize = 50;
       } else if (it.bagPieces && it.bagPieces > 0) {
         // Calculate bag size from total kg and pieces
         actualBagSize = normalizedKg / it.bagPieces;
@@ -544,7 +628,7 @@ const EditOrderPage: React.FC = () => {
   };
 
   const itemsArray = useMemo(
-    () => Object.values(selectedItems),
+    () => Object.entries(selectedItems).map(([key, item]) => ({ key, ...item })),
     [selectedItems]
   );
 
@@ -802,244 +886,186 @@ const EditOrderPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Order Items */}
-                {/* Products */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-semibold text-gray-900 flex items-center">
-                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
-                      Products
-                    </h3>
-                    {loadingProducts && (
-                      <span className="text-xs text-gray-500">Loading...</span>
-                    )}
-                    {productsError && (
-                      <span className="text-xs text-red-600">
-                        {productsError}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Show selected items grouped by original product name */}
-                  {Object.keys(selectedItems).length > 0 && (() => {
-                    // Group selected items by their original product name
-                    const selectedItemGroups = Object.entries(selectedItems).reduce((groups, [key, item]) => {
-                      const productName = item.product.name;
-                      if (!groups[productName]) {
-                        groups[productName] = [];
-                      }
-                      groups[productName].push({ key, item });
-                      return groups;
-                    }, {} as Record<string, Array<{ key: string; item: SelectedItem }>>);
-
-                    return (
-                      <div className="mb-4">
-                        <div className="text-xs text-gray-700 font-medium mb-2">Selected Items:</div>
-                        {Object.entries(selectedItemGroups).map(([productName, itemsWithKeys]) => (
-                          <div key={productName} className="mb-3 last:mb-0">
-                            <div className="flex items-center mb-2">
-                              <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                                {productName}
-                              </span>
-                              <div className="h-px bg-gray-200 flex-1 ml-2"></div>
-                            </div>
-
-                            <div className="space-y-1.5">
-                              {itemsWithKeys.map(({ key, item }, index) => (
-                                <button
-                                  type="button"
-                                  key={key}
-                                  onClick={() => openQtyModalForItem(key, item)}
-                                  className="w-full text-left p-2.5 rounded-lg border transition-all duration-200 bg-emerald-50 border-emerald-300"
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-1.5">
-                                        <h4 className="text-xs font-semibold text-gray-900 truncate">
-                                          {item.product.name}
-                                          {itemsWithKeys.length > 1 && (
-                                            <span className="text-[10px] text-gray-500 ml-1">
-                                              #{index + 1}
-                                            </span>
-                                          )}
-                                        </h4>
-                                        <span className="text-[10px] text-gray-500 flex-shrink-0">
-                                          ₹{formatNumber(item.product.pricePerKg)}/kg
-                                        </span>
-                                      </div>
-                                      <div className="text-[10px] text-emerald-600 mt-0.5">
-                                        {formatNumber(item.quantityKg || 0)} kg
-                                      </div>
-                                    </div>
-                                  </div>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Show available products for adding new items */}
-                  {currentProducts.length > 0 && (() => {
-                    const baseProductGroups = currentProducts.reduce((groups, product) => {
-                      const baseName = product.name;
-                      if (!groups[baseName]) {
-                        groups[baseName] = [];
-                      }
-                      groups[baseName].push(product);
-                      return groups;
-                    }, {} as Record<string, QuickProduct[]>);
-
-                    return (
-                      <div>
-                        <div className="text-xs text-gray-700 font-medium mb-2">
-                          {Object.keys(selectedItems).length > 0 ? 'Available Products:' : 'Products:'}
+        {/* Selected Products - Click to Edit */}
+        {Object.keys(selectedItems).length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 mb-3">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1.5"></span>
+                Selected Products ({itemsArray.length})
+              </h3>
+              <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full border border-blue-200">
+                Click to Edit
+              </div>
+            </div>
+            <div className="space-y-2">
+              {itemsArray.map((it) => {
+                const kg = it.quantityKg || 0;
+                const lineTotal = kg * it.product.pricePerKg;
+                
+                return (
+                  <button
+                    type="button"
+                    key={it.key}
+                    onClick={() => openQtyModalForExistingItem(it.key, it)}
+                    className="w-full text-left p-3 rounded-lg border border-blue-200 bg-blue-50 hover:border-blue-300 hover:bg-blue-100 transition-all duration-200 active:scale-[0.99]"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-medium text-gray-900 truncate">
+                            {it.product.name}
+                          </h4>
+                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                            ₹{formatNumber(it.product.pricePerKg)}/kg
+                          </span>
                         </div>
-                        {Object.entries(baseProductGroups).map(([baseName, variants]) => (
-                          <div key={baseName} className="mb-3 last:mb-0">
-                            <div className="flex items-center mb-2">
-                              <span className="text-xs font-medium text-gray-700 bg-gray-50 px-2.5 py-0.5 rounded-full border border-gray-200">
-                                {baseName}
-                              </span>
-                              <div className="h-px bg-gray-200 flex-1 ml-2"></div>
-                            </div>
-
-                            <div className="space-y-1.5">
-                               {variants.map(variant => (
-                                 <button
-                                   type="button"
-                                   key={variant.key}
-                                   onClick={() => openQtyModal(variant)}
-                                   className="w-full text-left p-2.5 rounded-lg border transition-all duration-200 bg-white border-gray-200 hover:border-gray-300 active:scale-[0.99]"
-                                 >
-                                   <div className="flex items-center justify-between">
-                                     <div className="flex-1 min-w-0">
-                                       <div className="flex items-center gap-1.5">
-                                         <h4 className="text-xs font-semibold text-gray-900 truncate">
-                                           {variant.name}
-                                         </h4>
-                                         <span className="text-[10px] text-gray-500 flex-shrink-0">
-                                           ₹{formatNumber(variant.pricePerKg)}/kg
-                                         </span>
-                                       </div>
-                                     </div>
-                                   </div>
-                                 </button>
-                               ))}
-                            </div>
-                          </div>
-                        ))}
+                        <div className="text-xs text-gray-600 mt-1">
+                          {kg}kg • {it.packaging || "Loose"} • ₹{formatNumber(lineTotal)}
+                        </div>
                       </div>
-                    );
-                  })()}
-
-                  {/* No products message */}
-                  {order && currentProducts.length === 0 && (
-                    <div className="text-center py-8">
-                      <div className="text-gray-400 mb-2">
-                        <svg
-                          className="w-12 h-12 mx-auto"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1.5}
-                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M9 9l3-3 3 3"
-                          />
-                        </svg>
-                      </div>
-                      <p className="text-sm text-gray-500">
-                        No products available for{" "}
-                        {order.godown?.name || "this godown"}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Location: {order.godown?.location?.city},{" "}
-                        {order.godown?.location?.area}
-                      </p>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeItem(it.key);
+                        }}
+                        className="p-1.5 rounded-md border border-red-200 bg-red-50 hover:bg-red-100 active:scale-95 transition-colors"
+                      >
+                        <XMarkIcon className="h-4 w-4 text-red-500" />
+                      </button>
                     </div>
-                  )}
-                </div>
+                  </button>
+                );
+              })}
+            </div>
+            
+            {/* Total Summary */}
+            <div className="mt-3 pt-3 border-t border-blue-200">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-700">Total Amount:</span>
+                <span className="text-lg font-bold text-blue-600">
+                  ₹{formatNumber(totalAmount)}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
-                {/* Cart */}
-                {itemsArray.length > 0 && (
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
-                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
-                      Cart ({itemsArray.length} items)
-                    </h3>
+        {/* Available Products - Click to Add */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 mb-3">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
+              Available Products
+            </h3>
+            <div className="flex items-center gap-2">
+              <div className="text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-200">
+                Click to Add
+              </div>
+              {loadingProducts && (
+                <span className="text-xs text-gray-500">Loading...</span>
+              )}
+              {productsError && (
+                <span className="text-xs text-red-600">{productsError}</span>
+              )}
+            </div>
+          </div>
 
-                    <div className="space-y-2">
-                      {itemsWithKeys.map(({ key, item }) => {
-                        const kg = computeItemKg(item);
-                        const lineTotal = kg * item.product.pricePerKg;
+          {/* If godown selected but no products match */}
+          {order && currentProducts.length === 0 && (
+            <div className="text-center py-8">
+              <div className="text-amber-400 mb-2">
+                <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div className="text-sm text-amber-600">
+                No products available for the selected godown. Please confirm that this location has assigned catalog items.
+              </div>
+            </div>
+          )}
 
-                        return (
-                          <div
-                            key={key}
-                            className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <div className="text-xs font-medium text-gray-900 truncate">
-                                {item.product.name}
-                              </div>
-                              <div className="text-[10px] text-gray-500">
-                                {formatItemQuantity(item)} • ₹
-                                {formatNumber(item.product.pricePerKg)}/kg
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 ml-2">
-                              <span className="text-xs font-semibold text-gray-900">
-                                ₹{formatNumber(lineTotal)}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => openQtyModalForItem(key, item)}
-                                className="p-1 text-gray-400 hover:text-emerald-600 transition-colors"
-                              >
-                                <svg
-                                  className="h-3 w-3"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                  />
-                                </svg>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => removeItem(key)}
-                                className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                              >
-                                <XMarkIcon className="h-3 w-3" />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+          {/* Available products grouped display */}
+          {order &&
+            currentProducts.length > 0 &&
+            (() => {
+              const baseProductGroups = currentProducts.reduce(
+                (groups, product) => {
+                  const baseName = product.name;
+                  if (!groups[baseName]) {
+                    groups[baseName] = [];
+                  }
+                  groups[baseName].push(product);
+                  return groups;
+                },
+                {} as Record<string, QuickProduct[]>
+              );
 
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-gray-900">
-                          Subtotal:
-                        </span>
-                        <span className="text-sm font-bold text-gray-900">
-                          ₹{formatNumber(calculateTotal())}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
+              // Show all products as "add new" options
+               const availableGroups = Object.entries(baseProductGroups).map(([baseName, variants]) => {
+                 return { baseName, variants };
+               });
+
+               return availableGroups.map(({ baseName, variants }) => (
+                 <div key={baseName} className="mb-4 last:mb-0">
+
+                   <div className="grid grid-cols-1 gap-2">
+                     {variants.map((variant) => {
+                       // Check for any items of this product (including numbered variants)
+                       const productItemsInCart = Object.keys(selectedItems).filter(key => 
+                         key === variant.key || key.startsWith(`${variant.key}_`)
+                       );
+                       const hasItemsInCart = productItemsInCart.length > 0;
+                       
+                       return (
+                         <button
+                           type="button"
+                           key={variant.key}
+                           onClick={() => openQtyModalForNewItem(variant)}
+                           className={`w-full text-left p-3 rounded-lg border transition-all duration-200 active:scale-[0.99] ${
+                             hasItemsInCart
+                               ? "border-emerald-200 bg-emerald-50 hover:border-emerald-300 hover:bg-emerald-100"
+                               : "border-gray-200 bg-white hover:border-emerald-300 hover:bg-emerald-50"
+                           }`}
+                         >
+                           <div className="flex items-center justify-between">
+                             <div className="flex-1 min-w-0">
+                               <div className="flex items-center gap-2">
+                                 <h4 className="text-sm font-medium text-gray-900 truncate">
+                                   {variant.name}
+                                 </h4>
+                                 <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                                   ₹{formatNumber(variant.pricePerKg)}/kg
+                                 </span>
+                                 {hasItemsInCart && (
+                                   <span className="text-xs text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-medium">
+                                     In Cart {productItemsInCart.length > 1 ? `(${productItemsInCart.length})` : ''}
+                                   </span>
+                                 )}
+                               </div>
+                             {variant.bagSizeKg && (
+                               <div className="text-xs text-gray-500 mt-1">
+                                 Available in {variant.bagSizeKg}kg bags
+                               </div>
+                             )}
+                           </div>
+                           <div className="flex items-center text-emerald-600">
+                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                             </svg>
+                           </div>
+                         </div>
+                       </button>
+                     );
+                   })}
+                   </div>
+                 </div>
+               ));
+            })()}
+        </div>
+
+
 
                 {/* Order Details */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4">
@@ -1328,7 +1354,7 @@ const EditOrderPage: React.FC = () => {
       {/* Quantity Modal */}
       {activeProduct && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40">
-          <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-4 shadow-lg">
+          <div className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl p-4 shadow-lg">
             <div className="flex items-center justify-between mb-1.5">
               <h4 className="text-sm font-semibold text-gray-900">
                 {activeProduct.name}
@@ -1341,203 +1367,242 @@ const EditOrderPage: React.FC = () => {
                 <XMarkIcon className="h-5 w-5 text-gray-500" />
               </button>
             </div>
-            <div className="text-[10px] text-gray-500 mb-3">
-              ₹{formatNumber(activeProduct.pricePerKg)}/kg
-              {activeProduct.bagSizeKg
-                ? ` • ${activeProduct.bagSizeKg}kg bag`
-                : ""}
+            <div className="text-[10px] text-gray-500 mb-4">
+              ₹{formatNumber(activeProduct.pricePerKg || 0)}/kg
             </div>
 
-            {/* Inputs */}
-            <div className="mb-3">
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                Kilograms
+            {/* Packaging Type Selection */}
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-gray-700 mb-2">
+                Packaging Type
               </label>
-              <div className="flex items-center">
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => {
-                    if (isBagSelection) {
-                      const newPieces = Math.max(
-                        0,
-                        (Number(bagPieces) || 0) - 1
-                      );
-                      setBagPieces(newPieces);
-                      setKg(newPieces * currentBagSize);
-                    } else {
-                      setIsBagSelection(false);
-                      setKg((prev) => Math.max(0, (Number(prev) || 0) - 0.5));
-                    }
+                    setIsBagSelection(false);
+                    setBagPieces(1);
+                    if (kg === 0) setKg(5); // Set default weight if none selected
                   }}
-                  disabled={kg <= 0}
-                  className="px-4 py-2 border border-gray-300 rounded-l-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-medium active:scale-95"
+                  className={`p-3 border rounded-lg text-sm font-medium transition-all duration-200 active:scale-95 ${
+                    !isBagSelection
+                      ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                      : "border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600"
+                  }`}
                 >
-                  -
+                  <div className="text-center">
+                    <div className="text-lg mb-1">📦</div>
+                    <div>Loose Packaging</div>
+                    <div className="text-xs text-gray-500 mt-1">Custom weight</div>
+                  </div>
                 </button>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={displayedKgValue === 0 ? "" : displayedKgValue}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === "") {
-                      setKg(0);
-                    } else {
-                      const num = Math.max(0, Number(value));
-                      if (isBagSelection) {
-                        const pieces = Math.ceil(num / currentBagSize);
-                        setBagPieces(pieces);
-                        setKg(pieces * currentBagSize);
-                      } else {
-                        setKg(num);
-                        setIsBagSelection(false);
-                      }
-                    }
-                  }}
-                  onFocus={(e) => {
-                    if (e.target.value === "0") {
-                      e.target.select();
-                    }
-                  }}
-                  min={0}
-                  step={0.5}
-                  placeholder="0"
-                  className="flex-1 px-3 py-2 border-t border-b border-gray-300 text-center text-base font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                />
                 <button
                   type="button"
                   onClick={() => {
-                    if (isBagSelection) {
-                      const newPieces = (Number(bagPieces) || 0) + 1;
-                      setBagPieces(newPieces);
-                      setKg(newPieces * currentBagSize);
-                    } else {
-                      setIsBagSelection(false);
-                      setKg((prev) => (Number(prev) || 0) + 0.5);
-                    }
+                    setIsBagSelection(true);
+                    setBagPieces(1);
+                    setCurrentBagSize(40); // Default to 40kg bags
+                    setKg(40); // Set default to 1 bag of 40kg
                   }}
-                  className="px-4 py-2 border border-gray-300 rounded-r-lg bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-medium active:scale-95"
+                  className={`p-3 border rounded-lg text-sm font-medium transition-all duration-200 active:scale-95 ${
+                    isBagSelection
+                      ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                      : "border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600"
+                  }`}
                 >
-                  +
+                  <div className="text-center">
+                    <div className="text-lg mb-1">🛍️</div>
+                    <div>Bag Packaging</div>
+                    <div className="text-xs text-gray-500 mt-1">Standard bags</div>
+                  </div>
                 </button>
               </div>
-              <div className="mt-2 flex gap-1.5">
-                {(() => {
-                  const presetOptions: {
-                    label: string;
-                    value: number;
-                    isBag?: boolean;
-                    bagSize?: number;
-                  }[] = [
-                    { label: "5kg", value: 5 },
-                    { label: "10kg", value: 10 },
-                    { label: "25kg", value: 25 },
-                    { label: "40kg", value: 40 },
-                    { label: "50kg", value: 50 },
-                  ];
+            </div>
 
-                  // Add bag presets based on product type - mutual exclusivity
-                  if (activeProduct.bagSizeKg === 5) {
-                    // For 5kg products, only show 5kg bag option
-                    presetOptions.push({
-                      label: "5kg (bag)",
-                      value: 5,
-                      isBag: true,
-                      bagSize: 5,
-                    });
-                  } 
-                  if (activeProduct.bagSizeKg === 40 ||activeProduct.bagSizeKg === 5) {
-                    // For 40kg products, only show 40kg bag option
-                    presetOptions.push({
-                      label: "40kg (bag)",
-                      value: 40,
-                      isBag: true,
-                      bagSize: 40,
-                    });
-                  } 
+            {/* Weight Options */}
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-gray-700 mb-2">
+                Weight Options
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {[5, 10, 40, 50].map((weight) => {
+                  const isActive = isBagSelection 
+                    ? (currentBagSize === weight && bagPieces === 1)
+                    : (kg === weight);
                   
-                  if (activeProduct.bagSizeKg && activeProduct.bagSizeKg !== 5 && activeProduct.bagSizeKg !== 40) {
-                    // For other bag sizes, show the specific bag option
-                    presetOptions.push({
-                      label: `${activeProduct.bagSizeKg}kg Bag`,
-                      value: activeProduct.bagSizeKg,
-                      isBag: true,
-                      bagSize: activeProduct.bagSizeKg,
-                    });
-                  }
-
-                  return presetOptions.map((preset) => (
+                  return (
                     <button
-                      key={`${preset.label}-${preset.value}-${preset.bagSize || 'loose'}`}
+                      key={weight}
                       type="button"
                       onClick={() => {
-                        if (preset.isBag && preset.bagSize) {
-                          setIsBagSelection(true);
-                          setCurrentBagSize(preset.bagSize);
+                        if (isBagSelection) {
+                          setCurrentBagSize(weight);
                           setBagPieces(1);
-                          setKg(preset.bagSize);
+                          setKg(weight);
                         } else {
-                          setIsBagSelection(false);
-                          setKg(preset.value);
-                          setBagPieces(1);
+                          setKg(weight);
                         }
                       }}
-                      className="flex-1 px-2 py-1 text-[10px] border border-gray-200 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-600 active:scale-95"
+                      className={`p-2 border rounded-lg text-sm font-medium transition-all duration-200 active:scale-95 ${
+                        isActive
+                          ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                          : "border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600"
+                      }`}
                     >
-                      {preset.label}
+                      {weight}kg
                     </button>
-                  ));
-                })()}
+                  );
+                })}
               </div>
             </div>
-            
-            {/* Bag Selection Controls */}
-            {isBagSelection && (
-              <div className="my-3">
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Bag Pieces
+
+            {/* Custom Weight Input for Loose Packaging */}
+            {!isBagSelection && (
+              <div className="mb-4">
+                <label className="block text-xs font-medium text-gray-700 mb-2">
+                  Custom Weight (kg)
                 </label>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setKg((prev) => Math.max(0, (Number(prev) || 0) - 0.5))}
+                    disabled={kg <= 0}
+                    className="px-4 py-2 border border-gray-300 rounded-l-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-medium active:scale-95"
+                  >
+                    -
+                  </button>
                   <input
                     type="number"
-                    min={1}
-                    step={1}
-                    value={bagPieces || ""}
+                    inputMode="decimal"
+                    value={kg === 0 ? "" : kg}
                     onChange={(e) => {
                       const value = e.target.value;
                       if (value === "") {
-                        setBagPieces(0);
                         setKg(0);
-                        return;
+                      } else {
+                        setKg(Math.max(0, Number(value)));
                       }
-                      const count = Math.max(0, Math.floor(Number(value)));
-                      setBagPieces(count);
-                      setKg(count * currentBagSize);
                     }}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                    placeholder="Number of bags"
+                    onFocus={(e) => {
+                      if (e.target.value === "0") {
+                        e.target.select();
+                      }
+                    }}
+                    min={0}
+                    step={0.5}
+                    placeholder="0"
+                    className="flex-1 px-3 py-2 border-t border-b border-gray-300 text-center text-base font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                   />
-                  <span className="text-xs text-gray-500">
-                    x {currentBagSize}kg
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setKg((prev) => (Number(prev) || 0) + 0.5)}
+                    className="px-4 py-2 border border-gray-300 rounded-r-lg bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-medium active:scale-95"
+                  >
+                    +
+                  </button>
                 </div>
               </div>
             )}
+
+            {/* Bag Pieces Input for Bag Packaging */}
+            {isBagSelection && (
+              <div className="mb-4">
+                <label className="block text-xs font-medium text-gray-700 mb-2">
+                  Number of Bags
+                </label>
+             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3 gap-2 w-full">
+  {/* Quantity Controls */}
+  <div className="flex items-center justify-center sm:justify-start w-full sm:w-auto">
+    <button
+      type="button"
+      onClick={() => {
+        const newPieces = Math.max(1, (Number(bagPieces) || 1) - 1);
+        setBagPieces(newPieces);
+        setKg(newPieces * currentBagSize);
+      }}
+      disabled={bagPieces <= 1}
+      className="px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-l-lg bg-gray-50 hover:bg-gray-100 
+      disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500 
+      text-sm sm:text-base font-medium active:scale-95 transition-transform duration-100 w-10 sm:w-auto"
+    >
+      -
+    </button>
+
+    <input
+      type="number"
+      min={1}
+      step={1}
+      value={bagPieces || ""}
+      onChange={(e) => {
+        const value = e.target.value;
+        if (value === "") {
+          setBagPieces(1);
+          setKg(currentBagSize);
+          return;
+        }
+        const count = Math.max(1, Math.floor(Number(value)));
+        setBagPieces(count);
+        setKg(count * currentBagSize);
+      }}
+      className="flex-1 px-2 py-2 sm:px-3 border-t border-b border-gray-300 text-center text-sm sm:text-base font-medium 
+      focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 w-16 sm:w-20"
+      placeholder="1"
+    />
+
+    <button
+      type="button"
+      onClick={() => {
+        const newPieces = (Number(bagPieces) || 1) + 1;
+        setBagPieces(newPieces);
+        setKg(newPieces * currentBagSize);
+      }}
+      className="px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-r-lg bg-gray-50 hover:bg-gray-100 
+      focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm sm:text-base font-medium active:scale-95 
+      transition-transform duration-100 w-10 sm:w-auto"
+    >
+      +
+    </button>
+  </div>
+
+  {/* Total Display */}
+  <div className="text-center sm:text-left text-xs sm:text-sm text-gray-600">
+    × {currentBagSize}kg ={" "}
+    <span className="font-semibold text-gray-900">{kg}kg</span>
+  </div>
+</div>
+
+              </div>
+            )}
+
+            {/* Total Summary */}
+            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Total Weight:</span>
+                <span className="text-sm font-medium text-gray-900">{kg}kg</span>
+              </div>
+              <div className="flex justify-between items-center mt-1">
+                <span className="text-sm text-gray-600">Total Amount:</span>
+                <span className="text-sm font-medium text-emerald-600">
+                  ₹{formatNumber(kg * (activeProduct.pricePerKg || 0))}
+                </span>
+              </div>
+            </div>
 
             <div className="flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={closeQtyModal}
-                className="px-3 py-1.5 rounded-lg border text-xs active:scale-95"
+                className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 active:scale-95"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={confirmQty}
-                className="px-4 py-1.5 rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 text-xs active:scale-95"
+                disabled={kg <= 0}
+                className="px-6 py-2 rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium active:scale-95"
               >
-                Save
+                Add to Order
               </button>
             </div>
           </div>

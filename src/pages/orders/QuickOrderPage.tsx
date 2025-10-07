@@ -29,7 +29,7 @@ type SelectedItem = {
     | "25kg Bags"
     | "50kg Bags"
     | "Loose"
-    | "40kg Bag";
+    | "40kg Bags";
   isBagSelection?: boolean;
   bagPieces?: number;
 };
@@ -238,52 +238,6 @@ const QuickOrderPage: React.FC = () => {
     }
   };
 
-  // removed unused helpers
-
-  const openQtyModal = (product: QuickProduct) => {
-    setActiveProduct(product);
-    const existing = selectedItems[product.key];
-    if (existing) {
-      setKg(existing.quantityKg || 0);
-      setIsBagSelection(!!existing.isBagSelection);
-      setBagPieces(existing.bagPieces || existing.bags || 1);
-      // Set currentBagSize based on existing selection packaging
-      if (existing.isBagSelection && existing.packaging === "5kg Bags") {
-        setCurrentBagSize(5);
-      }
-      else if (existing.isBagSelection && existing.packaging === "10kg Bags") {
-        setCurrentBagSize(10);
-      }
-       else if (existing.isBagSelection && existing.packaging === "40kg Bag") {
-        setCurrentBagSize(40);
-      } else if (existing.isBagSelection && existing.packaging === "50kg Bags") {
-        setCurrentBagSize(50);
-      } else {
-        setCurrentBagSize(product.bagSizeKg || 40);
-      }
-    } else {
-      // Initialize based on product's bagSizeKg from pricing config
-      if (product.bagSizeKg === 5) {
-        // For 5kg products, default to bag selection with 5kg bags
-        setIsBagSelection(true);
-        setBagPieces(1);
-        setKg(5);
-        setCurrentBagSize(5);
-      } else if (product.bagSizeKg === 40) {
-        // For 40kg products, default to bag selection with 40kg bags
-        setIsBagSelection(true);
-        setBagPieces(1);
-        setKg(40);
-        setCurrentBagSize(40);
-      } else {
-        // For other products, start with loose selection
-        setKg(0);
-        setIsBagSelection(false);
-        setBagPieces(1);
-        setCurrentBagSize(product.bagSizeKg || 40);
-      }
-    }
-  };
 
   const openQtyModalForNewItem = (product: QuickProduct) => {
     setActiveProduct(product);
@@ -323,7 +277,7 @@ const QuickOrderPage: React.FC = () => {
     else if (item.isBagSelection && item.packaging === "10kg Bags") {
       setCurrentBagSize(10);
     }
-     else if (item.isBagSelection && item.packaging === "40kg Bag") {
+     else if (item.isBagSelection && item.packaging === "40kg Bags") {
       setCurrentBagSize(40);
     } else if (item.isBagSelection && item.packaging === "50kg Bags") {
       setCurrentBagSize(50);
@@ -369,8 +323,10 @@ const QuickOrderPage: React.FC = () => {
       // Determine packaging based on current bag size
       if (currentBagSize === 5) {
         packaging = "5kg Bags";
+      } else if (currentBagSize === 10) {
+        packaging = "10kg Bags";
       } else if (currentBagSize === 40) {
-        packaging = "40kg Bag";
+        packaging = "40kg Bags";
       } else if (currentBagSize === 50) {
         packaging = "50kg Bags";
       } else if (
@@ -438,8 +394,12 @@ const QuickOrderPage: React.FC = () => {
       let actualBagSize: number;
       if (it.packaging === "5kg Bags") {
         actualBagSize = 5;
-      } else if (it.packaging === "40kg Bag") {
+      } else if (it.packaging === "10kg Bags") {
+        actualBagSize = 10;
+      } else if (it.packaging === "40kg Bags") {
         actualBagSize = 40;
+      } else if (it.packaging === "50kg Bags") {
+        actualBagSize = 50;
       } else if (it.bagPieces && it.bagPieces > 0) {
         // Calculate bag size from total kg and pieces
         actualBagSize = normalizedKg / it.bagPieces;
@@ -474,11 +434,11 @@ const QuickOrderPage: React.FC = () => {
 
   const displayedKgValue = useMemo(() => {
     if (isBagSelection) {
-      // Show the current bag size when in bag selection mode
-      return currentBagSize;
+      // Show the total kg (bagPieces * currentBagSize) when in bag selection mode
+      return bagPieces * currentBagSize;
     }
     return kg;
-  }, [isBagSelection, currentBagSize, kg]);
+  }, [isBagSelection, currentBagSize, kg, bagPieces]);
 
   const canSubmit = selectedCustomerId && itemsArray.length > 0 && !creating;
 
