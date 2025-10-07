@@ -195,6 +195,42 @@ class InventoryService {
     const total = this.calculateTotalValue(quantity, pricePerKg, unit);
     return total > 0 ? `₹${total.toFixed(2)}` : 'N/A';
   }
+
+  // Get inventory audit trail
+  async getInventoryAuditTrail(id: string, params: { page?: number; limit?: number } = {}): Promise<{
+    activities: any[];
+    pagination: {
+      currentPage: number;
+      totalItems: number;
+      itemsPerPage: number;
+      totalPages: number;
+      hasMore: boolean;
+    };
+  }> {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const url = `${API_CONFIG.ENDPOINTS.INVENTORY_BY_ID(id)}/audit-trail?${queryParams.toString()}`;
+    const response = await apiService.get<{
+      activities: any[];
+      pagination: {
+        currentPage: number;
+        totalItems: number;
+        itemsPerPage: number;
+        totalPages: number;
+        hasMore: boolean;
+      };
+    }>(url);
+    
+    if (response.success && response.data) {
+      return response.data?.data || {};
+    }
+    throw new Error(response.message || 'Failed to get inventory audit trail');
+  }
 }
 
 export const inventoryService = new InventoryService();

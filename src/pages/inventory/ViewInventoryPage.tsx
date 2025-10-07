@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { inventoryService } from '../../services/inventoryService';
 import type { Inventory } from '../../types';
@@ -18,6 +18,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import Avatar from '../../components/ui/Avatar';
 import Modal from '../../components/ui/Modal';
+import OrderActivityTimeline from '../../components/orders/OrderActivityTimeline';
 import toast from 'react-hot-toast';
 
 const ViewInventoryPage: React.FC = () => {
@@ -29,6 +30,63 @@ const ViewInventoryPage: React.FC = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Activity timeline state
+  const [activities, setActivities] = useState<any[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const [activitiesPagination, setActivitiesPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    hasMore: false,
+  });
+
+  const fetchActivities = useCallback(
+    async (page: number = 1, append: boolean = false) => {
+      if (!id) return;
+
+      try {
+        setActivitiesLoading(true);
+        const response = await inventoryService.getInventoryAuditTrail(id, {
+          page,
+          limit: 5,
+        });
+        if (append) {
+          setActivities((prev) => [...prev, ...response.activities]);
+        } else {
+          setActivities(response.activities);
+        }
+
+        setActivitiesPagination({
+          currentPage: response.pagination.currentPage,
+          totalPages: response.pagination.totalPages,
+          totalCount: response.pagination.totalItems,
+          hasMore: response.pagination.hasMore,
+        });
+      } catch (err: any) {
+        console.error("Error fetching activities:", err);
+        // Don't show error toast for activities as it's not critical
+      } finally {
+        setActivitiesLoading(false);
+      }
+    },
+    [id]
+  );
+
+  const loadMoreActivities = useCallback(() => {
+    if (
+      activitiesPagination?.hasMore &&
+      !activitiesLoading &&
+      activitiesPagination?.currentPage
+    ) {
+      fetchActivities(activitiesPagination.currentPage + 1, true);
+    }
+  }, [
+    activitiesPagination?.hasMore,
+    activitiesPagination?.currentPage,
+    activitiesLoading,
+    fetchActivities,
+  ]);
+
   useEffect(() => {
     if (!hasPermission("stock.read")) {
       navigate('/inventory');
@@ -36,8 +94,9 @@ const ViewInventoryPage: React.FC = () => {
     }
     if (id) {
       loadInventory();
+      fetchActivities();
     }
-  }, [id, hasPermission, navigate]);
+  }, [id, hasPermission, navigate, fetchActivities]);
 
   const loadInventory = async () => {
     if (!id) return;
@@ -309,6 +368,19 @@ const ViewInventoryPage: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {/* Activity Timeline */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <OrderActivityTimeline
+                  activities={activities}
+                  loading={activitiesLoading}
+                  hasMore={activitiesPagination.hasMore}
+                  onLoadMore={loadMoreActivities}
+                  totalCount={activitiesPagination.totalCount}
+                  clampDescriptionLines={3}
+                  text="inventory"
+                />
+              </div>
             </div>
           </div>
         </div>
