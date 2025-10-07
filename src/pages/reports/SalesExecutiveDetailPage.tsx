@@ -35,6 +35,12 @@ const SalesExecutiveDetailPage: React.FC = () => {
       // Pass the report type (convert 'orders' to 'order' and 'visits' to 'visit')
       params.type = reportType === 'orders' ? 'order' : 'visit';
       const detail = await getExecutivePerformanceDetail(userId, params);
+      console.log('Executive Detail Data:', detail);
+      console.log('Recent Orders:', detail?.recentOrders);
+      if (detail?.recentOrders?.length > 0) {
+        console.log('First order attaKg:', detail.recentOrders[0].attaKg);
+        console.log('First order items:', detail.recentOrders[0].items);
+      }
       setData(detail);
     } finally {
       setLoading(false);
@@ -201,26 +207,24 @@ const SalesExecutiveDetailPage: React.FC = () => {
             <>
               <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs text-gray-500">Locations</p>
+                  <p className="text-xs text-gray-500">Unique Locations</p>
                   <CurrencyDollarIcon className="h-5 w-5 text-green-500" />
                 </div>
                 <p className="text-xl font-bold text-green-600 truncate">{metrics.uniqueLocations || 0}</p>
               </div>
               <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs text-gray-500">Completed</p>
+                  <p className="text-xs text-gray-500">Avg Locations Per Day</p>
                   <ChartBarIcon className="h-5 w-5 text-blue-500" />
                 </div>
-                <p className="text-xl font-bold text-blue-600 truncate">{metrics.completedVisits || 0}</p>
+                <p className="text-xl font-bold text-blue-600 truncate">{metrics.avgLocationsPerDay || 0}</p>
               </div>
               <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs text-gray-500">Success Rate</p>
+                  <p className="text-xs text-gray-500">Today</p>
                   <ChartBarIcon className="h-5 w-5 text-purple-500" />
                 </div>
-                <p className="text-xl font-bold text-gray-900 truncate">
-                  {metrics.totalOrders > 0 ? Math.round(((metrics.completedVisits || 0) / metrics.totalOrders) * 100) : 0}%
-                </p>
+                <p className="text-xl font-bold text-purple-600 truncate">{metrics.totalVisitsToday || 0}</p>
               </div>
             </>
           )}
@@ -364,10 +368,10 @@ const SalesExecutiveDetailPage: React.FC = () => {
                   </div>
                 )}
                 {reportType === 'visits' && (
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                  <div className="flex items-center flex-wrap justify-between pt-2 border-t border-gray-200">
                     <div className="text-xs text-gray-500">Purpose</div>
                     <div className="text-xs font-medium text-gray-900">
-                      {o.purpose || 'General Visit'}
+                      {o.notes || 'General Visit'}
                     </div>
                   </div>
                 )}

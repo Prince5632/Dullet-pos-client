@@ -34,10 +34,17 @@ const SalesExecutiveReportsPage: React.FC = () => {
   const [godowns, setGodowns] = useState<any[]>([]);
   const [godownId, setGodownId] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [reportType, setReportType] = useState<ReportType>("orders");
+  const [reportType, setReportType] = useState<ReportType>(() => {
+    const saved = localStorage.getItem('salesExecutiveReportType');
+    return (saved as ReportType) || "orders";
+  });
 
   useEffect(() => {
     fetchReports();
+  }, [reportType]);
+
+  useEffect(() => {
+    localStorage.setItem('salesExecutiveReportType', reportType);
   }, [reportType]);
 
   const fetchReports = async () => {
@@ -87,43 +94,78 @@ const SalesExecutiveReportsPage: React.FC = () => {
   const exportToCSV = () => {
     if (!reportData?.reports) return;
 
-    const headers = [
-      "Employee ID",
-      "Name",
-      "Department",
-      "Position",
-      "Role",
-      "Total Orders",
-      "Total Revenue",
-      "Total Paid",
-      "Outstanding",
-      "Avg Order Value",
-      "Unique Customers",
-      "Conversion Rate",
-      "Pending",
-      "Approved",
-      "Delivered",
-      "Completed",
-    ];
+    let headers: string[];
+    let rows: any[][];
 
-    const rows = reportData.reports.map((report) => [
-      report.employeeId,
-      report.executiveName,
-      report.department,
-      report.position,
-      report.roleName,
-      report.totalOrders,
-      report.totalRevenue,
-      report.totalPaidAmount,
-      report.totalOutstanding,
-      report.avgOrderValue,
-      report.uniqueCustomersCount,
-      `${report.conversionRate}%`,
-      report.pendingOrders,
-      report.approvedOrders,
-      report.deliveredOrders,
-      report.completedOrders,
-    ]);
+    if (reportType === "orders") {
+      headers = [
+        "Employee ID",
+        "Name",
+        "Department",
+        "Position",
+        "Role",
+        "Total Orders",
+        "Total Revenue",
+        "Total Paid",
+        "Outstanding",
+        "Avg Order Value",
+        "Unique Customers",
+        "Conversion Rate",
+        "Pending",
+        "Approved",
+        "Delivered",
+        "Completed",
+      ];
+
+      rows = reportData.reports.map((report) => [
+        report.employeeId,
+        report.executiveName,
+        report.department,
+        report.position,
+        report.roleName,
+        report.totalOrders,
+        report.totalRevenue,
+        report.totalPaidAmount,
+        report.totalOutstanding,
+        report.avgOrderValue,
+        report.uniqueCustomersCount,
+        `${report.conversionRate}%`,
+        report.pendingOrders,
+        report.approvedOrders,
+        report.deliveredOrders,
+        report.completedOrders,
+      ]);
+    } else {
+      headers = [
+        "Employee ID",
+        "Name",
+        "Department",
+        "Position",
+        "Role",
+        "Total Visits",
+        "Unique Locations",
+        // "Conversion Rate",
+        // "Pending",
+        // "Approved",
+        // "Delivered",
+        // "Completed",
+      ];
+
+      rows = reportData.reports.map((report) => [
+        report.employeeId,
+        report.executiveName,
+        report.department,
+        report.position,
+        report.roleName,
+        report.totalOrders,
+        report.uniqueCustomersCount,
+        // `${report.conversionRate}%`,
+        // report.pendingOrders,
+        // report.approvedOrders,
+        // report.deliveredOrders,
+        // report.completedOrders,
+      ]);
+    }
 
     const csvContent = [
       headers.join(","),
@@ -133,7 +175,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `sales-executive-reports-${
+    link.download = `sales-executive-${reportType}-reports-${
       new Date().toISOString().split("T")[0]
     }.csv`;
     link.click();
@@ -336,7 +378,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
       <div className="px-3 sm:px-4 py-3">
         {/* Summary Cards - Mobile Grid */}
         {summary && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
             <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
@@ -398,7 +440,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
               </div>
             )}
 
-            <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+            {/* <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-gray-500 mb-1">Avg Order</p>
@@ -408,7 +450,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
                 </div>
                 <ChartBarIcon className="h-8 w-8 text-blue-500 flex-shrink-0" />
               </div>
-            </div>
+            </div> */}
           </div>
         )}
 
