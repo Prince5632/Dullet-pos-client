@@ -17,6 +17,7 @@ import {
 import { orderService } from "../../services/orderService";
 import { customerService } from "../../services/customerService";
 import { userService } from "../../services/userService";
+import { godownService } from "../../services/godownService";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDebounce } from "../../hooks/useDebounce";
 import type { Order, Customer, TableColumn, Godown } from "../../types";
@@ -224,7 +225,29 @@ const OrdersPage: React.FC = () => {
       const promises = [];
 
       if (hasPermission("orders.read")) {
-        promises.push(orderService.getOrderStats({ godownId: godownFilter }));
+        // Build params for stats based on view type and current filters
+        const statsParams = viewType === "orders" 
+          ? {
+              godownId: godownFilter,
+              search: debouncedSearchTerm,
+              status: statusFilter,
+              paymentStatus: paymentStatusFilter,
+              customerId: customerFilter,
+              dateFrom: dateFromFilter,
+              dateTo: dateToFilter,
+              priority: priorityFilter,
+              minAmount: minAmountFilter,
+              maxAmount: maxAmountFilter,
+            }
+          : {
+              godownId: godownFilter,
+              search: debouncedSearchTerm,
+              customerId: customerFilter,
+              dateFrom: dateFromFilter,
+              dateTo: dateToFilter,
+            };
+        
+        promises.push(orderService.getOrderStats(statsParams));
       }
 
       const results = await Promise.allSettled(promises);
@@ -298,7 +321,22 @@ const OrdersPage: React.FC = () => {
     } finally {
       setStatsLoading(false);
     }
-  }, [godownFilter, hasPermission, user]);
+  }, [
+    godownFilter, 
+    hasPermission, 
+    user, 
+    viewType,
+    debouncedSearchTerm,
+    customerFilter,
+    dateFromFilter,
+    dateToFilter,
+    // Order-specific filters
+    statusFilter,
+    paymentStatusFilter,
+    priorityFilter,
+    minAmountFilter,
+    maxAmountFilter,
+  ]);
 
   useEffect(() => {
     loadOrders();
@@ -312,17 +350,59 @@ const OrdersPage: React.FC = () => {
     fetchStats();
   }, [fetchStats]);
 
-  // Load godowns
+  // Load godowns with filtered counts
+  const loadGodowns = useCallback(async () => {
+    try {
+      const godownParams = viewType === "orders" 
+        ? {
+            search: debouncedSearchTerm,
+            status: statusFilter,
+            paymentStatus: paymentStatusFilter,
+            customerId: customerFilter,
+            dateFrom: dateFromFilter,
+            dateTo: dateToFilter,
+            priority: priorityFilter,
+            minAmount: minAmountFilter,
+            maxAmount: maxAmountFilter,
+          }
+        : {
+            search: debouncedSearchTerm,
+            customerId: customerFilter,
+            dateFrom: dateFromFilter,
+            dateTo: dateToFilter,
+            scheduleStatus: scheduleStatusFilter,
+            visitStatus: visitStatusFilter,
+            hasImage: hasImageFilter,
+            address: addressFilter,
+          };
+
+      const res = await godownService.getGodowns(godownParams);
+      if (res.success && res.data) setGodowns(res.data.godowns);
+    } catch (error) {
+      console.error("Failed to load godowns:", error);
+    }
+  }, [
+    viewType,
+    debouncedSearchTerm,
+    customerFilter,
+    dateFromFilter,
+    dateToFilter,
+    // Order-specific filters
+    statusFilter,
+    paymentStatusFilter,
+    priorityFilter,
+    minAmountFilter,
+    maxAmountFilter,
+    // Visit-specific filters
+    scheduleStatusFilter,
+    visitStatusFilter,
+    hasImageFilter,
+    addressFilter,
+  ]);
+
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await apiService.get<{ godowns: Godown[] }>(
-          API_CONFIG.ENDPOINTS.GODOWNS
-        );
-        if (res.success && res.data) setGodowns(res.data.godowns);
-      } catch {}
-    })();
-  }, []);
+    loadGodowns();
+  }, [loadGodowns]);
 
   // Sync viewType with the current route
   useEffect(() => {

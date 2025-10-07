@@ -1445,7 +1445,8 @@ const EditOrderPage: React.FC = () => {
                       isBag: true,
                       bagSize: 5,
                     });
-                  } else if (activeProduct.bagSizeKg === 40) {
+                  } 
+                  if (activeProduct.bagSizeKg === 40 ||activeProduct.bagSizeKg === 5) {
                     // For 40kg products, only show 40kg bag option
                     presetOptions.push({
                       label: "40kg Bag",
@@ -1453,7 +1454,9 @@ const EditOrderPage: React.FC = () => {
                       isBag: true,
                       bagSize: 40,
                     });
-                  } else if (activeProduct.bagSizeKg && activeProduct.bagSizeKg !== 5 && activeProduct.bagSizeKg !== 40) {
+                  } 
+                  
+                  if (activeProduct.bagSizeKg && activeProduct.bagSizeKg !== 5 && activeProduct.bagSizeKg !== 40) {
                     // For other bag sizes, show the specific bag option
                     presetOptions.push({
                       label: `${activeProduct.bagSizeKg}kg Bag`,

@@ -399,7 +399,18 @@ class OrderService {
   }
 
   // Get order statistics
-  async getOrderStats(params: { godownId?: string } = {}): Promise<{
+  async getOrderStats(params: { 
+    godownId?: string;
+    search?: string;
+    status?: string;
+    paymentStatus?: string;
+    customerId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    priority?: string;
+    minAmount?: string;
+    maxAmount?: string;
+  } = {}): Promise<{
     totalOrders: number;
     pendingOrders: number;
     approvedOrders: number;
@@ -409,7 +420,12 @@ class OrderService {
     monthlyRevenue: number;
   }> {
     const queryParams = new URLSearchParams();
-    if (params.godownId) queryParams.append('godownId', params.godownId);
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, String(value));
+      }
+    });
 
     const response = await apiService.get<{
       totalOrders: number;

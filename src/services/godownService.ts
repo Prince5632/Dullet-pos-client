@@ -3,9 +3,36 @@ import { API_CONFIG } from '../config/api';
 import type { ApiResponse, Godown } from '../types';
 
 class GodownService {
-  // Get all godowns
-  async getGodowns(): Promise<ApiResponse<{ godowns: Godown[] }>> {
-    const response = await apiService.get<{ godowns: Godown[] }>(API_CONFIG.ENDPOINTS.GODOWNS);
+  // Get all godowns with optional filter parameters for counts
+  async getGodowns(params: { 
+    search?: string;
+    status?: string;
+    paymentStatus?: string;
+    customerId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    priority?: string;
+    minAmount?: string;
+    maxAmount?: string;
+    // Visit-specific filters
+    scheduleStatus?: string;
+    visitStatus?: string;
+    hasImage?: string;
+    address?: string;
+  } = {}): Promise<ApiResponse<{ godowns: Godown[] }>> {
+    const queryParams = new URLSearchParams();
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const url = queryParams.toString() 
+      ? `${API_CONFIG.ENDPOINTS.GODOWNS}?${queryParams.toString()}`
+      : API_CONFIG.ENDPOINTS.GODOWNS;
+
+    const response = await apiService.get<{ godowns: Godown[] }>(url);
     if (response.data) {
       return response;
     }
