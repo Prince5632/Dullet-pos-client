@@ -303,7 +303,7 @@ const ViewInventoryPage: React.FC = () => {
 
                 {/* Price and User Information */}
                 <div className="space-y-4">
-                  {inventory.pricePerKg && (
+                  {inventory.pricePerKg ? (
                     <div className="flex items-start gap-3">
                       <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mt-0.5">
                         <CurrencyDollarIcon className="w-4 h-4 text-green-600" />
@@ -316,7 +316,7 @@ const ViewInventoryPage: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                  )}
+                  ):null}
 
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center mt-0.5">

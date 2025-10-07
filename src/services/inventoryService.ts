@@ -227,7 +227,7 @@ class InventoryService {
     }>(url);
     
     if (response.success && response.data) {
-      return response.data?.data || {};
+      return response.data || {};
     }
     throw new Error(response.message || 'Failed to get inventory audit trail');
   }
