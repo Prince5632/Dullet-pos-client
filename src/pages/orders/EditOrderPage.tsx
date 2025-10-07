@@ -687,6 +687,8 @@ const EditOrderPage: React.FC = () => {
         unit: "KG",
         ratePerUnit: item.product.pricePerKg,
         totalAmount: (item.quantityKg || 0) * item.product.pricePerKg,
+        isBagSelection: item.isBagSelection,
+        bagPieces: item.bagPieces || 1,
         packaging: item.packaging || "Loose",
       }));
 
