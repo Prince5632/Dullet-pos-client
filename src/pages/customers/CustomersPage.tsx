@@ -2,12 +2,16 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { customerService } from '../../services/customerService';
 import type { Customer, TableColumn } from '../../types';
-import { MagnifyingGlassIcon, PlusIcon, FunnelIcon, XMarkIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, PlusIcon, FunnelIcon, XMarkIcon, BuildingOfficeIcon, TrashIcon } from '@heroicons/react/24/outline';
 import Table from '../../components/ui/Table';
 import Pagination from '../../components/ui/Pagination';
 import Avatar from '../../components/ui/Avatar';
+import Modal from '../../components/ui/Modal';
+import { useAuth } from '../../contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 const CustomersPage: React.FC = () => {
+  const { user: currentUser, hasRole } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -20,6 +24,14 @@ const CustomersPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Check if current user is super admin
+  const isSuperAdmin = hasRole('Super Admin');
 
   const loadCustomers = async () => {
     try {
@@ -56,6 +68,24 @@ const CustomersPage: React.FC = () => {
       setPage(1);
     }
   }, [search, type, status, stateFilter, city]);
+
+  const handleDeleteCustomer = async () => {
+    if (!customerToDelete) return;
+
+    try {
+      setDeleteLoading(true);
+      await customerService.deleteCustomer(customerToDelete._id);
+      toast.success('Customer deleted successfully');
+      setDeleteModalOpen(false);
+      setCustomerToDelete(null);
+      loadCustomers(); // Reload the customer list
+    } catch (error: any) {
+      console.error('Failed to delete customer:', error);
+      toast.error(error.message || 'Failed to delete customer');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   const columns: TableColumn<Customer>[] = useMemo(() => [
     {
@@ -103,10 +133,22 @@ const CustomersPage: React.FC = () => {
         <div className="flex items-center justify-end gap-1">
           <Link to={`/customers/${c._id}`} className="px-2 py-1 text-blue-600 hover:bg-blue-50 rounded-md text-xs">View</Link>
           <Link to={`/customers/${c._id}/edit`} className="px-2 py-1 text-gray-700 hover:bg-gray-50 rounded-md text-xs">Edit</Link>
+          {isSuperAdmin && (
+            <button
+              onClick={() => {
+                setCustomerToDelete(c);
+                setDeleteModalOpen(true);
+              }}
+              className="px-2 py-1 text-red-600 hover:bg-red-50 rounded-md text-xs transition-colors"
+              title="Delete Customer"
+            >
+              Delete
+            </button>
+          )}
         </div>
       ),
     },
-  ], []);
+  ], [isSuperAdmin]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -272,6 +314,18 @@ const CustomersPage: React.FC = () => {
                         >
                           Edit
                         </Link>
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => {
+                              setCustomerToDelete(customer);
+                              setDeleteModalOpen(true);
+                            }}
+                            className="px-2 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
+                            title="Delete Customer"
+                          >
+                            <TrashIcon className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))
@@ -299,6 +353,74 @@ const CustomersPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          if (!deleteLoading) {
+            setDeleteModalOpen(false);
+            setCustomerToDelete(null);
+          }
+        }}
+        title="Delete Customer"
+        size="sm"
+      >
+        <div className="p-4">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+              <TrashIcon className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-gray-900">Delete Customer</h3>
+              <p className="text-xs text-gray-500">This action cannot be undone</p>
+            </div>
+          </div>
+
+          {customerToDelete && (
+            <div className="bg-gray-50 rounded-lg p-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Avatar name={customerToDelete.businessName} size="sm" />
+                <div>
+                  <div className="text-sm font-medium text-gray-900">{customerToDelete.businessName}</div>
+                  <div className="text-xs text-gray-500">ID: {customerToDelete.customerId}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <p className="text-sm text-gray-600 mb-6">
+            Are you sure you want to delete this customer? This action will permanently remove the customer from the database and cannot be undone.
+          </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setDeleteModalOpen(false);
+                setCustomerToDelete(null);
+              }}
+              disabled={deleteLoading}
+              className="flex-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeleteCustomer}
+              disabled={deleteLoading}
+              className="flex-1 px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+            >
+              {deleteLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Deleting...
+                </>
+              ) : (
+                'Delete Customer'
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
