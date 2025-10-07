@@ -588,6 +588,22 @@ const OrdersPage: React.FC = () => {
             </div>
           ),
         },
+        {
+          key: "createdBy",
+          label: "Logged by",
+          render: (_value, visit) => (
+            <div className="min-w-0 py-1">
+              <div className="text-sm text-gray-900">
+                {visit.createdBy?.firstName && visit.createdBy?.lastName
+                  ? `${visit.createdBy.firstName} ${visit.createdBy.lastName}`
+                  : "—"}
+              </div>
+              {/* <div className="text-xs text-gray-500">
+                {orderService.formatDate(visit.createdAt)}
+              </div> */}
+            </div>
+          ),
+        },
 
         {
           key: "actions",
@@ -717,6 +733,22 @@ const OrdersPage: React.FC = () => {
               onOrderUpdate={handleOrderUpdate}
               compact
             />
+          </div>
+        ),
+      },
+      {
+        key: "createdBy",
+        label: "Logged by",
+        render: (_value, order) => (
+          <div className="py-0.5">
+            <div className="text-xs text-gray-900 font-medium">
+              {order.createdBy?.firstName && order.createdBy?.lastName
+                ? `${order.createdBy.firstName} ${order.createdBy.lastName}`
+                : "—"}
+            </div>
+            {/* <div className="text-xs text-gray-500">
+              {orderService.formatDate(order.createdAt)}
+            </div> */}
           </div>
         ),
       },
