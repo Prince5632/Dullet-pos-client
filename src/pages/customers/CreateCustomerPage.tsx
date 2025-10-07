@@ -155,46 +155,34 @@ const CreateCustomerPage: React.FC = () => {
     const hasError = touched[fieldPath] && errors[fieldPath as keyof ValidationErrors];
     const isValid = touched[fieldPath] && !errors[fieldPath as keyof ValidationErrors];
     
-    return `w-full pl-11 pr-11 py-3 border-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-4 ${
+    return `w-full px-3 py-2.5 border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-0 ${
       hasError 
-        ? 'border-red-400 focus:border-red-500 focus:ring-red-100 bg-red-50/50' 
+        ? 'border-red-300 focus:border-red-500 focus:ring-red-200 bg-red-50' 
         : isValid
-        ? 'border-green-400 focus:border-green-500 focus:ring-green-100 bg-green-50/50'
-        : 'border-gray-200 focus:border-blue-500 focus:ring-blue-100 bg-white hover:border-gray-300'
-    }`;
-  };
-
-  const getIconClasses = (fieldPath: string) => {
-    const hasError = touched[fieldPath] && errors[fieldPath as keyof ValidationErrors];
-    const isValid = touched[fieldPath] && !errors[fieldPath as keyof ValidationErrors];
-    
-    return `w-5 h-5 transition-colors duration-200 ${
-      hasError ? 'text-red-400' : isValid ? 'text-green-500' : 'text-gray-400'
+        ? 'border-green-300 focus:border-green-500 focus:ring-green-200 bg-green-50'
+        : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200 bg-white hover:border-gray-400'
     }`;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40">
-      {/* Enhanced Header */}
-      <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 transform hover:scale-105 transition-transform duration-200">
-                  <BuildingOfficeIcon className="w-7 h-7 text-white" />
-                </div>
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                <BuildingOfficeIcon className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Create New Customer</h1>
-                <p className="text-sm text-gray-600 mt-0.5">Add complete business and contact information</p>
+                <h1 className="text-xl font-semibold text-gray-900">Create New Customer</h1>
+                <p className="text-sm text-gray-600">Add business and contact information</p>
               </div>
             </div>
             <button
               type="button"
               onClick={() => navigate('/customers')}
-              className="hidden sm:flex items-center gap-2 px-5 py-2.5 border-2 border-gray-200 rounded-xl text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-4 focus:ring-gray-100 transition-all duration-200 font-medium"
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
             >
               Cancel
             </button>
@@ -202,32 +190,23 @@ const CreateCustomerPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
         <form onSubmit={submit} className="space-y-6">
           {/* Basic Information */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl border-2 border-gray-200/50 shadow-xl shadow-gray-200/50 overflow-hidden hover:shadow-2xl hover:shadow-gray-200/60 transition-all duration-300">
-            <div className="px-7 py-5 border-b-2 border-gray-200/50 bg-gradient-to-r from-blue-50/50 to-indigo-50/30">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
-                  <UserGroupIcon className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">Basic Information</h2>
-                  <p className="text-sm text-gray-600">Primary business and contact details</p>
-                </div>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+              <div className="flex items-center gap-2">
+                <UserGroupIcon className="w-5 h-5 text-gray-600" />
+                <h2 className="text-lg font-medium text-gray-900">Basic Information</h2>
               </div>
             </div>
-            <div className="p-7 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Business Name */}
               <div className="md:col-span-2">
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <BuildingStorefrontIcon className="w-4 h-4 text-blue-500" />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Business Name <span className="text-red-500">*</span>
                 </label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <BuildingStorefrontIcon className={getIconClasses('businessName')} />
-                  </div>
+                <div className="relative">
                   <input
                     type="text"
                     value={form.businessName}
@@ -237,34 +216,27 @@ const CreateCustomerPage: React.FC = () => {
                     placeholder="Enter business name"
                   />
                   {touched.businessName && errors.businessName && (
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center animate-shake">
-                      <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                      <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
                     </div>
                   )}
                   {touched.businessName && !errors.businessName && form.businessName && (
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center animate-bounce-in">
-                      <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     </div>
                   )}
                 </div>
                 {touched.businessName && errors.businessName && (
-                  <p className="mt-2 text-sm text-red-600 flex items-center gap-1.5 animate-slide-down">
-                    <ExclamationTriangleIcon className="w-4 h-4" />
-                    {errors.businessName}
-                  </p>
+                  <p className="mt-1 text-sm text-red-600">{errors.businessName}</p>
                 )}
               </div>
 
               {/* Phone */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <PhoneIcon className="w-4 h-4 text-blue-500" />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Phone Number <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <PhoneIcon className={getIconClasses('phone')} />
-                  </div>
                   <input
                     type="tel"
                     value={form.phone}
@@ -274,34 +246,27 @@ const CreateCustomerPage: React.FC = () => {
                     placeholder="10-digit number"
                   />
                   {touched.phone && errors.phone && (
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                      <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                      <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
                     </div>
                   )}
                   {touched.phone && !errors.phone && form.phone && (
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                      <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     </div>
                   )}
                 </div>
                 {touched.phone && errors.phone && (
-                  <p className="mt-2 text-sm text-red-600 flex items-center gap-1.5">
-                    <ExclamationTriangleIcon className="w-4 h-4" />
-                    {errors.phone}
-                  </p>
+                  <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
                 )}
               </div>
 
               {/* Email */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <EnvelopeIcon className="w-4 h-4 text-blue-500" />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Email Address
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <EnvelopeIcon className={getIconClasses('email')} />
-                  </div>
                   <input
                     type="email"
                     value={form.email || ''}
@@ -311,79 +276,63 @@ const CreateCustomerPage: React.FC = () => {
                     placeholder="email@example.com"
                   />
                   {touched.email && errors.email && (
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                      <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                      <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
                     </div>
                   )}
                   {touched.email && !errors.email && form.email && (
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                      <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     </div>
                   )}
                 </div>
                 {touched.email && errors.email && (
-                  <p className="mt-2 text-sm text-red-600 flex items-center gap-1.5">
-                    <ExclamationTriangleIcon className="w-4 h-4" />
-                    {errors.email}
-                  </p>
+                  <p className="mt-1 text-sm text-red-600">{errors.email}</p>
                 )}
               </div>
 
               {/* Customer Type */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Customer Type
                 </label>
                 <select
                   value={form.customerType}
                   onChange={e => update('customerType', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white hover:border-gray-300 transition-all duration-200 font-medium"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="Retailer">🏪 Retailer</option>
-                  <option value="Distributor">📦 Distributor</option>
-                  <option value="Wholesaler">🏭 Wholesaler</option>
+                  <option value="Retailer">Retailer</option>
+                  <option value="Distributor">Distributor</option>
+                  <option value="Wholesaler">Wholesaler</option>
                 </select>
               </div>
 
               {/* Google Maps Link */}
               <div className="md:col-span-2">
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <MapPinIcon className="w-4 h-4 text-blue-500" />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Google Maps Link
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <MapPinIcon className="w-5 h-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="url"
-                    value={form.location || ''}
-                    onChange={e => update('location', e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white hover:border-gray-300 transition-all duration-200"
-                    placeholder="Paste Google Maps share link"
-                  />
-                </div>
+                <input
+                  type="url"
+                  value={form.location || ''}
+                  onChange={e => update('location', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Paste Google Maps share link"
+                />
               </div>
             </div>
           </div>
 
           {/* Address Information */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl border-2 border-gray-200/50 shadow-xl shadow-gray-200/50 overflow-hidden hover:shadow-2xl hover:shadow-gray-200/60 transition-all duration-300">
-            <div className="px-7 py-5 border-b-2 border-gray-200/50 bg-gradient-to-r from-indigo-50/50 to-purple-50/30">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center">
-                  <MapPinIcon className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">Address Information</h2>
-                  <p className="text-sm text-gray-600">Complete location details</p>
-                </div>
-              </div>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Address Information</h2>
+              <p className="text-sm text-gray-600">Complete location details</p>
             </div>
-            <div className="p-7 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Street Address */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Street Address <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -392,37 +341,28 @@ const CreateCustomerPage: React.FC = () => {
                     value={form.address.street}
                     onChange={e => update('address.street', e.target.value)}
                     onBlur={() => handleBlur('address.street')}
-                    className={`w-full px-4 py-3 pr-11 border-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-4 ${
-                      touched['address.street'] && errors['address.street']
-                        ? 'border-red-400 focus:border-red-500 focus:ring-red-100 bg-red-50/50'
-                        : touched['address.street'] && !errors['address.street'] && form.address.street
-                        ? 'border-green-400 focus:border-green-500 focus:ring-green-100 bg-green-50/50'
-                        : 'border-gray-200 focus:border-blue-500 focus:ring-blue-100 bg-white hover:border-gray-300'
-                    }`}
+                    className={getInputClasses('address.street')}
                     placeholder="Building, Street, Area"
                   />
                   {touched['address.street'] && errors['address.street'] && (
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                      <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                      <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
                     </div>
                   )}
                   {touched['address.street'] && !errors['address.street'] && form.address.street && (
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                      <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     </div>
                   )}
                 </div>
                 {touched['address.street'] && errors['address.street'] && (
-                  <p className="mt-2 text-sm text-red-600 flex items-center gap-1.5">
-                    <ExclamationTriangleIcon className="w-4 h-4" />
-                    {errors['address.street']}
-                  </p>
+                  <p className="mt-1 text-sm text-red-600">{errors['address.street']}</p>
                 )}
               </div>
 
               {/* City */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   City <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -431,51 +371,42 @@ const CreateCustomerPage: React.FC = () => {
                     value={form.address.city}
                     onChange={e => update('address.city', e.target.value)}
                     onBlur={() => handleBlur('address.city')}
-                    className={`w-full px-4 py-3 pr-11 border-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-4 ${
-                      touched['address.city'] && errors['address.city']
-                        ? 'border-red-400 focus:border-red-500 focus:ring-red-100 bg-red-50/50'
-                        : touched['address.city'] && !errors['address.city'] && form.address.city
-                        ? 'border-green-400 focus:border-green-500 focus:ring-green-100 bg-green-50/50'
-                        : 'border-gray-200 focus:border-blue-500 focus:ring-blue-100 bg-white hover:border-gray-300'
-                    }`}
+                    className={getInputClasses('address.city')}
                     placeholder="City name"
                   />
                   {touched['address.city'] && errors['address.city'] && (
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                      <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                      <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
                     </div>
                   )}
                   {touched['address.city'] && !errors['address.city'] && form.address.city && (
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                      <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     </div>
                   )}
                 </div>
                 {touched['address.city'] && errors['address.city'] && (
-                  <p className="mt-2 text-sm text-red-600 flex items-center gap-1.5">
-                    <ExclamationTriangleIcon className="w-4 h-4" />
-                    {errors['address.city']}
-                  </p>
+                  <p className="mt-1 text-sm text-red-600">{errors['address.city']}</p>
                 )}
               </div>
 
               {/* State */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   State
                 </label>
                 <input
                   type="text"
                   value={form.address.state}
                   onChange={e => update('address.state', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white hover:border-gray-300 transition-all duration-200"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="State"
                 />
               </div>
 
               {/* Pincode */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Pincode <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -484,44 +415,35 @@ const CreateCustomerPage: React.FC = () => {
                     value={form.address.pincode}
                     onChange={e => update('address.pincode', e.target.value)}
                     onBlur={() => handleBlur('address.pincode')}
-                    className={`w-full px-4 py-3 pr-11 border-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-4 ${
-                      touched['address.pincode'] && errors['address.pincode']
-                        ? 'border-red-400 focus:border-red-500 focus:ring-red-100 bg-red-50/50'
-                        : touched['address.pincode'] && !errors['address.pincode'] && form.address.pincode
-                        ? 'border-green-400 focus:border-green-500 focus:ring-green-100 bg-green-50/50'
-                        : 'border-gray-200 focus:border-blue-500 focus:ring-blue-100 bg-white hover:border-gray-300'
-                    }`}
+                    className={getInputClasses('address.pincode')}
                     placeholder="6-digit pincode"
                   />
                   {touched['address.pincode'] && errors['address.pincode'] && (
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                      <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                      <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />
                     </div>
                   )}
                   {touched['address.pincode'] && !errors['address.pincode'] && form.address.pincode && (
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                      <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     </div>
                   )}
                 </div>
                 {touched['address.pincode'] && errors['address.pincode'] && (
-                  <p className="mt-2 text-sm text-red-600 flex items-center gap-1.5">
-                    <ExclamationTriangleIcon className="w-4 h-4" />
-                    {errors['address.pincode']}
-                  </p>
+                  <p className="mt-1 text-sm text-red-600">{errors['address.pincode']}</p>
                 )}
               </div>
 
               {/* Country */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Country
                 </label>
                 <input
                   type="text"
                   value={form.address.country}
                   onChange={e => update('address.country', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white hover:border-gray-300 transition-all duration-200"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Country"
                 />
               </div>
@@ -529,22 +451,15 @@ const CreateCustomerPage: React.FC = () => {
           </div>
 
           {/* Additional Information */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl border-2 border-gray-200/50 shadow-xl shadow-gray-200/50 overflow-hidden hover:shadow-2xl hover:shadow-gray-200/60 transition-all duration-300">
-            <div className="px-7 py-5 border-b-2 border-gray-200/50 bg-gradient-to-r from-purple-50/50 to-pink-50/30">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center">
-                  <DocumentTextIcon className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">Additional Information</h2>
-                  <p className="text-sm text-gray-600">Optional details and notes</p>
-                </div>
-              </div>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Additional Information</h2>
+              <p className="text-sm text-gray-600">Optional details and notes</p>
             </div>
-            <div className="p-7 space-y-6">
+            <div className="p-6 space-y-4">
               {/* Assigned Godown */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Assigned Godown
                 </label>
                 <Select
@@ -561,26 +476,26 @@ const CreateCustomerPage: React.FC = () => {
                   styles={{
                     control: (base, state) => ({
                       ...base,
-                      borderWidth: '2px',
-                      borderRadius: '0.75rem',
-                      padding: '0.375rem',
-                      borderColor: state.isFocused ? '#3b82f6' : '#e5e7eb',
-                      boxShadow: state.isFocused ? '0 0 0 4px rgba(59, 130, 246, 0.1)' : 'none',
+                      borderWidth: '1px',
+                      borderRadius: '0.375rem',
+                      padding: '0.125rem',
+                      borderColor: state.isFocused ? '#3b82f6' : '#d1d5db',
+                      boxShadow: state.isFocused ? '0 0 0 2px rgba(59, 130, 246, 0.2)' : 'none',
                       '&:hover': {
-                        borderColor: '#d1d5db'
+                        borderColor: '#9ca3af'
                       }
                     }),
                     menu: (base) => ({
                       ...base,
-                      borderRadius: '0.75rem',
+                      borderRadius: '0.375rem',
                       overflow: 'hidden',
-                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
                     }),
                     option: (base, state) => ({
                       ...base,
                       backgroundColor: state.isSelected ? '#3b82f6' : state.isFocused ? '#eff6ff' : 'white',
                       color: state.isSelected ? 'white' : '#1f2937',
-                      padding: '0.75rem 1rem',
+                      padding: '0.5rem 0.75rem',
                       cursor: 'pointer'
                     })
                   }}
@@ -589,14 +504,14 @@ const CreateCustomerPage: React.FC = () => {
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Notes
                 </label>
                 <textarea
                   value={form.notes || ''}
                   onChange={e => update('notes', e.target.value)}
                   rows={4}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 bg-white hover:border-gray-300 transition-all duration-200 resize-none"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                   placeholder="Add any additional notes or special instructions..."
                 />
               </div>
@@ -604,27 +519,27 @@ const CreateCustomerPage: React.FC = () => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-col-reverse sm:flex-row gap-4 pt-2">
+          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">
             <button
               type="button"
               onClick={() => navigate('/customers')}
-              className="sm:flex-1 sm:max-w-[200px] px-8 py-4 border-2 border-gray-300 rounded-xl text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-4 focus:ring-gray-100 transition-all duration-200 font-semibold"
+              className="sm:flex-1 sm:max-w-[200px] px-6 py-2.5 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 font-medium"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="sm:flex-1 px-8 py-4 rounded-xl text-white bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 hover:from-blue-700 hover:via-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-semibold shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 hover:-translate-y-0.5 transform"
+              className="sm:flex-1 px-6 py-2.5 rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {saving ? (
-                <div className="flex items-center justify-center gap-3">
-                  <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   <span>Creating Customer...</span>
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-2">
-                  <CheckCircleIcon className="w-5 h-5" />
+                  <CheckCircleIcon className="w-4 h-4" />
                   <span>Create Customer</span>
                 </div>
               )}
@@ -632,9 +547,9 @@ const CreateCustomerPage: React.FC = () => {
           </div>
 
           {/* Helper Text */}
-          <div className="text-center pb-4">
+          <div className="text-center pb-2">
             <p className="text-sm text-gray-500">
-              Fields marked with <span className="text-red-500 font-semibold">*</span> are required
+              Fields marked with <span className="text-red-500">*</span> are required
             </p>
           </div>
         </form>
