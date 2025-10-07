@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDownIcon, MagnifyingGlassIcon, UserIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon, MagnifyingGlassIcon, UserIcon, PlusIcon, XMarkIcon, ExclamationTriangleIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { customerService } from '../../services/customerService';
 import type { Customer, CreateCustomerForm, Godown } from '../../types';
 import Select from 'react-select';
@@ -53,6 +53,19 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
   const [createLoading, setCreateLoading] = useState(false);
   const [godowns, setGodowns] = useState<Godown[]>([]);
   const [godownsLoading, setGodownsLoading] = useState(false);
+  
+  // Validation states for create modal
+  interface ValidationErrors {
+    businessName?: string;
+    phone?: string;
+    email?: string;
+    'address.street'?: string;
+    'address.city'?: string;
+    'address.pincode'?: string;
+  }
+  
+  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -145,13 +158,97 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
     onCustomerChange('', null);
   };
 
+  // Validation functions
+  const validateField = (fieldPath: string, value: string): string => {
+    switch (fieldPath) {
+      case 'businessName':
+        if (!value.trim()) return 'Business name is required';
+        if (value.trim().length < 2) return 'Business name must be at least 2 characters';
+        return '';
+      
+      case 'phone':
+        if (!value.trim()) return 'Phone number is required';
+        const phoneRegex = /^[+]?[\d\s\-\(\)]{10,15}$/;
+        if (!phoneRegex.test(value.trim())) return 'Please enter a valid phone number';
+        return '';
+      
+      case 'email':
+        if (value && value.trim()) {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(value.trim())) return 'Please enter a valid email address';
+        }
+        return '';
+      
+      case 'address.street':
+        if (!value.trim()) return 'Street address is required';
+        return '';
+      
+      case 'address.city':
+        if (!value.trim()) return 'City is required';
+        return '';
+      
+      case 'address.pincode':
+        if (!value.trim()) return 'Pincode is required';
+        const pincodeRegex = /^\d{6}$/;
+        if (!pincodeRegex.test(value.trim())) return 'Pincode must be 6 digits';
+        return '';
+      
+      default:
+        return '';
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: ValidationErrors = {};
+    
+    // Validate required fields
+    newErrors.businessName = validateField('businessName', createFormData.businessName);
+    newErrors.phone = validateField('phone', createFormData.phone);
+    newErrors['address.street'] = validateField('address.street', createFormData.address.street);
+    newErrors['address.city'] = validateField('address.city', createFormData.address.city);
+    newErrors['address.pincode'] = validateField('address.pincode', createFormData.address.pincode);
+    
+    // Remove empty errors
+    Object.keys(newErrors).forEach(key => {
+      if (!newErrors[key as keyof ValidationErrors]) {
+        delete newErrors[key as keyof ValidationErrors];
+      }
+    });
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleBlur = (fieldPath: string) => {
+    setTouched(prev => ({ ...prev, [fieldPath]: true }));
+    
+    let value = '';
+    if (fieldPath.includes('.')) {
+      const [parent, child] = fieldPath.split('.');
+      value = (createFormData as any)[parent][child] || '';
+    } else {
+      value = (createFormData as any)[fieldPath] || '';
+    }
+    
+    const error = validateField(fieldPath, value);
+    setErrors(prev => ({ ...prev, [fieldPath]: error }));
+  };
+
   const handleCreateCustomer = async () => {
     try {
       setCreateLoading(true);
       
-      // Basic validation
-      if (!createFormData.businessName.trim() || !createFormData.phone.trim()) {
-        toast.error('Please fill in all required fields');
+      // Mark all fields as touched for validation display
+      const allFields = ['businessName', 'phone', 'address.street', 'address.city', 'address.pincode'];
+      const newTouched: Record<string, boolean> = {};
+      allFields.forEach(field => {
+        newTouched[field] = true;
+      });
+      setTouched(newTouched);
+      
+      // Validate form
+      if (!validateForm()) {
+        toast.error('Please fix the validation errors before submitting');
         return;
       }
 
@@ -178,7 +275,10 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
           pincode: '',
         },
         customerType: 'Retailer',
+        assignedGodownId: '',
       });
+      setErrors({});
+      setTouched({});
       setShowCreateModal(false);
       setIsOpen(false);
       
@@ -207,6 +307,12 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
         [field]: value,
       }));
     }
+    
+    // Validate field if it has been touched
+    if (touched[field]) {
+      const error = validateField(field, value);
+      setErrors(prev => ({ ...prev, [field]: error }));
+    }
   };
 
   const closeCreateModal = () => {
@@ -223,7 +329,10 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
         pincode: '',
       },
       customerType: 'Retailer',
+      assignedGodownId: '',
     });
+    setErrors({});
+    setTouched({});
   };
 
   return (
@@ -410,84 +519,184 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
         size="lg"
       >
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Business Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={createFormData.businessName}
-              onChange={(e) => handleCreateFormChange('businessName', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter business name"
-            />
-          </div>
+          {/* Helper function for input classes */}
+          {(() => {
+            const getInputClasses = (fieldPath: string) => {
+              const hasError = touched[fieldPath] && errors[fieldPath as keyof ValidationErrors];
+              const isValid = touched[fieldPath] && !errors[fieldPath as keyof ValidationErrors];
+              
+              return `w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 transition-colors ${
+                hasError 
+                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500 bg-red-50' 
+                  : isValid
+                  ? 'border-green-300 focus:border-green-500 focus:ring-green-500 bg-green-50'
+                  : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+              }`;
+            };
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Google Maps Link
-            </label>
-            <input
-              type="url"
-              value={createFormData.location || ''}
-              onChange={(e) => handleCreateFormChange('location', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Paste Google Maps share link"
-            />
-          </div>
+            return (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Business Name <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={createFormData.businessName}
+                      onChange={(e) => handleCreateFormChange('businessName', e.target.value)}
+                      onBlur={() => handleBlur('businessName')}
+                      className={getInputClasses('businessName')}
+                      placeholder="Enter business name"
+                    />
+                    {touched.businessName && errors.businessName && (
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                        <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+                      </div>
+                    )}
+                    {touched.businessName && !errors.businessName && createFormData.businessName && (
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                        <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                      </div>
+                    )}
+                  </div>
+                  {touched.businessName && errors.businessName && (
+                    <p className="mt-1 text-sm text-red-600">{errors.businessName}</p>
+                  )}
+                </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Phone Number <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="tel"
-              value={createFormData.phone}
-              onChange={(e) => handleCreateFormChange('phone', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter phone number"
-            />
-          </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Google Maps Link
+                  </label>
+                  <input
+                    type="url"
+                    value={createFormData.location || ''}
+                    onChange={(e) => handleCreateFormChange('location', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Paste Google Maps share link"
+                  />
+                </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Street Address <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={createFormData.address.street}
-              onChange={(e) => handleCreateFormChange('address.street', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter street address"
-            />
-          </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="tel"
+                      value={createFormData.phone}
+                      onChange={(e) => handleCreateFormChange('phone', e.target.value)}
+                      onBlur={() => handleBlur('phone')}
+                      className={getInputClasses('phone')}
+                      placeholder="Enter phone number"
+                    />
+                    {touched.phone && errors.phone && (
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                        <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+                      </div>
+                    )}
+                    {touched.phone && !errors.phone && createFormData.phone && (
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                        <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                      </div>
+                    )}
+                  </div>
+                  {touched.phone && errors.phone && (
+                    <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+                  )}
+                </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                City <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={createFormData.address.city}
-                onChange={(e) => handleCreateFormChange('address.city', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter city"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Pincode <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={createFormData.address.pincode}
-                onChange={(e) => handleCreateFormChange('address.pincode', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter pincode"
-              />
-            </div>
-          </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Street Address <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={createFormData.address.street}
+                      onChange={(e) => handleCreateFormChange('address.street', e.target.value)}
+                      onBlur={() => handleBlur('address.street')}
+                      className={getInputClasses('address.street')}
+                      placeholder="Enter street address"
+                    />
+                    {touched['address.street'] && errors['address.street'] && (
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                        <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+                      </div>
+                    )}
+                    {touched['address.street'] && !errors['address.street'] && createFormData.address.street && (
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                        <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                      </div>
+                    )}
+                  </div>
+                  {touched['address.street'] && errors['address.street'] && (
+                    <p className="mt-1 text-sm text-red-600">{errors['address.street']}</p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      City <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={createFormData.address.city}
+                        onChange={(e) => handleCreateFormChange('address.city', e.target.value)}
+                        onBlur={() => handleBlur('address.city')}
+                        className={getInputClasses('address.city')}
+                        placeholder="Enter city"
+                      />
+                      {touched['address.city'] && errors['address.city'] && (
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                          <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+                        </div>
+                      )}
+                      {touched['address.city'] && !errors['address.city'] && createFormData.address.city && (
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                          <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                        </div>
+                      )}
+                    </div>
+                    {touched['address.city'] && errors['address.city'] && (
+                      <p className="mt-1 text-sm text-red-600">{errors['address.city']}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Pincode <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={createFormData.address.pincode}
+                        onChange={(e) => handleCreateFormChange('address.pincode', e.target.value)}
+                        onBlur={() => handleBlur('address.pincode')}
+                        className={getInputClasses('address.pincode')}
+                        placeholder="Enter pincode"
+                      />
+                      {touched['address.pincode'] && errors['address.pincode'] && (
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                          <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+                        </div>
+                      )}
+                      {touched['address.pincode'] && !errors['address.pincode'] && createFormData.address.pincode && (
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                          <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                        </div>
+                      )}
+                    </div>
+                    {touched['address.pincode'] && errors['address.pincode'] && (
+                      <p className="mt-1 text-sm text-red-600">{errors['address.pincode']}</p>
+                    )}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -498,9 +707,8 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
               onChange={(e) => handleCreateFormChange('customerType', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
             >
-              <option value="Retailer">Retailer</option>
-              <option value="Distributor">Distributor</option>
-              <option value="Wholesaler">Wholesaler</option>
+              <option value="individual">Individual</option>
+              <option value="business">Business</option>
             </select>
           </div>
 
@@ -508,18 +716,18 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Assigned Godown
             </label>
-            <Select
-              isLoading={godownsLoading}
-              options={godowns.map(g => ({ value: g._id, label: `${g.name}${g.code ? ` (${g.code})` : ''}` }))}
-              value={
-                createFormData.assignedGodownId
-                  ? { value: createFormData.assignedGodownId, label: godowns.find(g => g._id === createFormData.assignedGodownId)?.name || 'Selected' }
-                  : null
-              }
-              onChange={(opt) => handleCreateFormChange('assignedGodownId', (opt as any)?.value)}
-              placeholder="Select godown"
-              classNamePrefix="react-select"
-            />
+            <select
+              value={createFormData.assignedGodownId || ''}
+              onChange={(e) => handleCreateFormChange('assignedGodownId', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Select a godown</option>
+              {godowns.map((godown) => (
+                <option key={godown._id} value={godown._id}>
+                  {godown.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Action Buttons */}
