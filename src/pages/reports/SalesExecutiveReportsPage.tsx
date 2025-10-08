@@ -14,6 +14,7 @@ import {
   BuildingOfficeIcon,
   BuildingOffice2Icon,
   ArrowPathIcon,
+  ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { getSalesExecutiveReports } from "../../services/reportService";
 import { godownService } from "../../services/godownService";
@@ -37,6 +38,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
   const [godowns, setGodowns] = useState<any[]>([]);
   const [godownId, setGodownId] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [dateRangeError, setDateRangeError] = useState("");
   const [reportType, setReportType] = useState<ReportType>(() => {
     const saved = localStorage.getItem('salesExecutiveReportType');
     return (saved as ReportType) || "orders";
@@ -116,6 +118,30 @@ const SalesExecutiveReportsPage: React.FC = () => {
     } finally {
       setSyncing(false);
     }
+  };
+
+  // Date validation functions
+  const validateDateRange = (startDate: string, endDate: string) => {
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (start > end) {
+        setDateRangeError("Start date cannot be after end date");
+        return false;
+      }
+    }
+    setDateRangeError("");
+    return true;
+  };
+
+  const handleStartDateChange = (value: string) => {
+    setStartDate(value);
+    validateDateRange(value, endDate);
+  };
+
+  const handleEndDateChange = (value: string) => {
+    setEndDate(value);
+    validateDateRange(startDate, value);
   };
 
   useEffect(() => {
@@ -681,8 +707,12 @@ const SalesExecutiveReportsPage: React.FC = () => {
                   <input
                     type="date"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => handleStartDateChange(e.target.value)}
+                    className={`w-full px-2 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 ${
+                      dateRangeError 
+                        ? "border-red-300 focus:ring-red-500" 
+                        : "border-gray-300 focus:ring-blue-500"
+                    }`}
                   />
                 </div>
                 <div>
@@ -692,10 +722,22 @@ const SalesExecutiveReportsPage: React.FC = () => {
                   <input
                     type="date"
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => handleEndDateChange(e.target.value)}
+                    className={`w-full px-2 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 ${
+                      dateRangeError 
+                        ? "border-red-300 focus:ring-red-500" 
+                        : "border-gray-300 focus:ring-blue-500"
+                    }`}
                   />
                 </div>
+                
+                {/* Date Range Error Message */}
+                {dateRangeError && (
+                  <div className="col-span-2 flex items-center text-red-600 text-sm">
+                    <ExclamationCircleIcon className="h-4 w-4 mr-1" />
+                    {dateRangeError}
+                  </div>
+                )}
               </div>
 
               {/* Department */}

@@ -102,7 +102,6 @@ const CustomerDetailsPage: React.FC = () => {
           )}
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-3 space-y-1 text-sm">
-          <div className="flex justify-between"><span className="text-gray-500">Credit Limit</span><span className="text-gray-900">₹{(customer.creditLimit || 0).toLocaleString()}</span></div>
           <div className="flex justify-between"><span className="text-gray-500">Outstanding</span><span className="text-gray-900">₹{(customer.outstandingAmount || 0).toLocaleString()}</span></div>
           <div className="flex justify-between"><span className="text-gray-500">Active</span><span className="text-gray-900">{customer.isActive ? 'Yes' : 'No'}</span></div>
           <div className="flex justify-between"><span className="text-gray-500">Created</span><span className="text-gray-900">{new Date(customer.createdAt).toLocaleDateString()}</span></div>

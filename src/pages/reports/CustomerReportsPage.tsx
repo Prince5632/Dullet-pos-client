@@ -12,6 +12,7 @@ import {
   XMarkIcon,
   EyeIcon,
   ArrowPathIcon,
+  ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
 import { getCustomerReports, getInactiveCustomers } from '../../services/reportService';
 import type { CustomerReportResponse, InactiveCustomersResponse } from '../../services/reportService';
@@ -32,6 +33,7 @@ const CustomerReportsPage: React.FC = () => {
   const [sortOrder, setSortOrder] = useState('desc');
   const [showFilters, setShowFilters] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [dateRangeError, setDateRangeError] = useState('');
 
   useEffect(() => {
     fetchReports();
@@ -82,6 +84,28 @@ const CustomerReportsPage: React.FC = () => {
     setInactiveDays(7);
     setSortBy('totalSpent');
     setSortOrder('desc');
+    setDateRangeError('');
+  };
+
+  const validateDateRange = (start: string, end: string) => {
+    if (start && end && new Date(start) > new Date(end)) {
+      setDateRangeError('Start date cannot be after end date');
+      return false;
+    }
+    setDateRangeError('');
+    return true;
+  };
+
+  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newStartDate = e.target.value;
+    setStartDate(newStartDate);
+    validateDateRange(newStartDate, endDate);
+  };
+
+  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newEndDate = e.target.value;
+    setEndDate(newEndDate);
+    validateDateRange(startDate, newEndDate);
   };
 
   const exportToCSV = () => {
@@ -183,7 +207,7 @@ const CustomerReportsPage: React.FC = () => {
       key: 'businessName',
       label: 'Customer',
       render: (value: string, row: any) => (
-        <Link to={`/reports/customers/${row._id}`} className="hover:underline">
+        <Link to={`/customers/${row._id}`} className="hover:underline">
           <div className="font-medium text-gray-900">{value}</div>
           <div className="text-sm text-gray-500">{row.customerId}</div>
         </Link>
@@ -255,6 +279,19 @@ const CustomerReportsPage: React.FC = () => {
         <span className="font-semibold text-blue-600">{formatCurrency(value)}</span>
       ),
     },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (value: any, row: any) => (
+        <Link
+          to={`/customers/${row._id}`}
+          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
+        >
+          <EyeIcon className="h-3 w-3" />
+          View
+        </Link>
+      ),
+    },
   ];
 
   const inactiveCustomersColumns = [
@@ -262,10 +299,10 @@ const CustomerReportsPage: React.FC = () => {
       key: 'businessName',
       label: 'Customer',
       render: (value: string, row: any) => (
-        <div>
+        <Link to={`/customers/${row._id}`} className="hover:underline">
           <div className="font-medium text-gray-900">{value}</div>
           <div className="text-sm text-gray-500">{row.customerId}</div>
-        </div>
+        </Link>
       ),
     },
     {
@@ -324,6 +361,19 @@ const CustomerReportsPage: React.FC = () => {
         <span className={`font-medium ${value > 0 ? 'text-orange-600' : 'text-gray-500'}`}>
           {formatCurrency(value)}
         </span>
+      ),
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (value: any, row: any) => (
+        <Link
+          to={`/customers/${row._id}`}
+          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
+        >
+          <EyeIcon className="h-3 w-3" />
+          View
+        </Link>
       ),
     },
   ];
@@ -532,8 +582,12 @@ const CustomerReportsPage: React.FC = () => {
                     <input
                       type="date"
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={handleStartDateChange}
+                      className={`w-full px-2 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 ${
+                        dateRangeError 
+                          ? 'border-red-300 focus:ring-red-500' 
+                          : 'border-gray-300 focus:ring-blue-500'
+                      }`}
                     />
                   </div>
                   <div>
@@ -541,11 +595,23 @@ const CustomerReportsPage: React.FC = () => {
                     <input
                       type="date"
                       value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={handleEndDateChange}
+                      className={`w-full px-2 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 ${
+                        dateRangeError 
+                          ? 'border-red-300 focus:ring-red-500' 
+                          : 'border-gray-300 focus:ring-blue-500'
+                      }`}
                     />
                   </div>
                 </div>
+                
+                {/* Date Range Error Message */}
+                {dateRangeError && (
+                  <div className="flex items-center text-red-600 text-sm">
+                    <ExclamationCircleIcon className="h-4 w-4 mr-1" />
+                    {dateRangeError}
+                  </div>
+                )}
 
                 {/* Sort Options */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -622,7 +688,7 @@ const CustomerReportsPage: React.FC = () => {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0">
                     <Link 
-                      to={`/reports/customers/${report._id}`}
+                      to={`/customers/${report._id}`}
                       className="font-medium text-gray-900 hover:text-blue-600 truncate block"
                     >
                       {report.businessName}
@@ -638,7 +704,7 @@ const CustomerReportsPage: React.FC = () => {
                     </div>
                   </div>
                   <Link
-                    to={`/reports/customers/${report._id}`}
+                    to={`/customers/${report._id}`}
                     className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors flex-shrink-0"
                   >
                     <EyeIcon className="h-4 w-4" />

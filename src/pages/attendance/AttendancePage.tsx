@@ -42,6 +42,7 @@ const AttendancePage: React.FC = () => {
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [dateRangeError, setDateRangeError] = useState("");
 
   // Filters
   const [filters, setFilters] = useState<AttendanceListParams>({
@@ -149,6 +150,30 @@ const AttendancePage: React.FC = () => {
       [key]: value,
       page: key !== 'page' ? 1 : value
     }));
+  };
+
+  // Date validation functions
+  const validateDateRange = (startDate: string, endDate: string) => {
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (start > end) {
+        setDateRangeError("Start date cannot be after end date");
+        return false;
+      }
+    }
+    setDateRangeError("");
+    return true;
+  };
+
+  const handleStartDateChange = (value: string) => {
+    handleFilterChange('startDate', value);
+    validateDateRange(value, filters.endDate || '');
+  };
+
+  const handleEndDateChange = (value: string) => {
+    handleFilterChange('endDate', value);
+    validateDateRange(filters.startDate || '', value);
   };
 
   const handleStatusSelect = (attendanceId: string, newStatus: Attendance['status']) => {
@@ -461,18 +486,34 @@ const AttendancePage: React.FC = () => {
                   <input
                     type="date"
                     value={filters.startDate || ''}
-                    onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                    onChange={(e) => handleStartDateChange(e.target.value)}
                     placeholder="Start Date"
-                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className={`px-2 py-1.5 text-xs border rounded-md focus:outline-none focus:ring-1 ${
+                      dateRangeError 
+                        ? "border-red-300 focus:ring-red-500" 
+                        : "border-gray-300 focus:ring-blue-500"
+                    }`}
                   />
                   
                   <input
                     type="date"
                     value={filters.endDate || ''}
-                    onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                    onChange={(e) => handleEndDateChange(e.target.value)}
                     placeholder="End Date"
-                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className={`px-2 py-1.5 text-xs border rounded-md focus:outline-none focus:ring-1 ${
+                      dateRangeError 
+                        ? "border-red-300 focus:ring-red-500" 
+                        : "border-gray-300 focus:ring-blue-500"
+                    }`}
                   />
+                  
+                  {/* Date Range Error Message */}
+                  {dateRangeError && (
+                    <div className="col-span-2 flex items-center text-red-600 text-xs">
+                      <ExclamationCircleIcon className="h-4 w-4 mr-1" />
+                      {dateRangeError}
+                    </div>
+                  )}
                   
                   {canManageAttendance && (
                     <select

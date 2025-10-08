@@ -8,7 +8,8 @@ import {
   UserIcon,
   CurrencyRupeeIcon,
   CheckIcon,
-  XMarkIcon
+  XMarkIcon,
+  ExclamationCircleIcon
 } from '@heroicons/react/24/outline';
 import { orderService } from '../../services/orderService';
 import { customerService } from '../../services/customerService';
@@ -37,6 +38,7 @@ const OrderApprovalPage: React.FC = () => {
   const [dateFromFilter, setDateFromFilter] = useState('');
   const [dateToFilter, setDateToFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [dateRangeError, setDateRangeError] = useState('');
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -135,6 +137,30 @@ const OrderApprovalPage: React.FC = () => {
       setSortBy(field);
       setSortOrder('desc');
     }
+  };
+
+  // Date validation functions
+  const validateDateRange = (startDate: string, endDate: string) => {
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (start > end) {
+        setDateRangeError("Start date cannot be after end date");
+        return false;
+      }
+    }
+    setDateRangeError("");
+    return true;
+  };
+
+  const handleDateFromChange = (value: string) => {
+    setDateFromFilter(value);
+    validateDateRange(value, dateToFilter);
+  };
+
+  const handleDateToChange = (value: string) => {
+    setDateToFilter(value);
+    validateDateRange(dateFromFilter, value);
   };
 
   const handleOrderUpdate = (updatedOrder: Order) => {
@@ -441,8 +467,12 @@ const OrderApprovalPage: React.FC = () => {
                   <input
                     type="date"
                     value={dateFromFilter}
-                    onChange={(e) => setDateFromFilter(e.target.value)}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    onChange={(e) => handleDateFromChange(e.target.value)}
+                    className={`block w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 ${
+                      dateRangeError 
+                        ? "border-red-300 focus:ring-red-500 focus:border-red-500" 
+                        : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                    }`}
                   />
                 </div>
 
@@ -453,10 +483,22 @@ const OrderApprovalPage: React.FC = () => {
                   <input
                     type="date"
                     value={dateToFilter}
-                    onChange={(e) => setDateToFilter(e.target.value)}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    onChange={(e) => handleDateToChange(e.target.value)}
+                    className={`block w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 ${
+                      dateRangeError 
+                        ? "border-red-300 focus:ring-red-500 focus:border-red-500" 
+                        : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                    }`}
                   />
                 </div>
+                
+                {/* Date Range Error Message */}
+                {dateRangeError && (
+                  <div className="col-span-2 flex items-center text-red-600 text-sm mt-2">
+                    <ExclamationCircleIcon className="h-4 w-4 mr-1" />
+                    {dateRangeError}
+                  </div>
+                )}
               </div>
             )}
           </div>

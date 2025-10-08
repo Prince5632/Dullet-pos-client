@@ -1,6 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { 
+import React, { useEffect, useState } from "react";
+import {
+  useParams,
+  Link,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
+import {
   ArrowLeftIcon,
   ChartBarIcon,
   CurrencyDollarIcon,
@@ -9,21 +14,28 @@ import {
   CalendarIcon,
   FunnelIcon,
   XMarkIcon,
-} from '@heroicons/react/24/outline';
-import { getExecutivePerformanceDetail } from '../../services/reportService';
-import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { formatCurrency, formatDate } from '../../utils';
+  PhotoIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
+import { getExecutivePerformanceDetail } from "../../services/reportService";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
+import Modal from "../../components/ui/Modal";
+import { formatCurrency, formatDate } from "../../utils";
+import { resolveCapturedImageSrc } from "../../utils/image";
 
 const SalesExecutiveDetailPage: React.FC = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const reportType = searchParams.get('type') || 'orders';
+  const reportType = searchParams.get("type") || "orders";
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string>("");
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [dateRangeError, setDateRangeError] = useState("");
 
   const fetchDetail = async () => {
     if (!userId) return;
@@ -33,13 +45,13 @@ const SalesExecutiveDetailPage: React.FC = () => {
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
       // Pass the report type (convert 'orders' to 'order' and 'visits' to 'visit')
-      params.type = reportType === 'orders' ? 'order' : 'visit';
+      params.type = reportType === "orders" ? "order" : "visit";
       const detail = await getExecutivePerformanceDetail(userId, params);
-      console.log('Executive Detail Data:', detail);
-      console.log('Recent Orders:', detail?.recentOrders);
+      console.log("Executive Detail Data:", detail);
+      console.log("Recent Orders:", detail?.recentOrders);
       if (detail?.recentOrders?.length > 0) {
-        console.log('First order attaKg:', detail.recentOrders[0].attaKg);
-        console.log('First order items:', detail.recentOrders[0].items);
+        console.log("First order attaKg:", detail.recentOrders[0].attaKg);
+        console.log("First order items:", detail.recentOrders[0].items);
       }
       setData(detail);
     } finally {
@@ -56,16 +68,48 @@ const SalesExecutiveDetailPage: React.FC = () => {
     setShowFilters(false);
   };
 
+  const handleViewImage = (capturedImage: string) => {
+    const imageSrc = resolveCapturedImageSrc(capturedImage);
+    setSelectedImage(imageSrc);
+    setShowImageModal(true);
+  };
+
+  // Date validation functions
+  const validateDateRange = (fromDate: string, toDate: string) => {
+    if (fromDate && toDate) {
+      const from = new Date(fromDate);
+      const to = new Date(toDate);
+      if (from > to) {
+        setDateRangeError("Start date cannot be after end date");
+        return false;
+      }
+    }
+    setDateRangeError("");
+    return true;
+  };
+
+  const handleStartDateChange = (value: string) => {
+    setStartDate(value);
+    validateDateRange(value, endDate);
+  };
+
+  const handleEndDateChange = (value: string) => {
+    setEndDate(value);
+    validateDateRange(startDate, value);
+  };
+
   if (loading) return <LoadingSpinner />;
   if (!data) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="text-center">
           <UserIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No Data Found</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No Data Found
+          </h3>
           <p className="text-gray-500 mb-4">Unable to load executive details</p>
           <button
-            onClick={() => navigate('/reports/sales-executives')}
+            onClick={() => navigate("/reports/sales-executives")}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Back to Reports
@@ -75,7 +119,14 @@ const SalesExecutiveDetailPage: React.FC = () => {
     );
   }
 
-  const { executive, metrics, monthlyTrend, topCustomers, recentOrders, attaSummary } = data;
+  const {
+    executive,
+    metrics,
+    monthlyTrend,
+    topCustomers,
+    recentOrders,
+    attaSummary,
+  } = data;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -84,17 +135,19 @@ const SalesExecutiveDetailPage: React.FC = () => {
         <div className="px-3 sm:px-4 py-3">
           <div className="flex items-center gap-2 mb-2">
             <button
-              onClick={() => navigate('/reports/sales-executives')}
+              onClick={() => navigate("/reports/sales-executives")}
               className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <ArrowLeftIcon className="h-5 w-5" />
             </button>
             <div className="flex-1 min-w-0">
               <h1 className="text-lg font-semibold text-gray-900 truncate">
-                {executive.name} - {reportType === 'visits' ? 'Visit' : 'Order'} Details
+                {executive.name} - {reportType === "visits" ? "Visit" : "Order"}{" "}
+                Details
               </h1>
               <p className="text-xs text-gray-500 truncate">
-                {executive.employeeId} • {executive.department} • {executive.position}
+                {executive.employeeId} • {executive.department} •{" "}
+                {executive.position}
               </p>
             </div>
           </div>
@@ -107,13 +160,13 @@ const SalesExecutiveDetailPage: React.FC = () => {
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
-              showFilters 
-                ? 'bg-blue-50 text-blue-700 border-blue-200' 
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              showFilters
+                ? "bg-blue-50 text-blue-700 border-blue-200"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
             }`}
           >
             <FunnelIcon className="h-4 w-4" />
-            {showFilters ? 'Hide Filters' : 'Show Filters'}
+            {showFilters ? "Hide Filters" : "Show Filters"}
             {(startDate || endDate) && (
               <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-medium text-white bg-blue-600 rounded-full">
                 !
@@ -128,7 +181,9 @@ const SalesExecutiveDetailPage: React.FC = () => {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <CalendarIcon className="h-4 w-4 text-gray-400" />
-                <span className="text-sm font-medium text-gray-900">Date Range</span>
+                <span className="text-sm font-medium text-gray-900">
+                  Date Range
+                </span>
               </div>
               <button
                 onClick={() => setShowFilters(false)}
@@ -141,28 +196,49 @@ const SalesExecutiveDetailPage: React.FC = () => {
             <div className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">From Date</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    From Date
+                  </label>
                   <input
                     type="date"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => handleStartDateChange(e.target.value)}
+                    className={`w-full px-2 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 ${
+                      dateRangeError 
+                        ? "border-red-300 focus:ring-red-500" 
+                        : "border-gray-300 focus:ring-blue-500"
+                    }`}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">To Date</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    To Date
+                  </label>
                   <input
                     type="date"
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => handleEndDateChange(e.target.value)}
+                    className={`w-full px-2 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 ${
+                      dateRangeError 
+                        ? "border-red-300 focus:ring-red-500" 
+                        : "border-gray-300 focus:ring-blue-500"
+                    }`}
                   />
                 </div>
               </div>
 
+              {/* Date Range Error Message */}
+              {dateRangeError && (
+                <div className="flex items-center gap-1 text-red-600 text-xs">
+                  <ExclamationTriangleIcon className="h-4 w-4" />
+                  {dateRangeError}
+                </div>
+              )}
+
               <button
                 onClick={handleApplyFilters}
                 className="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                disabled={!!dateRangeError}
               >
                 Apply Filters
               </button>
@@ -174,33 +250,43 @@ const SalesExecutiveDetailPage: React.FC = () => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-gray-500">{reportType === 'visits' ? 'Visits' : 'Orders'}</p>
+              <p className="text-xs text-gray-500">
+                {reportType === "visits" ? "Visits" : "Orders"}
+              </p>
               <ShoppingBagIcon className="h-5 w-5 text-blue-500" />
             </div>
-            <p className="text-xl font-bold text-gray-900 truncate">{metrics.totalOrders}</p>
+            <p className="text-xl font-bold text-gray-900 truncate">
+              {metrics.totalOrders}
+            </p>
           </div>
-          {reportType === 'orders' ? (
+          {reportType === "orders" ? (
             <>
               <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs text-gray-500">Revenue</p>
                   <CurrencyDollarIcon className="h-5 w-5 text-green-500" />
                 </div>
-                <p className="text-xl font-bold text-green-600 truncate">{formatCurrency(metrics.totalRevenue)}</p>
+                <p className="text-xl font-bold text-green-600 truncate">
+                  {formatCurrency(metrics.totalRevenue)}
+                </p>
               </div>
               <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs text-gray-500">Avg Order</p>
                   <ChartBarIcon className="h-5 w-5 text-blue-500" />
                 </div>
-                <p className="text-xl font-bold text-blue-600 truncate">{formatCurrency(metrics.avgOrderValue)}</p>
+                <p className="text-xl font-bold text-blue-600 truncate">
+                  {formatCurrency(metrics.avgOrderValue)}
+                </p>
               </div>
               <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs text-gray-500">Max Order</p>
                   <ChartBarIcon className="h-5 w-5 text-purple-500" />
                 </div>
-                <p className="text-xl font-bold text-gray-900 truncate">{formatCurrency(metrics.maxOrderValue)}</p>
+                <p className="text-xl font-bold text-gray-900 truncate">
+                  {formatCurrency(metrics.maxOrderValue)}
+                </p>
               </div>
             </>
           ) : (
@@ -210,37 +296,47 @@ const SalesExecutiveDetailPage: React.FC = () => {
                   <p className="text-xs text-gray-500">Unique Locations</p>
                   <CurrencyDollarIcon className="h-5 w-5 text-green-500" />
                 </div>
-                <p className="text-xl font-bold text-green-600 truncate">{metrics.uniqueLocations || 0}</p>
+                <p className="text-xl font-bold text-green-600 truncate">
+                  {metrics.uniqueLocations || 0}
+                </p>
               </div>
               <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs text-gray-500">Avg Locations Per Day</p>
                   <ChartBarIcon className="h-5 w-5 text-blue-500" />
                 </div>
-                <p className="text-xl font-bold text-blue-600 truncate">{metrics.avgLocationsPerDay || 0}</p>
+                <p className="text-xl font-bold text-blue-600 truncate">
+                  {metrics.avgLocationsPerDay || 0}
+                </p>
               </div>
               <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs text-gray-500">Today</p>
                   <ChartBarIcon className="h-5 w-5 text-purple-500" />
                 </div>
-                <p className="text-xl font-bold text-purple-600 truncate">{metrics.totalVisitsToday || 0}</p>
+                <p className="text-xl font-bold text-purple-600 truncate">
+                  {metrics.totalVisitsToday || 0}
+                </p>
               </div>
             </>
           )}
         </div>
 
         {/* Aata Sales Summary - Only for Orders */}
-        {reportType === 'orders' && (
+        {reportType === "orders" && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 mb-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">Aata Sales Summary</h3>
-            
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">
+              Aata Sales Summary
+            </h3>
+
             {/* Summary Metrics */}
             <div className="grid grid-cols-3 gap-2 mb-4">
               <div className="bg-gray-50 p-2 rounded text-center">
                 <p className="text-xs text-gray-500 mb-1">Total KG</p>
                 <p className="text-lg font-bold text-gray-900">
-                  {attaSummary?.totalKg?.toFixed ? attaSummary.totalKg.toFixed(2) : attaSummary?.totalKg || 0}
+                  {attaSummary?.totalKg?.toFixed
+                    ? attaSummary.totalKg.toFixed(2)
+                    : attaSummary?.totalKg || 0}
                 </p>
               </div>
               <div className="bg-green-50 p-2 rounded text-center">
@@ -258,22 +354,37 @@ const SalesExecutiveDetailPage: React.FC = () => {
             </div>
 
             {/* By Grade */}
-            <h4 className="text-xs font-semibold text-gray-700 mb-2">By Grade</h4>
+            <h4 className="text-xs font-semibold text-gray-700 mb-2">
+              By Grade
+            </h4>
             <div className="space-y-2">
               {(attaSummary?.byGrade || []).map((g: any) => (
-                <div key={g.grade || 'NA'} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                <div
+                  key={g.grade || "NA"}
+                  className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs"
+                >
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-gray-900 truncate">{g.grade || 'Standard'}</div>
-                    <div className="text-gray-500">{(g.kg || 0).toFixed(2)} kg</div>
+                    <div className="font-medium text-gray-900 truncate">
+                      {g.grade || "Standard"}
+                    </div>
+                    <div className="text-gray-500">
+                      {(g.kg || 0).toFixed(2)} kg
+                    </div>
                   </div>
                   <div className="text-right flex-shrink-0 ml-2">
-                    <div className="font-medium text-green-600">{formatCurrency(g.amount || 0)}</div>
-                    <div className="text-gray-500">{formatCurrency(g.avgPricePerKg || 0)}/kg</div>
+                    <div className="font-medium text-green-600">
+                      {formatCurrency(g.amount || 0)}
+                    </div>
+                    <div className="text-gray-500">
+                      {formatCurrency(g.avgPricePerKg || 0)}/kg
+                    </div>
                   </div>
                 </div>
               ))}
               {(!attaSummary || (attaSummary.byGrade || []).length === 0) && (
-                <div className="text-xs text-gray-500 text-center py-4">No Aata items found</div>
+                <div className="text-xs text-gray-500 text-center py-4">
+                  No Aata items found
+                </div>
               )}
             </div>
           </div>
@@ -282,27 +393,36 @@ const SalesExecutiveDetailPage: React.FC = () => {
         {/* Top Customers */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 mb-4">
           <h3 className="text-sm font-semibold text-gray-900 mb-3">
-            {reportType === 'visits' ? 'Top Locations' : 'Top Customers'}
+            {reportType === "visits" ? "Top Locations" : "Top Customers"}
           </h3>
           <div className="space-y-2">
             {topCustomers.map((c: any) => (
-              <div key={c._id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+              <div
+                key={c._id}
+                className="flex items-center justify-between p-2 bg-gray-50 rounded"
+              >
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-gray-900 truncate">
                     {c.customerInfo?.businessName}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {reportType === 'visits' ? `Visits: ${c.totalOrders}` : `Orders: ${c.totalOrders}`}
+                    {reportType === "visits"
+                      ? `Visits: ${c.totalOrders}`
+                      : `Orders: ${c.totalOrders}`}
                   </div>
                 </div>
                 <div className="text-sm font-semibold text-green-600 flex-shrink-0 ml-2">
-                  {reportType === 'visits' ? `${c.totalOrders} visits` : formatCurrency(c.totalSpent)}
+                  {reportType === "visits"
+                    ? `${c.totalOrders} visits`
+                    : formatCurrency(c.totalSpent)}
                 </div>
               </div>
             ))}
             {topCustomers.length === 0 && (
               <div className="text-xs text-gray-500 text-center py-4">
-                {reportType === 'visits' ? 'No location data' : 'No customer data'}
+                {reportType === "visits"
+                  ? "No location data"
+                  : "No customer data"}
               </div>
             )}
           </div>
@@ -310,21 +430,34 @@ const SalesExecutiveDetailPage: React.FC = () => {
 
         {/* Monthly Trend */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 mb-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Monthly Trend (Last 12)</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">
+            Monthly Trend (Last 12)
+          </h3>
           <div className="space-y-2">
             {monthlyTrend.map((m: any) => (
-              <div key={`${m._id.year}-${m._id.month}`} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
-                <div className="font-medium text-gray-700 w-16">{m._id.month}/{m._id.year}</div>
+              <div
+                key={`${m._id.year}-${m._id.month}`}
+                className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs"
+              >
+                <div className="font-medium text-gray-700 w-16">
+                  {m._id.month}/{m._id.year}
+                </div>
                 <div className="text-gray-600">
-                  {reportType === 'visits' ? `Visits: ${m.orders}` : `Orders: ${m.orders}`}
+                  {reportType === "visits"
+                    ? `Visits: ${m.orders}`
+                    : `Orders: ${m.orders}`}
                 </div>
                 <div className="font-medium text-green-600 flex-shrink-0 ml-2">
-                  {reportType === 'visits' ? `${m.orders} visits` : formatCurrency(m.revenue)}
+                  {reportType === "visits"
+                    ? `${m.orders} visits`
+                    : formatCurrency(m.revenue)}
                 </div>
               </div>
             ))}
             {monthlyTrend.length === 0 && (
-              <div className="text-xs text-gray-500 text-center py-4">No trend data</div>
+              <div className="text-xs text-gray-500 text-center py-4">
+                No trend data
+              </div>
             )}
           </div>
         </div>
@@ -332,34 +465,38 @@ const SalesExecutiveDetailPage: React.FC = () => {
         {/* Recent Orders/Visits - Mobile Cards */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
           <h3 className="text-sm font-semibold text-gray-900 mb-3">
-            {reportType === 'visits' ? 'Recent Visits' : 'Recent Orders'}
+            {reportType === "visits" ? "Recent Visits" : "Recent Orders"}
           </h3>
-          
+
           {/* Mobile Card View */}
           <div className="block lg:hidden space-y-3">
             {recentOrders.map((o: any) => (
               <div key={o._id} className="p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900">{o.orderNumber}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">{formatDate(o.orderDate)}</div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {o.orderNumber}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {formatDate(o.orderDate)}
+                    </div>
                     <div className="text-xs text-gray-600 mt-1 truncate">
                       {o.customer?.businessName}
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0 ml-2">
-                    {reportType === 'orders' ? (
+                    {reportType === "orders" ? (
                       <div className="text-sm font-semibold text-green-600">
                         {formatCurrency(o.totalAmount)}
                       </div>
                     ) : (
                       <div className="text-sm font-semibold text-blue-600">
-                        {o.status || 'Pending'}
+                        {o.status || "Pending"}
                       </div>
                     )}
                   </div>
                 </div>
-                {reportType === 'orders' && (
+                {reportType === "orders" && (
                   <div className="flex items-center justify-between pt-2 border-t border-gray-200">
                     <div className="text-xs text-gray-500">Aata KG</div>
                     <div className="text-xs font-medium text-gray-900">
@@ -367,19 +504,38 @@ const SalesExecutiveDetailPage: React.FC = () => {
                     </div>
                   </div>
                 )}
-                {reportType === 'visits' && (
-                  <div className="flex items-center flex-wrap justify-between pt-2 border-t border-gray-200">
-                    <div className="text-xs text-gray-500">Purpose</div>
-                    <div className="text-xs font-medium text-gray-900">
-                      {o.notes || 'General Visit'}
+                {reportType === "visits" && (
+                  <>
+                    <div className="flex items-center flex-wrap justify-between pt-2 border-t border-gray-200">
+                      <div className="text-xs text-gray-500">Purpose</div>
+                      <div className="text-xs font-medium text-gray-900">
+                        {o.notes || "General Visit"}
+                      </div>
                     </div>
-                  </div>
+                    {o.capturedImage && (
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-200 mt-2">
+                        <div className="text-xs text-gray-500">Image</div>
+                        <button
+                          onClick={() => handleViewImage(o.capturedImage)}
+                          className="flex items-center space-x-1 text-xs text-blue-600 hover:text-blue-800"
+                        >
+                          <img
+                            src={resolveCapturedImageSrc(o.capturedImage) || ""}
+                            alt="Check In"
+                            className="w-10 h-10 object-cover group-hover:scale-110 transition-transform"
+                          />
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             ))}
             {recentOrders.length === 0 && (
               <div className="text-xs text-gray-500 text-center py-8">
-                {reportType === 'visits' ? 'No recent visits' : 'No recent orders'}
+                {reportType === "visits"
+                  ? "No recent visits"
+                  : "No recent orders"}
               </div>
             )}
           </div>
@@ -390,20 +546,31 @@ const SalesExecutiveDetailPage: React.FC = () => {
               <thead>
                 <tr className="bg-gray-50">
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">
-                    {reportType === 'visits' ? 'Visit No' : 'Order No'}
+                    {reportType === "visits" ? "Visit No" : "Order No"}
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">Date</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">
-                    {reportType === 'visits' ? 'Location' : 'Customer'}
+                    Date
                   </th>
-                  {reportType === 'orders' ? (
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">
+                    {reportType === "visits" ? "Location" : "Customer"}
+                  </th>
+                  {reportType === "orders" ? (
                     <>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-700">Aata KG</th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-700">Amount</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-700">
+                        Aata KG
+                      </th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-700">
+                        Amount
+                      </th>
                     </>
                   ) : (
                     <>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">Notes</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">
+                        Notes
+                      </th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-700">
+                        Image
+                      </th>
                       {/* <th className="px-3 py-2 text-right text-xs font-medium text-gray-700">Status</th> */}
                     </>
                   )}
@@ -413,18 +580,42 @@ const SalesExecutiveDetailPage: React.FC = () => {
                 {recentOrders.map((o: any) => (
                   <tr key={o._id} className="hover:bg-gray-50">
                     <td className="px-3 py-2 text-sm">{o.orderNumber}</td>
-                    <td className="px-3 py-2 text-sm">{formatDate(o.orderDate)}</td>
-                    <td className="px-3 py-2 text-sm">{o.customer?.businessName}</td>
-                    {reportType === 'orders' ? (
+                    <td className="px-3 py-2 text-sm">
+                      {formatDate(o.orderDate)}
+                    </td>
+                    <td className="px-3 py-2 text-sm">
+                      {o.customer?.businessName}
+                    </td>
+                    {reportType === "orders" ? (
                       <>
-                        <td className="px-3 py-2 text-right text-sm">{(o.attaKg ?? 0).toFixed(2)}</td>
+                        <td className="px-3 py-2 text-right text-sm">
+                          {(o.attaKg ?? 0).toFixed(2)}
+                        </td>
                         <td className="px-3 py-2 text-right text-sm font-medium text-green-600">
                           {formatCurrency(o.totalAmount)}
                         </td>
                       </>
                     ) : (
                       <>
-                        <td className="px-3 py-2 text-sm">{o?.notes || 'General Visit'}</td>
+                        <td className="px-3 py-2 text-sm">
+                          {o?.notes || "General Visit"}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          {o.capturedImage ? (
+                            <button
+                              onClick={() => handleViewImage(o.capturedImage)}
+                              className="inline-flex items-center space-x-1 text-blue-600 hover:text-blue-800 text-sm"
+                            >
+                              <img
+                            src={resolveCapturedImageSrc(o.capturedImage) || ""}
+                            alt="Check In"
+                            className="w-10 h-10 object-cover group-hover:scale-110 transition-transform"
+                          />
+                            </button>
+                          ) : (
+                            <span className="text-gray-400 text-sm">-</span>
+                          )}
+                        </td>
                         {/* <td className="px-3 py-2 text-right text-sm font-medium text-blue-600">
                           {o.status || 'Pending'}
                         </td> */}
@@ -434,8 +625,13 @@ const SalesExecutiveDetailPage: React.FC = () => {
                 ))}
                 {recentOrders.length === 0 && (
                   <tr>
-                    <td className="px-3 py-4 text-center text-sm text-gray-500" colSpan={5}>
-                      {reportType === 'visits' ? 'No recent visits' : 'No recent orders'}
+                    <td
+                      className="px-3 py-4 text-center text-sm text-gray-500"
+                      colSpan={reportType === "visits" ? 5 : 5}
+                    >
+                      {reportType === "visits"
+                        ? "No recent visits"
+                        : "No recent orders"}
                     </td>
                   </tr>
                 )}
@@ -444,6 +640,22 @@ const SalesExecutiveDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Image Modal */}
+      <Modal
+        isOpen={showImageModal}
+        onClose={() => setShowImageModal(false)}
+        title="Captured Image"
+        size="2xl"
+      >
+        <div className="flex justify-center">
+          <img
+            src={selectedImage}
+            alt="Captured"
+            className="max-w-full max-h-96 object-contain rounded-lg"
+          />
+        </div>
+      </Modal>
     </div>
   );
 };
