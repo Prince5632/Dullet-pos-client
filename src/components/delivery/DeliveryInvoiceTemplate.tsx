@@ -1,5 +1,9 @@
 import React from "react";
-import type { DeliveryInvoiceProps } from "../../types/deliveryInvoice";
+
+interface DeliveryInvoiceProps {
+  data: any;
+  onPrint?: () => void;
+}
 
 const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
   data,
@@ -11,6 +15,76 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
     } else {
       window.print();
     }
+  };
+
+  // Helper function to safely access nested properties
+  const getOrderData = () => {
+    // Support both direct data and nested order structure
+    return data.order || data;
+  };
+
+  const orderData = getOrderData();
+  const company = data.company || {};
+  const customer = orderData.customer || {};
+  const items = orderData.items || [];
+
+  // Format date helper
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  // Calculate total amount
+  const calculateTotal = () => {
+    return items.reduce((total: number, item: any) => {
+      return total + (item.totalAmount || item.taxableValue || 0);
+    }, 0);
+  };
+
+  // Simple number to words conversion (basic implementation)
+  const numberToWords = (num: number): string => {
+    if (num === 0) return 'Zero';
+    
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    
+    const convertHundreds = (n: number): string => {
+      let result = '';
+      if (n >= 100) {
+        result += ones[Math.floor(n / 100)] + ' Hundred ';
+        n %= 100;
+      }
+      if (n >= 20) {
+        result += tens[Math.floor(n / 10)] + ' ';
+        n %= 10;
+      } else if (n >= 10) {
+        result += teens[n - 10] + ' ';
+        return result;
+      }
+      if (n > 0) {
+        result += ones[n] + ' ';
+      }
+      return result;
+    };
+    
+    let result = '';
+    const crores = Math.floor(num / 10000000);
+    const lakhs = Math.floor((num % 10000000) / 100000);
+    const thousands = Math.floor((num % 100000) / 1000);
+    const hundreds = num % 1000;
+    
+    if (crores > 0) result += convertHundreds(crores) + 'Crore ';
+    if (lakhs > 0) result += convertHundreds(lakhs) + 'Lakh ';
+    if (thousands > 0) result += convertHundreds(thousands) + 'Thousand ';
+    if (hundreds > 0) result += convertHundreds(hundreds);
+    
+    return result.trim();
   };
 
   return (
@@ -29,7 +103,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
           {/* Header Section with Logo and Tax Invoice */}
           <div className=" flex flex-col justify-center ">
             <div className="logo-section text-center">
-              <div className="blinkit-logo">Dulltet Industries</div>
+              <div className="blinkit-logo">{company.name || 'Dullet Industries'}</div>
             </div>
             <div className=" border text-[20px] border-l-0 border-r-0 py-3 flex justify-center items-center font-bold">
               Delivery Chalan
@@ -40,25 +114,25 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
           <div className="info-section">
             <div className="sold-by-section">
               <div className="section-title">Sold By / Seller</div>
-              <div className="company-name">{data.company.name}</div>
-              <div className="company-address">{data.company.address}</div>
+              <div className="company-name">{company.name || 'Dullet Industries'}</div>
+              <div className="company-address">{company.address}</div>
               <div className="company-address">
-                {data.company.city}, {data.company.state} {data.company.pincode}
+                {company.city}{company.state ? `, ${company.state}` : ''} {company.pincode}
               </div>
-              <div className="company-address">{data.company.city}</div>
-              <div className="company-address">{data.company.pincode}</div>
 
               <div className="company-details">
                 <div className="detail-row">
                   <span className="detail-label">GSTIN</span>
                   <span className="detail-colon">:</span>
-                  <span className="detail-value">{data.company.gstin}</span>
+                  <span className="detail-value">{company.gstin || 'N/A'}</span>
                 </div>
-                <div className="detail-row">
-                  <span className="detail-label">PAN</span>
-                  <span className="detail-colon">:</span>
-                  <span className="detail-value">{data.company.pan}</span>
-                </div>
+                {company.pan && (
+                  <div className="detail-row">
+                    <span className="detail-label">PAN</span>
+                    <span className="detail-colon">:</span>
+                    <span className="detail-value">{company.pan}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -66,24 +140,33 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
               <div className="invoice-meta">
                 <div className="meta-row">
                   <span className="meta-label">Order Id</span>
-                  <span className="meta-value">{data.orderId}</span>
+                  <span className="meta-value">{orderData.orderNumber || orderData._id || data.orderId || 'N/A'}</span>
                 </div>
                 <div className="meta-row">
                   <span className="meta-label">Invoice Date</span>
-                  <span className="meta-value">{data.invoiceDate}</span>
+                  <span className="meta-value">{formatDate(orderData.orderDate || orderData.createdAt || data.invoiceDate)}</span>
                 </div>
                 <div className="meta-row">
                   <span className="meta-label">Place of Supply</span>
-                  <span className="meta-value">{data.placeOfSupply}</span>
+                  <span className="meta-value">{data.placeOfSupply || customer.address?.state || customer.state || 'N/A'}</span>
                 </div>
               </div>
 
               <div className="invoice-to">
                 <div className="section-title">Invoice To</div>
-                <div className="customer-name">{data.customer.name}</div>
-                <div className="customer-address">{data.customer.address}</div>
-                <div className="customer-city">{data.customer.city}</div>
-                <div className="customer-state">{data.customer.state}</div>
+                <div className="customer-name">{customer.businessName || customer.name || 'N/A'}</div>
+                <div className="customer-address">
+                  {customer.address?.street || customer.address || 'N/A'}
+                </div>
+                <div className="customer-city">
+                  {customer.address?.city || customer.city || 'N/A'}
+                </div>
+                <div className="customer-state">
+                  {customer.address?.state || customer.state || 'N/A'} {customer.address?.pincode || customer.pincode || ''}
+                </div>
+                {customer.phone && (
+                  <div className="customer-phone">Phone: {customer.phone}</div>
+                )}
               </div>
             </div>
           </div>
@@ -102,19 +185,21 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {data.items.map((item, index) => (
-                  <tr key={index}>
+                {items.map((item: any, index: number) => (
+                  <tr key={item._id || index}>
                     <td>{index + 1}</td>
-                    <td>{item.description}</td>
+                    <td>{item.productName || item.description || 'N/A'}</td>
                     <td>{item.hsnCode || 'N/A'}</td>
-                    <td>{item.quantity}</td>
-                    <td>₹{item?.rate?.toFixed(2)}</td>
-                    <td>₹{item?.taxableValue?.toFixed(2)}</td>
+                    <td>{item.quantity} {item.unit || ''}</td>
+                    <td>₹{(item.ratePerUnit || item.rate || 0).toFixed(2)}</td>
+                    <td>₹{(item.totalAmount || item.taxableValue || 0).toFixed(2)}</td>
                   </tr>
                 ))}
                 <tr className="total-row">
-                  <td colSpan="5" className="total-label">Total</td>
-                  <td className="total-value border text-center">₹{data?.totals?.grandTotal?.toFixed(2)}</td>
+                  <td colSpan={5} className="total-label">Total</td>
+                  <td className="total-value border text-center">
+                    ₹{(orderData.totalAmount || orderData.subtotal || data?.totals?.grandTotal || calculateTotal()).toFixed(2)}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -123,27 +208,51 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
            <div className="signatures-section">
              <div className="delivery-signature">
                <div className="signature-title">Delivery Partner Signature</div>
-               <div className="signature-box"></div>
-               <div className="signature-label">Signature</div>
+               <div className="signature-box">
+                 {orderData.signatures?.driver && (
+                   <img 
+                     src={orderData.signatures.driver} 
+                     alt="Driver Signature" 
+                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                   />
+                 )}
+               </div>
+               <div className="signature-label">
+                 {orderData.driverAssignment?.driver ? 
+                   `${orderData.driverAssignment.driver.firstName} ${orderData.driverAssignment.driver.lastName}` : 
+                   'Signature'
+                 }
+               </div>
              </div>
              <div className="customer-signature">
                <div className="signature-title">Customer Signature</div>
-               <div className="signature-box"></div>
+               <div className="signature-box">
+                 {orderData.signatures?.receiver && (
+                   <img 
+                     src={orderData.signatures.receiver} 
+                     alt="Customer Signature" 
+                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                   />
+                 )}
+               </div>
                <div className="signature-label">Signature</div>
              </div>
            </div>
           {/* Amount in Words and Company Signature */}
            <div className="bottom-section">
-            
              <div className="amount-words">
                <span className="words-label">Amount in Words:</span>
-               <span className="words-value">{data.totals.amountInWords}</span>
+               <span className="words-value">
+                 {data.totals?.amountInWords || 
+                  `${numberToWords(orderData.totalAmount || orderData.subtotal || calculateTotal())} Rupees Only`}
+               </span>
              </div>
-             {/* <div className="signature-section">
-               <div className="company-signature">For {data.company.name}</div>
-               <div className="signature-space"></div>
-               <div className="authorized-signature">Authorized Signature</div>
-             </div> */}
+             {orderData.driverAssignment?.vehicleNumber && (
+               <div className="vehicle-info">
+                 <span className="vehicle-label">Vehicle Number:</span>
+                 <span className="vehicle-value">{orderData.driverAssignment.vehicleNumber}</span>
+               </div>
+             )}
            </div>
 
          
@@ -426,6 +535,20 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
 
         .words-label {
           font-weight: bold;
+        }
+
+        .vehicle-info {
+          margin-bottom: 10px;
+          font-size: 12px;
+          color: #000;
+        }
+        
+        .vehicle-label {
+          font-weight: bold;
+        }
+        
+        .vehicle-value {
+          font-weight: normal;
         }
 
         .signature-section {

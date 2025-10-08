@@ -1,6 +1,6 @@
 import React from 'react';
 import DeliveryInvoiceTemplate from '../../components/delivery/DeliveryInvoiceTemplate';
-import { sampleDeliveryData } from '../../data/sampleDeliveryData';
+import { sampleDeliveryData2 } from '../../data/sampleDeliveryData';
 
 const DeliveryInvoiceTest: React.FC = () => {
   const handlePrint = () => {
@@ -20,9 +20,8 @@ const DeliveryInvoiceTest: React.FC = () => {
         </div>
 
         <DeliveryInvoiceTemplate 
-          data={sampleDeliveryData}
+          data={sampleDeliveryData2}
           onPrint={handlePrint}
-          className="shadow-lg"
         />
 
       </div>
