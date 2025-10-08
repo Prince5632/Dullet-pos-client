@@ -16,6 +16,7 @@ import {
   ClockIcon,
   DocumentTextIcon,
 } from "@heroicons/react/24/outline";
+import { useAuth } from "../../contexts/AuthContext";
 import { userService } from "../../services/userService";
 import type { User } from "../../types";
 import { formatDateTime, formatDate } from "../../utils";
@@ -29,6 +30,7 @@ import { resolveCapturedImageSrc, resolveProfileImageSrc, resolveDocumentSrc } f
 const UserDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
 
   // State
   const [user, setUser] = useState<User | null>(null);
@@ -287,15 +289,17 @@ const UserDetailsPage: React.FC = () => {
             </span>
           </Link>
 
-          <button
-            onClick={() => setDeleteModalOpen(true)}
-            className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors whitespace-nowrap"
-          >
-            <TrashIcon className="h-4 w-4 mr-2 shrink-0" />
-            <span className="break-words [overflow-wrap:anywhere] text-wrap">
-              Delete
-            </span>
-          </button>
+          {currentUser?.role?.name === 'Super Admin' && (
+            <button
+              onClick={() => setDeleteModalOpen(true)}
+              className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors whitespace-nowrap"
+            >
+              <TrashIcon className="h-4 w-4 mr-2 shrink-0" />
+              <span className="break-words [overflow-wrap:anywhere] text-wrap">
+                Delete
+              </span>
+            </button>
+          )}
         </div>
       </div>
 

@@ -33,7 +33,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
   const [endDate, setEndDate] = useState("");
   const [sortBy, setSortBy] = useState("totalRevenue");
   const [sortOrder, setSortOrder] = useState("desc");
-  const [department, setDepartment] = useState("Sales");
+  const [department, setDepartment] = useState("");
   const [godowns, setGodowns] = useState<any[]>([]);
   const [godownId, setGodownId] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -68,8 +68,9 @@ const SalesExecutiveReportsPage: React.FC = () => {
       
       if (effectiveStartDate) params.dateFrom = effectiveStartDate;
       if (effectiveEndDate) params.dateTo = effectiveEndDate;
+      // Pass department to ensure consistent counts with reports (only if specified)
+      if (department) params.department = department;
       // Note: Don't pass godownId here as we want counts for all godowns
-      // Don't pass department filter to godowns as it's user-specific, not order-specific
       
       const resp = await godownService.getGodowns(params);
       setGodowns(resp.data?.godowns || []);
@@ -84,7 +85,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
       const params: any = overrideParams || { 
         sortBy, 
         sortOrder, 
-        department,
+        ...(department && { department }),
         ...(startDate && { startDate }),
         ...(endDate && { endDate }),
         ...(godownId && { godownId })
@@ -138,14 +139,14 @@ const SalesExecutiveReportsPage: React.FC = () => {
     setEndDate("");
     setSortBy("totalRevenue");
     setSortOrder("desc");
-    setDepartment("Sales");
+    setDepartment("");
     setGodownId("");
     
     // Fetch reports with reset values immediately
     const resetParams = {
       sortBy: "totalRevenue",
       sortOrder: "desc",
-      department: "Sales"
+      department: ""
       // startDate, endDate, and godownId are intentionally omitted (reset to empty)
     };
     fetchReports(resetParams);
@@ -644,7 +645,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
           >
             <FunnelIcon className="h-4 w-4" />
             {showFilters ? "Hide Filters" : "Show Filters"}
-            {(startDate || endDate || department !== "Sales") && (
+            {(startDate || endDate || department !== "") && (
               <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-medium text-white bg-blue-600 rounded-full">
                 !
               </span>
@@ -708,6 +709,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
                     onChange={(e) => setDepartment(e.target.value)}
                     className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
+                    <option value="">Choose department</option>
                     <option value="Sales">Sales</option>
                     <option value="Production">Production</option>
                     <option value="Management">Management</option>

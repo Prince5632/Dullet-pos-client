@@ -1144,7 +1144,8 @@ const OrdersPage: React.FC = () => {
           </div>
         </div>
         {(user?.role?.name?.toLowerCase() === "super admin" ||
-          user?.role?.name?.toLowerCase() === "admin") && (
+          user?.role?.name?.toLowerCase() === "admin" ||
+          user?.role?.name?.toLowerCase() === "manager") && (
           <>
             {/* Godown Selector - Cards (matches Dashboard design) */}
             {godowns.length > 0 && (

@@ -43,13 +43,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
 
   return (
     <div className="delivery-invoice">
-      {/* Print Button - Hidden during print */}
-      <div className="print-controls no-print">
-        <button onClick={handlePrint} className="print-btn">
-          Print Invoice
-        </button>
-      </div>
-
+      
       {/* Invoice Content - Mimicking the exact SVG layout */}
       <div className="invoice-page p-6">
         {/* Main Border Container */}
@@ -319,8 +313,6 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
           width: 100%;
           max-width: 793px;
           margin: 0 auto;
-          background: #777;
-          padding: 5px 0;
           font-family: "DejaVu Sans", Arial, sans-serif;
           font-size: 12px;
           line-height: 1.4;

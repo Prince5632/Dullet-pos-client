@@ -601,7 +601,7 @@ const DashboardPage: React.FC = () => {
       {roleName === "manager" && (
         <>
           {/* Enhanced Responsive Manager Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {stats &&
               [
                 {
@@ -621,14 +621,7 @@ const DashboardPage: React.FC = () => {
                   bgColor: "bg-blue-500",
                   link: "/orders",
                 },
-                {
-                  label: "Team",
-                  value: "95%",
-                  subtitle: "Performance",
-                  icon: TruckIcon,
-                  bgColor: "bg-green-500",
-                  link: "/reports/sales-executives",
-                },
+               
               ].map((stat) => (
                 <div
                   key={stat.label}

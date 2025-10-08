@@ -487,7 +487,7 @@ const UsersPage: React.FC = () => {
               <UserPlusIcon className="h-3.5 w-3.5" />
             )}
           </button>
-          {currentUser?._id !== user._id && (
+          {currentUser?._id !== user._id && currentUser?.role?.name === 'Super Admin' && (
             <button
               onClick={() => {
                 setUserToDelete(user);
@@ -715,14 +715,16 @@ const UsersPage: React.FC = () => {
                 <UserMinusIcon className="h-3 w-3" />
                 Deactivate
               </button>
-              <button
-                onClick={handleBulkDelete}
-                disabled={bulkActionLoading}
-                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 disabled:opacity-50 transition-colors"
-              >
-                <TrashIcon className="h-3 w-3" />
-                Delete
-              </button>
+              {currentUser?.role?.name === 'Super Admin' && (
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={bulkActionLoading}
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 disabled:opacity-50 transition-colors"
+                >
+                  <TrashIcon className="h-3 w-3" />
+                  Delete
+                </button>
+              )}
               <button
                 onClick={() => setBulkRoleModalOpen(true)}
                 disabled={bulkActionLoading}
