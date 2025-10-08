@@ -100,6 +100,7 @@ const OrdersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
+  const [totalAmountSum, setTotalAmountSum] = useState(0);
   const [limit, setLimit] = useState(10);
 
   // Sorting
@@ -198,9 +199,11 @@ const OrdersPage: React.FC = () => {
         if (pagination) {
           setTotalPages(pagination.totalPages || 1);
           setTotalOrders(pagination.totalOrders || 0);
+          setTotalAmountSum(pagination.totalAmountSum || 0);
         } else {
           setTotalPages(1);
           setTotalOrders(response.data.orders?.length || 0);
+          setTotalAmountSum(0);
         }
       }
     } catch (err) {
@@ -1355,7 +1358,7 @@ const OrdersPage: React.FC = () => {
                 <div className="text-xs text-gray-500">Value</div>
                 <div className="font-semibold text-xs">
                   {orderService.formatCurrency(
-                    orders.reduce((sum, o) => sum + o.totalAmount, 0)
+                    totalAmountSum
                   )}
                 </div>
               </div>
