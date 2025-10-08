@@ -1,76 +1,82 @@
 // API Configuration
 export const API_CONFIG = {
-  // BASE_URL: import.meta.env.VITE_API_URL || 'https://dullet.sensationsolutions.in',
+  // BASE_URL:
+    // import.meta.env.VITE_API_URL || "https://dullet.sensationsolutions.in",
   BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
   ENDPOINTS: {
     // Auth endpoints
-    LOGIN: '/api/auth/login',
-    LOGOUT: '/api/auth/logout',
-    PROFILE: '/api/auth/profile',
-    CHANGE_PASSWORD: '/api/auth/change-password',
-    REFRESH_TOKEN: '/api/auth/refresh-token',
-    
+    LOGIN: "/api/auth/login",
+    LOGOUT: "/api/auth/logout",
+    PROFILE: "/api/auth/profile",
+    CHANGE_PASSWORD: "/api/auth/change-password",
+    REFRESH_TOKEN: "/api/auth/refresh-token",
+
     // User endpoints
-    USERS: '/api/users',
+    USERS: "/api/users",
     USER_BY_ID: (id: string) => `/api/users/${id}`,
     ACTIVATE_USER: (id: string) => `/api/users/${id}/activate`,
     DEACTIVATE_USER: (id: string) => `/api/users/${id}/deactivate`,
-    
+
     // Role endpoints
-    ROLES: '/api/roles',
+    ROLES: "/api/roles",
     ROLE_BY_ID: (id: string) => `/api/roles/${id}`,
     ROLE_PERMISSIONS: (id: string) => `/api/roles/${id}/permissions`,
     ACTIVATE_ROLE: (id: string) => `/api/roles/${id}/activate`,
-    AVAILABLE_PERMISSIONS: '/api/roles/permissions/available',
-    
+    AVAILABLE_PERMISSIONS: "/api/roles/permissions/available",
+
     // Customer endpoints
-    CUSTOMERS: '/api/customers',
+    CUSTOMERS: "/api/customers",
     CUSTOMER_BY_ID: (id: string) => `/api/customers/${id}`,
     ACTIVATE_CUSTOMER: (id: string) => `/api/customers/${id}/activate`,
-    CUSTOMER_STATS: '/api/customers/stats/summary',
-    
+    CUSTOMER_STATS: "/api/customers/stats/summary",
+
     // Order endpoints
-    ORDERS: '/api/orders',
+    ORDERS: "/api/orders",
     ORDER_BY_ID: (id: string) => `/api/orders/${id}`,
     ORDER_APPROVE: (id: string) => `/api/orders/${id}/approve`,
     ORDER_REJECT: (id: string) => `/api/orders/${id}/reject`,
     ORDER_ASSIGN_DRIVER: (id: string) => `/api/orders/${id}/assign-driver`,
     ORDER_UNASSIGN_DRIVER: (id: string) => `/api/orders/${id}/unassign-driver`,
-    ORDER_OUT_FOR_DELIVERY: (id: string) => `/api/orders/${id}/out-for-delivery`,
+    ORDER_OUT_FOR_DELIVERY: (id: string) =>
+      `/api/orders/${id}/out-for-delivery`,
     ORDER_RECORD_DELIVERY: (id: string) => `/api/orders/${id}/record-delivery`,
-    CUSTOMER_ORDER_HISTORY: (customerId: string) => `/api/orders/customer/${customerId}/history`,
-    ORDER_STATS: '/api/orders/stats/summary',
+    CUSTOMER_ORDER_HISTORY: (customerId: string) =>
+      `/api/orders/customer/${customerId}/history`,
+    ORDER_STATS: "/api/orders/stats/summary",
     // Visit endpoints
-    CREATE_VISIT: '/api/orders/visits',
-    VISITS: '/api/orders/visits',
+    CREATE_VISIT: "/api/orders/visits",
+    VISITS: "/api/orders/visits",
     VISIT_BY_ID: (id: string) => `/api/orders/visits/${id}`,
     // Quick-order endpoints
-    QUICK_PRODUCTS: '/api/orders/quick/products',
-    QUICK_ORDER: '/api/orders/quick',
-    
-  // Godown endpoints
-  GODOWNS: '/api/godowns',
-  GODOWN_BY_ID: (id: string) => `/api/godowns/${id}`,
+    QUICK_PRODUCTS: "/api/orders/quick/products",
+    QUICK_ORDER: "/api/orders/quick",
 
-  // Inventory endpoints
-  INVENTORY: '/api/inventory',
-  INVENTORY_BY_ID: (id: string) => `/api/inventory/${id}`,
-  INVENTORY_STATS: '/api/inventory/stats/summary',
-  INVENTORY_BY_GODOWN: (godownId: string) => `/api/inventory/godown/${godownId}`,
+    // Godown endpoints
+    GODOWNS: "/api/godowns",
+    GODOWN_BY_ID: (id: string) => `/api/godowns/${id}`,
 
-  // Attendance endpoints
-  ATTENDANCE: '/api/attendance',
-  ATTENDANCE_BY_ID: (id: string) => `/api/attendance/${id}`,
-  ATTENDANCE_STATS: '/api/attendance/stats',
-  ATTENDANCE_TODAY: '/api/attendance/today',
-  ATTENDANCE_TODAY_BY_USER: (userId: string) => `/api/attendance/today/${userId}`,
-  ATTENDANCE_CHECK_IN: '/api/attendance/check-in',
-  ATTENDANCE_CHECK_OUT: '/api/attendance/check-out',
-  ATTENDANCE_CHECK_OUT_BY_ID: (id: string) => `/api/attendance/${id}/check-out`,
-    
+    // Inventory endpoints
+    INVENTORY: "/api/inventory",
+    INVENTORY_BY_ID: (id: string) => `/api/inventory/${id}`,
+    INVENTORY_STATS: "/api/inventory/stats/summary",
+    INVENTORY_BY_GODOWN: (godownId: string) =>
+      `/api/inventory/godown/${godownId}`,
+
+    // Attendance endpoints
+    ATTENDANCE: "/api/attendance",
+    ATTENDANCE_BY_ID: (id: string) => `/api/attendance/${id}`,
+    ATTENDANCE_STATS: "/api/attendance/stats",
+    ATTENDANCE_TODAY: "/api/attendance/today",
+    ATTENDANCE_TODAY_BY_USER: (userId: string) =>
+      `/api/attendance/today/${userId}`,
+    ATTENDANCE_CHECK_IN: "/api/attendance/check-in",
+    ATTENDANCE_CHECK_OUT: "/api/attendance/check-out",
+    ATTENDANCE_CHECK_OUT_BY_ID: (id: string) =>
+      `/api/attendance/${id}/check-out`,
+
     // System endpoints
-    HEALTH: '/api/health'
-  }
+    HEALTH: "/api/health",
+  },
 };
 
 // Request/Response configurations
@@ -83,8 +89,12 @@ export const REQUEST_CONFIG = {
 // File upload configurations
 export const UPLOAD_CONFIG = {
   MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
-  ACCEPTED_IMAGE_TYPES: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
-  ACCEPTED_DOCUMENT_TYPES: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+  ACCEPTED_IMAGE_TYPES: ["image/jpeg", "image/jpg", "image/png", "image/webp"],
+  ACCEPTED_DOCUMENT_TYPES: [
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ],
 };
 
 // Pagination configurations
@@ -96,11 +106,12 @@ export const PAGINATION_CONFIG = {
 
 // App configurations
 export const APP_CONFIG = {
-  APP_NAME: 'Dullet Industries POS',
-  LOGO_URL: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSl-e2zS5iPvDMHvbCfA9aCvYYlSuBukcqElS0ewrn-wKVY9b53',
-  APP_VERSION: '1.0.0',
-  COMPANY_NAME: 'Dullet Industries',
-  COMPANY_WEBSITE: 'https://www.dulletindustries.in',
+  APP_NAME: "Dullet Industries POS",
+  LOGO_URL:
+    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSl-e2zS5iPvDMHvbCfA9aCvYYlSuBukcqElS0ewrn-wKVY9b53",
+  APP_VERSION: "1.0.0",
+  COMPANY_NAME: "Dullet Industries",
+  COMPANY_WEBSITE: "https://www.dulletindustries.in",
   SESSION_TIMEOUT: 10 * 60 * 60 * 1000, // 10 hours
   AUTO_SAVE_INTERVAL: 5 * 60 * 1000, // 5 minutes
 };
