@@ -43,7 +43,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
 
   return (
     <div className="delivery-invoice">
-      
+     
       {/* Invoice Content - Mimicking the exact SVG layout */}
       <div className="invoice-page p-6">
         {/* Main Border Container */}
@@ -56,7 +56,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
               </div>
             </div>
             <div className=" border text-[20px] border-l-0 border-r-0 py-3 flex justify-center items-center font-bold">
-              Delivery Chalan
+              Delivery Challan
             </div>
           </div>
           <div className="border border-l-0 p-1 border-t-0 border-r-0">
@@ -68,6 +68,10 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
             {formatDate(
               orderData.orderDate || orderData.createdAt || data.invoiceDate
             )}
+          </div>
+          <div className="border border-l-0 p-1 border-t-0 border-r-0">
+            <strong>GSTIN:</strong>{" "}
+            {company.gstin || "N/A"}
           </div>
 
           {/* Company and Customer Info Section */}
@@ -108,13 +112,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
                     <span className="detail-value">{orderData.godown.contact.email}</span>
                   </div>
                 )}
-                {company.pan && (
-                  <div className="detail-row">
-                    <span className="detail-label">PAN</span>
-                    <span className="detail-colon">:</span>
-                    <span className="detail-value">{company.pan}</span>
-                  </div>
-                )}
+                
               </div>
             </div>
 
@@ -164,10 +162,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
             <strong>Vehicle Number:</strong>{" "}
             {orderData.driverAssignment?.vehicleNumber || "N/A"}
           </div>
-          <div className="border border-l-0 p-1 border-t-0 border-r-0">
-            <strong>GSTIN:</strong>{" "}
-            {company.gstin || "N/A"}
-          </div>
+          
 
           {/* Items Table */}
           <div className="items-table-container">
@@ -262,11 +257,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
                   />
                 )}
               </div>
-              <div className="signature-label">
-                {orderData.driverAssignment?.driver
-                  ? `${orderData.driverAssignment.driver.firstName} ${orderData.driverAssignment.driver.lastName}`
-                  : "Signature"}
-              </div>
+             
             </div>
             <div className="customer-signature">
               <div className="signature-title">Customer Signature</div>
@@ -283,7 +274,6 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
                   />
                 )}
               </div>
-              <div className="signature-label">Signature</div>
             </div>
           </div>
 

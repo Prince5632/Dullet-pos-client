@@ -58,8 +58,6 @@ const CustomerDetailPage = lazy(() => import('../pages/reports/CustomerDetailPag
 
 // Settings Pages
 
-// Test Pages
-const DeliveryInvoiceTest = lazy(() => import('../pages/test/DeliveryInvoiceTest'));
 
 // Error Pages
 const NotFoundPage = lazy(() => import('../pages/errors/NotFoundPage'));
@@ -429,11 +427,6 @@ export const router = createBrowserRouter([
         ),
       },
 
-      // Test Pages
-      {
-        path: 'test/delivery-invoice',
-        element: <DeliveryInvoiceTest />,
-      },
 
       // Error pages within dashboard
       {
