@@ -8,6 +8,7 @@ import {
   FunnelIcon,
   UserGroupIcon,
   ChartBarIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { getGodownSalesReports } from '../../services/reportService';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
@@ -109,29 +110,44 @@ const GodownSalesReportsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
-          <p className="mt-1 text-sm text-gray-500">Godown-wise sales performance</p>
+      <div className='p-3 bg-white'>
+      <div className="flex justify-between items-center mb-3">
+        <div className="">
+        <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <ChartBarIcon className="w-4 h-4 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900">Reports</h1>
+                <p className="text-xs text-gray-500 hidden sm:block">
+                  Track performance insights
+                </p>
+              </div>
+            </div>
         </div>
-        <button onClick={exportToCSV} className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-          <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
-          Export CSV
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={fetchReports} className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+            <ArrowPathIcon className="h-5 w-5 mr-2" />
+            Sync
+          </button>
+          <button onClick={exportToCSV} className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+            <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
+            Export CSV
+          </button>
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          <Link to="/reports/sales-executives" className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2">
+
+        <nav className="flex space-x-4 overflow-x-auto no-scrollbar mb-3">
+          <Link to="/reports/sales-executives" className="flex items-center gap-1.5 px-3 py-2 text-gray-500 font-medium text-sm whitespace-nowrap">
             <UserGroupIcon className="h-5 w-5" />
             Sales Executives
           </Link>
-          <Link to="/reports/customers" className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2">
+          <Link to="/reports/customers" className="flex items-center gap-1.5 px-3 py-2 text-gray-500 font-medium text-sm whitespace-nowrap">
             <ChartBarIcon className="h-5 w-5" />
             Customers
           </Link>
-          <Link to="/reports/godowns" className="border-blue-500 text-blue-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2">
+          <Link to="/reports/godowns" className="flex items-center gap-1.5 px-3 py-2 border-b-2 border-blue-500 text-blue-600 font-medium text-sm whitespace-nowrap">
             <BuildingOffice2Icon className="h-5 w-5" />
             Godowns
           </Link>

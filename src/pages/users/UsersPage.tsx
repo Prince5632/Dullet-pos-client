@@ -15,6 +15,7 @@ import {
   ShieldCheckIcon,
   UsersIcon,
   XMarkIcon,
+  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../contexts/AuthContext";
 import { userService } from "../../services/userService";
@@ -65,6 +66,7 @@ const UsersPage: React.FC = () => {
   const [selectedRoleForBulk, setSelectedRoleForBulk] = useState<Role | null>(
     null
   );
+  const [syncing, setSyncing] = useState(false);
 
   // Filters
   const [filters, setFilters] = useState<UserListFilters>({
@@ -132,6 +134,21 @@ const UsersPage: React.FC = () => {
       setRoles(allRoles);
     } catch (error) {
       console.error("Failed to load roles:", error);
+    }
+  };
+
+  // Handle sync functionality
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await Promise.all([
+        loadUsers(),
+        loadRoles()
+      ]);
+    } catch (error) {
+      console.error("Failed to sync users data:", error);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -507,14 +524,26 @@ const UsersPage: React.FC = () => {
               </div>
             </div>
 
-            <Link
-              to="/users/create"
-              className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-            >
-              <PlusIcon className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Add User</span>
-              <span className="sm:hidden">Add</span>
-            </Link>
+            <div className="flex gap-2">
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="inline-flex cursor-pointer gap-1 items-center px-3 py-1.5 text-sm font-medium rounded-lg text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Sync Users Data"
+              >
+                <ArrowPathIcon 
+                  className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} 
+                /> Sync
+              </button>
+              <Link
+                to="/users/create"
+                className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+              >
+                <PlusIcon className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">Add User</span>
+                <span className="sm:hidden">Add</span>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

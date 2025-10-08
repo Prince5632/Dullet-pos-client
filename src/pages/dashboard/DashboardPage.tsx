@@ -22,6 +22,7 @@ import {
   FireIcon,
   LightBulbIcon,
   ChevronRightIcon,
+  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../contexts/AuthContext";
 import { orderService } from "../../services/orderService";
@@ -65,6 +66,7 @@ const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [godowns, setGodowns] = useState<Godown[]>([]);
   const [selectedGodownId, setSelectedGodownId] = useState<string>("");
+  const [syncing, setSyncing] = useState(false);
   const navigate = useNavigate();
   useEffect(() => {
     (async () => {
@@ -183,6 +185,17 @@ const DashboardPage: React.FC = () => {
     }
   };
 
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await fetchDashboardData(selectedGodownId);
+    } catch (error) {
+      console.error("Failed to sync dashboard data:", error);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
@@ -225,6 +238,17 @@ const DashboardPage: React.FC = () => {
                     {user?.role?.name} Dashboard
                   </p>
                 </div>
+                {/* Mobile Sync Button */}
+                <button
+                  onClick={handleSync}
+                  disabled={syncing}
+                  className="sm:hidden cursor-pointer p-2 text-white hover:bg-emerald-600/50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Sync Dashboard Data"
+                >
+                  <ArrowPathIcon 
+                    className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`} 
+                  />
+                </button>
               </div>
             </div>
 
@@ -241,6 +265,17 @@ const DashboardPage: React.FC = () => {
                 </p>
                 <p className="text-xs text-emerald-100">Revenue</p>
               </div>
+              <div className="h-8 w-px bg-emerald-300/50"></div>
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="p-2 cursor-pointer text-white hover:bg-emerald-600/50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Sync Dashboard Data"
+              >
+                <ArrowPathIcon 
+                  className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`} 
+                />
+              </button>
             </div>
           </div>
         </div>

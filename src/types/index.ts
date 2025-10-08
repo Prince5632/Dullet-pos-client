@@ -550,7 +550,7 @@ export interface InventoryListParams {
   limit?: number;
   search?: string;
   inventoryType?: string;
-  godownId?: string;
+  godown?: string;
   dateFrom?: string;
   dateTo?: string;
   sortBy?: string;
