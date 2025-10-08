@@ -2,20 +2,12 @@ import React from "react";
 
 interface DeliveryInvoiceProps {
   data: any;
-  onPrint?: () => void;
 }
 
 const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
   data,
-  onPrint,
 }) => {
-  const handlePrint = () => {
-    if (onPrint) {
-      onPrint();
-    } else {
-      window.print();
-    }
-  };
+  
 
   // Helper function to safely access nested properties
   const getOrderData = () => {
@@ -30,12 +22,12 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
 
   // Format date helper
   const formatDate = (dateString: string) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return "N/A";
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
+    return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
     });
   };
 
@@ -47,45 +39,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
   };
 
   // Simple number to words conversion (basic implementation)
-  const numberToWords = (num: number): string => {
-    if (num === 0) return 'Zero';
-    
-    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
-    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    
-    const convertHundreds = (n: number): string => {
-      let result = '';
-      if (n >= 100) {
-        result += ones[Math.floor(n / 100)] + ' Hundred ';
-        n %= 100;
-      }
-      if (n >= 20) {
-        result += tens[Math.floor(n / 10)] + ' ';
-        n %= 10;
-      } else if (n >= 10) {
-        result += teens[n - 10] + ' ';
-        return result;
-      }
-      if (n > 0) {
-        result += ones[n] + ' ';
-      }
-      return result;
-    };
-    
-    let result = '';
-    const crores = Math.floor(num / 10000000);
-    const lakhs = Math.floor((num % 10000000) / 100000);
-    const thousands = Math.floor((num % 100000) / 1000);
-    const hundreds = num % 1000;
-    
-    if (crores > 0) result += convertHundreds(crores) + 'Crore ';
-    if (lakhs > 0) result += convertHundreds(lakhs) + 'Lakh ';
-    if (thousands > 0) result += convertHundreds(thousands) + 'Thousand ';
-    if (hundreds > 0) result += convertHundreds(hundreds);
-    
-    return result.trim();
-  };
+
 
   return (
     <div className="delivery-invoice">
@@ -97,35 +51,69 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
       </div>
 
       {/* Invoice Content - Mimicking the exact SVG layout */}
-      <div className="invoice-page">
+      <div className="invoice-page p-6">
         {/* Main Border Container */}
         <div className="invoice-container">
           {/* Header Section with Logo and Tax Invoice */}
           <div className=" flex flex-col justify-center ">
             <div className="logo-section text-center">
-              <div className="blinkit-logo">{company.name || 'Dullet Industries'}</div>
+              <div className="blinkit-logo">
+                {company.name || "Dullet Industries"}
+              </div>
             </div>
             <div className=" border text-[20px] border-l-0 border-r-0 py-3 flex justify-center items-center font-bold">
               Delivery Chalan
             </div>
+          </div>
+          <div className="border border-l-0 p-1 border-t-0 border-r-0">
+            <strong>Order Id:</strong>{" "}
+            {orderData.orderNumber || orderData._id || data.orderId || "N/A"}
+          </div>
+          <div className="border border-l-0 p-1 border-t-0 border-r-0">
+            <strong>Invoice Date:</strong>{" "}
+            {formatDate(
+              orderData.orderDate || orderData.createdAt || data.invoiceDate
+            )}
           </div>
 
           {/* Company and Customer Info Section */}
           <div className="info-section">
             <div className="sold-by-section">
               <div className="section-title">Sold By / Seller</div>
-              <div className="company-name">{company.name || 'Dullet Industries'}</div>
+              <div className="company-name">
+                {company.name || "Dullet Industries"}
+              </div>
+              <div
+                className="section-title"
+                style={{
+                  fontSize: "12px",
+                  marginTop: "10px",
+                  marginBottom: "5px",
+                }}
+              >
+                Address:
+              </div>
               <div className="company-address">{company.address}</div>
               <div className="company-address">
-                {company.city}{company.state ? `, ${company.state}` : ''} {company.pincode}
+                {company.city}
+                {company.state ? `, ${company.state}` : ""} {company.pincode}
               </div>
 
               <div className="company-details">
-                <div className="detail-row">
-                  <span className="detail-label">GSTIN</span>
-                  <span className="detail-colon">:</span>
-                  <span className="detail-value">{company.gstin || 'N/A'}</span>
-                </div>
+                {orderData.godown?.contact?.phone && (
+                  <div className="detail-row">
+                    <span className="detail-label">Phone</span>
+                    <span className="detail-colon">:</span>
+                    <span className="detail-value">{orderData.godown.contact.phone}</span>
+                  </div>
+                )}
+                {orderData.godown?.contact?.email && (
+                  <div className="detail-row">
+                    <span className="detail-label">Email</span>
+                    <span className="detail-colon">:</span>
+                    <span className="detail-value">{orderData.godown.contact.email}</span>
+                  </div>
+                )}
                 {company.pan && (
                   <div className="detail-row">
                     <span className="detail-label">PAN</span>
@@ -138,131 +126,195 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
 
             <div className="invoice-to-section">
               <div className="invoice-meta">
-                <div className="meta-row">
-                  <span className="meta-label">Order Id</span>
-                  <span className="meta-value">{orderData.orderNumber || orderData._id || data.orderId || 'N/A'}</span>
-                </div>
-                <div className="meta-row">
-                  <span className="meta-label">Invoice Date</span>
-                  <span className="meta-value">{formatDate(orderData.orderDate || orderData.createdAt || data.invoiceDate)}</span>
-                </div>
-                <div className="meta-row">
-                  <span className="meta-label">Place of Supply</span>
-                  <span className="meta-value">{data.placeOfSupply || customer.address?.state || customer.state || 'N/A'}</span>
-                </div>
-              </div>
+                <div className="invoice-to">
+                  <div className="section-title">Invoice To</div>
+                  <div className="customer-name capitalize">
+                    {customer.businessName || customer.name || "N/A"}
+                  </div>
 
-              <div className="invoice-to">
-                <div className="section-title">Invoice To</div>
-                <div className="customer-name">{customer.businessName || customer.name || 'N/A'}</div>
-                <div className="customer-address">
-                  {customer.address?.street || customer.address || 'N/A'}
+                  <div
+                    className="section-title"
+                    style={{
+                      fontSize: "12px",
+                      marginTop: "10px",
+                      marginBottom: "5px",
+                    }}
+                  >
+                    Address:
+                  </div>
+                  <div className="customer-address">
+                    {[
+                      customer.address?.street || customer.address,
+                      customer.address?.city || customer.city,
+                      customer.address?.state || customer.state,
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                    {(customer.address?.pincode || customer.pincode) &&
+                      ` - ${customer.address?.pincode || customer.pincode}`}
+                  </div>
+                  {customer.phone && (
+                    <div className="">Phone: {customer.phone}</div>
+                  )}
                 </div>
-                <div className="customer-city">
-                  {customer.address?.city || customer.city || 'N/A'}
-                </div>
-                <div className="customer-state">
-                  {customer.address?.state || customer.state || 'N/A'} {customer.address?.pincode || customer.pincode || ''}
-                </div>
-                {customer.phone && (
-                  <div className="customer-phone">Phone: {customer.phone}</div>
-                )}
               </div>
             </div>
           </div>
+          <div className="border border-l-0 p-1 border-t-0 border-r-0">
+            <strong>Delivery Partner Name:</strong>{" "}
+            {orderData.driverAssignment?.driver?.firstName +
+              " " +
+              orderData.driverAssignment?.driver?.lastName || "N/A"}
+          </div>
+          <div className="border border-l-0 p-1 border-t-0 border-r-0">
+            <strong>Vehicle Number:</strong>{" "}
+            {orderData.driverAssignment?.vehicleNumber || "N/A"}
+          </div>
+          <div className="border border-l-0 p-1 border-t-0 border-r-0">
+            <strong>GSTIN:</strong>{" "}
+            {company.gstin || "N/A"}
+          </div>
 
           {/* Items Table */}
-          <div className="items-table-container p-4">
+          <div className="items-table-container">
             <table className="items-table">
               <thead>
                 <tr>
-                  <th>Sr No</th>
-                  <th>Item Name</th>
-                  <th>HSN Code</th>
-                  <th>Quantity</th>
-                  <th>Rate</th>
-                  <th>Taxable Value</th>
+                  <th>SR NO</th>
+                  <th>ITEM NAME</th>
+                  <th>HSN CODE</th>
+                  <th>QUANTITY</th>
+                  <th>RATE</th>
+                  <th>ITEM PRICE</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((item: any, index: number) => (
                   <tr key={item._id || index}>
                     <td>{index + 1}</td>
-                    <td>{item.productName || item.description || 'N/A'}</td>
-                    <td>{item.hsnCode || 'N/A'}</td>
-                    <td>{item.quantity} {item.unit || ''}</td>
+                    <td>{item.productName || item.description || "N/A"}</td>
+                    <td>{company?.hsnCode || "N/A"}</td>
+                    <td>
+                      {item.quantity} {item.unit || ""}
+                    </td>
                     <td>₹{(item.ratePerUnit || item.rate || 0).toFixed(2)}</td>
-                    <td>₹{(item.totalAmount || item.taxableValue || 0).toFixed(2)}</td>
+                    <td>
+                      ₹{(item.totalAmount || item.taxableValue || 0).toFixed(2)}
+                    </td>
                   </tr>
                 ))}
-                <tr className="total-row">
-                  <td colSpan={5} className="total-label">Total</td>
-                  <td className="total-value border text-center">
-                    ₹{(orderData.totalAmount || orderData.subtotal || data?.totals?.grandTotal || calculateTotal()).toFixed(2)}
-                  </td>
-                </tr>
               </tbody>
             </table>
+
+<div className="flex justify-end">
+            {/* Order Summary - Simple Design Below Table */}
+            <div className="table-summary">
+              <div className="summary-row-simple">
+                <span>Sub Total:</span>
+                <span>
+                  ₹{(orderData.subtotal || calculateTotal()).toFixed(2)}
+                </span>
+              </div>
+              {orderData.taxAmount && orderData.taxAmount > 0 ? (
+                <div className="summary-row-simple">
+                  <span>Tax Amount:</span>
+                  <span>₹{orderData.taxAmount.toFixed(2)}</span>
+                </div>
+              ) : null}
+              <div className="summary-row-simple total-row-simple">
+                <span>Total Amount:</span>
+                <span>
+                  ₹
+                  {(
+                    orderData.finalAmount ||
+                    orderData.totalAmount ||
+                    calculateTotal()
+                  ).toFixed(2)}
+                </span>
+              </div>
+              {orderData.paidAmount !== undefined && (
+                <div className="summary-row-simple">
+                  <span>Paid Amount:</span>
+                  <span>₹{orderData.paidAmount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="summary-row-simple">
+                <span>Remaining Payment:</span>
+                <span>
+                  ₹{(
+                    (orderData.totalAmount ||
+                      orderData.subtotal ||
+                      calculateTotal()) -
+                    (orderData.paidAmount || 0)
+                  ).toFixed(2)}
+                </span>
+              </div>
+            </div></div>
           </div>
-  {/* Delivery Partner and Customer Signatures */}
-           <div className="signatures-section">
-             <div className="delivery-signature">
-               <div className="signature-title">Delivery Partner Signature</div>
-               <div className="signature-box">
-                 {orderData.signatures?.driver && (
-                   <img 
-                     src={orderData.signatures.driver} 
-                     alt="Driver Signature" 
-                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                   />
-                 )}
-               </div>
-               <div className="signature-label">
-                 {orderData.driverAssignment?.driver ? 
-                   `${orderData.driverAssignment.driver.firstName} ${orderData.driverAssignment.driver.lastName}` : 
-                   'Signature'
-                 }
-               </div>
-             </div>
-             <div className="customer-signature">
-               <div className="signature-title">Customer Signature</div>
-               <div className="signature-box">
-                 {orderData.signatures?.receiver && (
-                   <img 
-                     src={orderData.signatures.receiver} 
-                     alt="Customer Signature" 
-                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                   />
-                 )}
-               </div>
-               <div className="signature-label">Signature</div>
-             </div>
-           </div>
-          {/* Amount in Words and Company Signature */}
-           <div className="bottom-section">
-             <div className="amount-words">
-               <span className="words-label">Amount in Words:</span>
-               <span className="words-value">
-                 {data.totals?.amountInWords || 
-                  `${numberToWords(orderData.totalAmount || orderData.subtotal || calculateTotal())} Rupees Only`}
-               </span>
-             </div>
-             {orderData.driverAssignment?.vehicleNumber && (
-               <div className="vehicle-info">
-                 <span className="vehicle-label">Vehicle Number:</span>
-                 <span className="vehicle-value">{orderData.driverAssignment.vehicleNumber}</span>
-               </div>
-             )}
-           </div>
+          {/* Delivery Partner and Customer Signatures */}
+          <div className="signatures-section">
+            <div className="delivery-signature">
+              <div className="signature-title">Delivery Partner Signature</div>
+              <div className="signature-box">
+                {orderData.signatures?.driver && (
+                  <img
+                    src={orderData.signatures.driver}
+                    alt="Driver Signature"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
+                )}
+              </div>
+              <div className="signature-label">
+                {orderData.driverAssignment?.driver
+                  ? `${orderData.driverAssignment.driver.firstName} ${orderData.driverAssignment.driver.lastName}`
+                  : "Signature"}
+              </div>
+            </div>
+            <div className="customer-signature">
+              <div className="signature-title">Customer Signature</div>
+              <div className="signature-box">
+                {orderData.signatures?.receiver && (
+                  <img
+                    src={orderData.signatures.receiver}
+                    alt="Customer Signature"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
+                )}
+              </div>
+              <div className="signature-label">Signature</div>
+            </div>
+          </div>
 
-         
 
-        
+          {/* Footer Section */}
+          <div className="invoice-footer">
+            <div className="footer-content">
+              <p>Thank you for your business!</p>
+              <p>Generated on: {new Date().toLocaleString('en-IN', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit',
+                hour12: true 
+              })}</p>
+              <p>Dullet POS - Delivery Management System</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Exact CSS to match the original template */}
-      <style jsx>{`
+      {/* Consistent and responsive CSS styles */}
+      <style>{`
         .delivery-invoice {
           width: 100%;
           max-width: 793px;
@@ -270,6 +322,8 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
           background: #777;
           padding: 5px 0;
           font-family: "DejaVu Sans", Arial, sans-serif;
+          font-size: 12px;
+          line-height: 1.4;
         }
 
         .print-controls {
@@ -286,7 +340,8 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
           padding: 10px 20px;
           border-radius: 4px;
           cursor: pointer;
-          font-size: 16px;
+          font-size: 14px;
+          font-weight: 600;
         }
 
         .print-btn:hover {
@@ -296,13 +351,14 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
         .invoice-page {
           background: white;
           margin: 5px 0;
+          padding: 10px;
         }
 
         .invoice-container {
           width: 100%;
           position: relative;
           background: white;
-          border: 1px solid #000;
+          border: 2px solid #000;
         }
 
         /* Header Section */
@@ -310,9 +366,9 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          padding: 20px;
-          border-bottom: 1px solid #000;
-          height: 120px;
+          padding: 15px;
+          border-bottom: 2px solid #000;
+          min-height: 120px;
         }
 
         .logo-section {
@@ -320,84 +376,54 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
         }
 
         .blinkit-logo {
-          font-size: 36px;
+          font-size: 28px;
           font-weight: bold;
           color: #000;
           font-family: Arial, sans-serif;
-        }
-
-        .tax-invoice-section {
-          flex: 1;
-          text-align: right;
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-        }
-
-        .tax-invoice-title {
-          font-size: 30px;
-          font-weight: bold;
-          margin: 0 0 20px 0;
-          color: #000;
-        }
-
-        .qr-code {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-
-        .qr-placeholder {
-          width: 96px;
-          height: 96px;
-          border: 1px solid #000;
-          background: #f0f0f0;
-          margin-bottom: 5px;
-        }
-
-        .invoice-number-qr {
-          font-size: 10px;
-          text-align: center;
+          word-wrap: break-word;
         }
 
         /* Info Section */
         .info-section {
           display: flex;
-          border-bottom: 1px solid #000;
+          border-bottom: 2px solid #000;
           min-height: 200px;
         }
 
         .sold-by-section {
           flex: 1;
-          padding: 15px;
-          border-right: 1px solid #000;
+          padding: 10px;
+          border-right: 2px solid #000;
         }
 
         .invoice-to-section {
           flex: 1;
-          padding: 15px;
+          padding: 10px;
           display: flex;
           flex-direction: column;
         }
 
         .section-title {
-          font-size: 12px;
+          font-size: 14px;
           font-weight: bold;
           margin-bottom: 8px;
           color: #000;
+          word-wrap: break-word;
         }
 
         .company-name {
-          font-size: 12px;
+          font-size: 14px;
           font-weight: bold;
           margin-bottom: 5px;
           color: #000;
+          word-wrap: break-word;
         }
 
         .company-address {
           font-size: 12px;
           margin-bottom: 3px;
           color: #000;
+          word-wrap: break-word;
         }
 
         .company-details {
@@ -408,11 +434,13 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
           display: flex;
           margin-bottom: 5px;
           font-size: 12px;
+          word-wrap: break-word;
         }
 
         .detail-label {
           font-weight: bold;
           color: #000;
+          min-width: 60px;
         }
 
         .detail-colon {
@@ -422,6 +450,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
 
         .detail-value {
           color: #000;
+          word-wrap: break-word;
         }
 
         .invoice-meta {
@@ -433,6 +462,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
           justify-content: space-between;
           margin-bottom: 5px;
           font-size: 12px;
+          word-wrap: break-word;
         }
 
         .meta-label {
@@ -442,6 +472,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
 
         .meta-value {
           color: #000;
+          word-wrap: break-word;
         }
 
         .invoice-to {
@@ -449,10 +480,11 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
         }
 
         .customer-name {
-          font-size: 12px;
+          font-size: 14px;
           font-weight: bold;
           margin-bottom: 5px;
           color: #000;
+          word-wrap: break-word;
         }
 
         .customer-address,
@@ -461,135 +493,119 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
           font-size: 12px;
           margin-bottom: 3px;
           color: #000;
+          word-wrap: break-word;
         }
 
         /* Items Table */
         .items-table-container {
-          border-bottom: 1px solid #000;
+          border-bottom: 2px solid #000;
+          padding: 10px;
         }
 
         .items-table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 10px;
+          font-size: 11px;
         }
 
         .items-table th,
         .items-table td {
           border: 1px solid #000;
-          padding: 4px 2px;
+          padding: 8px 4px;
           text-align: center;
           vertical-align: middle;
+          word-wrap: break-word;
         }
 
         .items-table th {
           background: #f5f5f5;
           font-weight: bold;
-          font-size: 9px;
+          font-size: 12px;
         }
 
-        .text-left {
-          text-align: left !important;
-        }
-
-        .total-row {
-          font-weight: bold;
-        }
-
-        .total-label {
-          text-align: right !important;
-          font-weight: bold;
-        }
-
-        .total-value {
-          font-weight: bold;
-        }
-
-        /* Column widths for 6-column layout */
         .items-table th:nth-child(1),
-        .items-table td:nth-child(1) { width: 8%; } /* Sr No */
-        .items-table th:nth-child(2),
-        .items-table td:nth-child(2) { width: 35%; text-align: left; } /* Item Name */
-        .items-table th:nth-child(3),
-        .items-table td:nth-child(3) { width: 15%; } /* HSN Code */
-        .items-table th:nth-child(4),
-        .items-table td:nth-child(4) { width: 12%; } /* Quantity */
-        .items-table th:nth-child(5),
-        .items-table td:nth-child(5) { width: 15%; } /* Rate */
-        .items-table th:nth-child(6),
-        .items-table td:nth-child(6) { width: 15%; } /* Taxable Value */
+        .items-table td:nth-child(1) {
+          width: 8%;
+        }
 
-        /* Bottom Section */
-        .bottom-section {
+        .items-table th:nth-child(2),
+        .items-table td:nth-child(2) {
+          width: 35%;
+          text-align: left;
+        }
+
+        .items-table th:nth-child(3),
+        .items-table td:nth-child(3) {
+          width: 15%;
+        }
+
+        .items-table th:nth-child(4),
+        .items-table td:nth-child(4) {
+          width: 12%;
+        }
+
+        .items-table th:nth-child(5),
+        .items-table td:nth-child(5) {
+          width: 15%;
+        }
+
+        .items-table th:nth-child(6),
+        .items-table td:nth-child(6) {
+          width: 15%;
+        }
+
+        /* Table Summary Section - Simple Design */
+        .table-summary {
+          margin-top: 10px;
+          padding: 10px 0;
+          max-width: 220px;
+        }
+
+        .summary-row-simple {
           display: flex;
           justify-content: space-between;
-          align-items: flex-end;
-          padding: 15px;
-          border-bottom: 1px solid #000;
-        }
-
-        .amount-words {
+          padding: 3px 0;
           font-size: 12px;
-          color: #000;
+          min-height: 18px;
+          align-items: center;
         }
 
-        .words-label {
+        .summary-row-simple span:first-child {
           font-weight: bold;
+          min-width: 120px;
+          text-align: left;
         }
 
-        .vehicle-info {
-          margin-bottom: 10px;
-          font-size: 12px;
-          color: #000;
-        }
-        
-        .vehicle-label {
-          font-weight: bold;
-        }
-        
-        .vehicle-value {
-          font-weight: normal;
-        }
-
-        .signature-section {
+        .summary-row-simple span:last-child {
           text-align: right;
+          min-width: 100px;
+          flex-shrink: 0;
+        }
+
+        .total-row-simple {
           font-size: 12px;
+          font-weight: bold;
         }
 
-        .company-signature {
-          margin-bottom: 40px;
-          color: #000;
-        }
 
-        .signature-space {
-          height: 40px;
-          border-bottom: 1px solid #000;
-          width: 150px;
-          margin-left: auto;
-        }
-
-        .authorized-signature {
-          margin-top: 5px;
-          color: #000;
-        }
 
         /* Signatures Section */
         .signatures-section {
           display: flex;
           justify-content: space-between;
-          padding: 20px;
-          border-bottom: 1px solid #000;
+          padding: 15px;
+          border-bottom: 2px solid #000;
         }
 
         .delivery-signature,
         .customer-signature {
           flex: 1;
           text-align: center;
-          margin: 0 20px;
+          margin: 0 10px;
         }
 
         .signature-title {
-          font-size: 12px;
+          font-size: 14px;
           font-weight: bold;
           margin-bottom: 10px;
           color: #000;
@@ -597,40 +613,72 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
 
         .signature-box {
           height: 60px;
-          border: 1px solid #000;
+          border: 2px solid #000;
           margin-bottom: 10px;
           background: white;
         }
 
         .signature-label {
-           font-size: 10px;
+           font-size: 12px;
            color: #000;
+           font-weight: normal;
          }
 
-         /* Terms Section */
-         .terms-section {
-           padding: 15px;
-           font-size: 10px;
-         }
 
-         .terms-title {
-           font-weight: bold;
-           margin-bottom: 10px;
-           color: #000;
-         }
 
-         .terms-list {
-           margin: 0;
-           padding-left: 15px;
-           color: #000;
-         }
+        /* Responsive Design */
+        @media (max-width: 768px) {
+          .delivery-invoice {
+            font-size: 10px;
+          }
+          
+          .blinkit-logo {
+            font-size: 24px;
+          }
+          
+          .section-title,
+          .company-name,
+          .customer-name {
+            font-size: 12px;
+          }
+          
+          .items-table {
+            font-size: 9px;
+          }
+          
+          .items-table th {
+            font-size: 10px;
+          }
+          
+          .summary-row {
+            font-size: 10px;
+          }
+          
+          .total-row-summary {
+            font-size: 12px;
+          }
+        }
 
-         .terms-list li {
-           margin-bottom: 5px;
-           line-height: 1.3;
-         }
+        /* Footer Section */
+        .invoice-footer {
+          margin-top: 15px;
+          padding: 10px 0;
+          border-top: 1px solid #ddd;
+        }
 
-         /* Print Styles */
+        .footer-content {
+          text-align: center;
+        }
+
+        .footer-content p {
+          margin: 3px 0;
+          font-style: italic;
+          color: #666;
+          font-size: 11px;
+          line-height: 1.3;
+        }
+
+        /* Print Styles */
         @media print {
           .no-print {
             display: none !important;
@@ -641,10 +689,12 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
             padding: 0;
             margin: 0;
             max-width: none;
+            font-size: 11px;
           }
 
           .invoice-page {
             margin: 0;
+            padding: 10px;
           }
 
           body {
