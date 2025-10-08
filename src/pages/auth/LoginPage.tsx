@@ -76,22 +76,48 @@ const LoginPage: React.FC = () => {
       await login(loginData);
       console.log('Login successful, preparing to navigate...');
       
-      // Small delay to ensure state is updated
-      setTimeout(() => {
-        // Role/permission-based landing
-        let landing = '/dashboard';
-        // Drivers: send to orders (or a dedicated page if exists)
-        if (hasRole('Driver')) landing = '/orders';
-        // Sales executive: send to visits by default if they have access
-        if (hasRole('Sales Executive') && hasPermission('orders.read')) landing = '/visits';
-        // Admin/Manager: dashboard by default
-        if (hasRole('Super Admin') || hasRole('Admin') || hasRole('Manager')) landing = '/dashboard';
-        // If a guarded route redirected us here, prefer that
-        const from = (location.state as any)?.from?.pathname;
-        const destination = from || landing;
-        console.log('Navigating to:', destination);
-        navigate(destination, { replace: true });
-      }, 100);
+      // Wait for user data to be available in AuthContext state
+      const waitForUserData = () => {
+        return new Promise<void>((resolve) => {
+          const checkUserData = () => {
+            // Check if user data is available and has role/permissions
+            if (isAuthenticated && !isLoading && hasRole) {
+              console.log('User data is ready for navigation');
+              resolve();
+            } else {
+              // Check again in 10ms
+              setTimeout(checkUserData, 10);
+            }
+          };
+          checkUserData();
+        });
+      };
+
+      // Wait for user data to be ready
+      await waitForUserData();
+
+      // Role/permission-based landing using AuthContext functions
+      let landing = '/dashboard';
+      
+      // Drivers: send to orders (or a dedicated page if exists)
+      if (hasRole('Driver')) {
+        landing = '/orders';
+      }
+      // Sales executive: send to visits by default if they have access
+      else if (hasRole('Sales Executive') && hasPermission('orders.read')) {
+        landing = '/visits';
+      }
+      // Admin/Manager: dashboard by default
+      else if (hasRole('Super Admin') || hasRole('Admin') || hasRole('Manager')) {
+        landing = '/dashboard';
+      }
+      
+      // If a guarded route redirected us here, prefer that
+      const from = (location.state as any)?.from?.pathname;
+      const destination = from || landing;
+      
+      console.log('Navigating to:', destination);
+      navigate(destination, { replace: true });
       
     } catch (error: any) {
       // Error is handled by the auth context and displayed via toast

@@ -80,8 +80,8 @@ const RolesPage: React.FC = () => {
       
       if (response.success && response.data) {
         setRoles(response.data.roles);
-        setTotalRoles(response.pagination?.totalRoles || 0);
-        setTotalPages(response.pagination?.totalPages || 1);
+        setTotalRoles(response?.data?.pagination?.totalRoles || 0);
+        setTotalPages(response?.data?.pagination?.totalPages || 1);
       }
     } catch (error: any) {
       if (error.name !== 'CanceledError') {

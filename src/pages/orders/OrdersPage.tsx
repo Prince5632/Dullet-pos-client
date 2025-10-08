@@ -79,6 +79,7 @@ const OrdersPage: React.FC = () => {
   const [dateFromFilter, setDateFromFilter] = useState("");
   const [dateToFilter, setDateToFilter] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [dateRangeError, setDateRangeError] = useState("");
 
   // Order-specific Filters
   const [statusFilter, setStatusFilter] = useState("");
@@ -120,6 +121,30 @@ const OrdersPage: React.FC = () => {
       setSelectedImage({ src: formattedSrc, title });
       setShowImageModal(true);
     }
+  };
+
+  // Date validation functions
+  const validateDateRange = (fromDate: string, toDate: string) => {
+    if (fromDate && toDate) {
+      const from = new Date(fromDate);
+      const to = new Date(toDate);
+      if (from > to) {
+        setDateRangeError("Start date cannot be after end date");
+        return false;
+      }
+    }
+    setDateRangeError("");
+    return true;
+  };
+
+  const handleDateFromChange = (value: string) => {
+    setDateFromFilter(value);
+    validateDateRange(value, dateToFilter);
+  };
+
+  const handleDateToChange = (value: string) => {
+    setDateToFilter(value);
+    validateDateRange(dateFromFilter, value);
   };
 
   // Load data functions
@@ -438,6 +463,7 @@ const OrdersPage: React.FC = () => {
     setCustomerFilter("");
     setDateFromFilter("");
     setDateToFilter("");
+    setDateRangeError("");
 
     // Clear order-specific filters
     setStatusFilter("");
@@ -473,6 +499,7 @@ const OrdersPage: React.FC = () => {
     setCustomerFilter("");
     setDateFromFilter("");
     setDateToFilter("");
+    setDateRangeError("");
 
     // Clear order-specific filters
     setStatusFilter("");
@@ -979,21 +1006,43 @@ const OrdersPage: React.FC = () => {
                     ))}
                   </select>
 
-                  <input
-                    type="date"
-                    value={dateFromFilter}
-                    onChange={(e) => setDateFromFilter(e.target.value)}
-                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="From Date"
-                  />
+                  {/* <div className="relative"> */}
+                    <input
+                      type="date"
+                      value={dateFromFilter}
+                      onChange={(e) => handleDateFromChange(e.target.value)}
+                      className={`px-2 py-1.5 text-xs border rounded-md focus:outline-none focus:ring-1 ${
+                        dateRangeError 
+                          ? "border-red-300 focus:ring-red-500" 
+                          : "border-gray-300 focus:ring-blue-500"
+                      }`}
+                      placeholder="From Date"
+                    />
+                  {/* </div> */}
 
-                  <input
-                    type="date"
-                    value={dateToFilter}
-                    onChange={(e) => setDateToFilter(e.target.value)}
-                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="To Date"
-                  />
+                  {/* <div className="relative"> */}
+                    <input
+                      type="date"
+                      value={dateToFilter}
+                      onChange={(e) => handleDateToChange(e.target.value)}
+                      className={`px-2 py-1.5 text-xs border rounded-md focus:outline-none focus:ring-1 ${
+                        dateRangeError 
+                          ? "border-red-300 focus:ring-red-500" 
+                          : "border-gray-300 focus:ring-blue-500"
+                      }`}
+                      placeholder="To Date"
+                    />
+                  {/* </div> */}
+
+                  {/* Date Range Error Message */}
+                  {dateRangeError && (
+                    <div className="col-span-full">
+                      <div className="flex items-center gap-1 text-red-600 text-xs">
+                        <ExclamationTriangleIcon className="h-3 w-3" />
+                        {dateRangeError}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Order-specific Filters */}
                   {viewType === "orders" && (
