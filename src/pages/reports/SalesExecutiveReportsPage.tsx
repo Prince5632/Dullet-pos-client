@@ -12,6 +12,8 @@ import {
   ClipboardDocumentListIcon,
   MapPinIcon,
   BuildingOfficeIcon,
+  BuildingOffice2Icon,
+  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import { getSalesExecutiveReports } from "../../services/reportService";
 import { godownService } from "../../services/godownService";
@@ -39,6 +41,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
     const saved = localStorage.getItem('salesExecutiveReportType');
     return (saved as ReportType) || "orders";
   });
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     fetchReports();
@@ -96,6 +99,21 @@ const SalesExecutiveReportsPage: React.FC = () => {
       console.error("Error fetching sales executive reports:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle sync functionality
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await Promise.all([
+        fetchReports(),
+        fetchGodowns()
+      ]);
+    } catch (error) {
+      console.error("Failed to sync sales executive reports data:", error);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -363,13 +381,25 @@ const SalesExecutiveReportsPage: React.FC = () => {
               </div>
             </div>
 
-            <button
-              onClick={exportToCSV}
-              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <ArrowDownTrayIcon className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Export</span>
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="inline-flex cursor-pointer gap-1 items-center px-3 py-1.5 text-sm font-medium rounded-lg text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Sync Reports Data"
+              >
+                <ArrowPathIcon 
+                  className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} 
+                /> Sync
+              </button>
+              <button
+                onClick={exportToCSV}
+                className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Export</span>
+              </button>
+            </div>
           </div>
 
           {/* Main Tabs Navigation */}
@@ -387,6 +417,13 @@ const SalesExecutiveReportsPage: React.FC = () => {
             >
               <ChartBarIcon className="h-4 w-4" />
               <span>Customers</span>
+            </Link>
+            <Link
+              to="/reports/godowns"
+              className="flex items-center gap-1.5 px-3 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm whitespace-nowrap"
+            >
+              <BuildingOffice2Icon className="h-4 w-4" />
+              <span>Godowns</span>
             </Link>
           </nav>
 

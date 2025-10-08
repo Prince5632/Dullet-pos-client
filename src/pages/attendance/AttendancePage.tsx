@@ -11,7 +11,8 @@ import {
   XMarkIcon,
   CheckCircleIcon,
   ExclamationCircleIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import { attendanceService } from '../../services/attendanceService';
@@ -40,6 +41,7 @@ const AttendancePage: React.FC = () => {
   const [statusEdits, setStatusEdits] = useState<Record<string, Attendance['status']>>({});
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // Filters
   const [filters, setFilters] = useState<AttendanceListParams>({
@@ -119,6 +121,21 @@ const AttendancePage: React.FC = () => {
       console.error('Failed to load today\'s attendance:', error);
     }
   }, []);
+
+  // Handle sync functionality
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await Promise.all([
+        loadAttendance(),
+        loadTodaysAttendance()
+      ]);
+    } catch (error) {
+      console.error("Failed to sync attendance data:", error);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   useEffect(() => {
     loadAttendance();
@@ -255,37 +272,51 @@ const AttendancePage: React.FC = () => {
               </div>
             </div>
             
-            {canMarkAttendance && (
-              <div className="flex gap-2">
-                {!todaysAttendance && (
-                  <button
-                    onClick={() => {
-                      setCameraAction('checkin');
-                      setShowCamera(true);
-                    }}
-                    className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 transition-colors"
-                  >
-                    <ClockIcon className="h-4 w-4 mr-1" />
-                    <span className="hidden sm:inline">Check In</span>
-                    <span className="sm:hidden">In</span>
-                  </button>
-                )}
-                
-                {todaysAttendance && !todaysAttendance.checkOutTime && (
-                  <button
-                    onClick={() => {
-                      setCameraAction('checkout');
-                      setShowCamera(true);
-                    }}
-                    className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-orange-600 hover:bg-orange-700 transition-colors"
-                  >
-                    <ClockIcon className="h-4 w-4 mr-1" />
-                    <span className="hidden sm:inline">Check Out</span>
-                    <span className="sm:hidden">Out</span>
-                  </button>
-                )}
-              </div>
-            )}
+            <div className="flex gap-2">
+              {/* Sync Button - Always visible */}
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="inline-flex gap-1 cursor-pointer items-center px-3 py-1.5 text-sm font-medium rounded-lg text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Sync Attendance Data"
+              >
+                <ArrowPathIcon 
+                  className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} 
+                /> Sync
+              </button>
+
+              {canMarkAttendance && (
+                <>
+                  {!todaysAttendance && (
+                    <button
+                      onClick={() => {
+                        setCameraAction('checkin');
+                        setShowCamera(true);
+                      }}
+                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 transition-colors"
+                    >
+                      <ClockIcon className="h-4 w-4 mr-1" />
+                      <span className="hidden sm:inline">Check In</span>
+                      <span className="sm:hidden">In</span>
+                    </button>
+                  )}
+                  
+                  {todaysAttendance && !todaysAttendance.checkOutTime && (
+                    <button
+                      onClick={() => {
+                        setCameraAction('checkout');
+                        setShowCamera(true);
+                      }}
+                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-orange-600 hover:bg-orange-700 transition-colors"
+                    >
+                      <ClockIcon className="h-4 w-4 mr-1" />
+                      <span className="hidden sm:inline">Check Out</span>
+                      <span className="sm:hidden">Out</span>
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>

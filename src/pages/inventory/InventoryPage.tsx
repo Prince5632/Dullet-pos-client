@@ -4,7 +4,7 @@ import { inventoryService } from '../../services/inventoryService';
 import { apiService } from '../../services/api';
 import { API_CONFIG } from '../../config/api';
 import type { Inventory, TableColumn, Godown, InventoryListParams } from '../../types';
-import { MagnifyingGlassIcon, PlusIcon, FunnelIcon, XMarkIcon, CubeIcon, TrashIcon, EyeIcon, PencilIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, PlusIcon, FunnelIcon, XMarkIcon, CubeIcon, TrashIcon, EyeIcon, PencilIcon, BuildingOfficeIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import Table from '../../components/ui/Table';
 import Pagination from '../../components/ui/Pagination';
 import Avatar from '../../components/ui/Avatar';
@@ -34,6 +34,7 @@ const InventoryPage: React.FC = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [inventoryToDelete, setInventoryToDelete] = useState<Inventory | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // Debounced search
   const debouncedSearch = useDebounce(search, 300);
@@ -62,7 +63,7 @@ const InventoryPage: React.FC = () => {
         limit,
         search: debouncedSearch,
         inventoryType: inventoryType,
-        godownId: godownFilter,
+        godown: godownFilter,
         dateFrom: dateFrom,
         dateTo: dateTo,
         loggedBy: loggedBy,
@@ -80,6 +81,21 @@ const InventoryPage: React.FC = () => {
       console.error('Failed to load inventory:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle sync functionality
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await Promise.all([
+        loadInventory(),
+        loadGodowns()
+      ]);
+    } catch (error) {
+      console.error("Failed to sync inventory data:", error);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -215,13 +231,25 @@ const InventoryPage: React.FC = () => {
                 <p className="text-xs text-gray-500 hidden sm:block">Manage stock inventory and track movements</p>
               </div>
             </div>
-            {hasPermission("stock.create") && (
-              <Link to="/inventory/add" className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 transition-colors">
-                <PlusIcon className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Add Stock</span>
-                <span className="sm:hidden">Add</span>
-              </Link>
-            )}
+            <div className="flex gap-2">
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="inline-flex gap-1 cursor-pointer items-center px-3 py-1.5 text-sm font-medium rounded-lg text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Sync Inventory Data"
+              >
+                <ArrowPathIcon 
+                  className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} 
+                /> Sync
+              </button>
+              {hasPermission("stock.create") && (
+                <Link to="/inventory/add" className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 transition-colors">
+                  <PlusIcon className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">Add Stock</span>
+                  <span className="sm:hidden">Add</span>
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </div>

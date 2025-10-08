@@ -11,6 +11,7 @@ import {
   UserGroupIcon,
   XMarkIcon,
   EyeIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { getCustomerReports, getInactiveCustomers } from '../../services/reportService';
 import type { CustomerReportResponse, InactiveCustomersResponse } from '../../services/reportService';
@@ -30,6 +31,7 @@ const CustomerReportsPage: React.FC = () => {
   const [sortBy, setSortBy] = useState('totalSpent');
   const [sortOrder, setSortOrder] = useState('desc');
   const [showFilters, setShowFilters] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     fetchReports();
@@ -54,6 +56,18 @@ const CustomerReportsPage: React.FC = () => {
       console.error('Error fetching customer reports:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle sync functionality
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await fetchReports();
+    } catch (error) {
+      console.error("Failed to sync customer reports data:", error);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -330,13 +344,25 @@ const CustomerReportsPage: React.FC = () => {
               </div>
             </div>
             
-            <button
-              onClick={exportToCSV}
-              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
+            <div className="flex gap-2">
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="inline-flex cursor-pointer gap-1 items-center px-3 py-1.5 text-sm font-medium rounded-lg text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Sync Customer Reports Data"
+              >
+                <ArrowPathIcon 
+                  className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} 
+                /> Sync
+              </button>
+              <button
+                onClick={exportToCSV}
+                className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
               <ArrowDownTrayIcon className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Export</span>
             </button>
+            </div>
           </div>
 
           {/* Main Tabs - Horizontal Scroll */}

@@ -13,6 +13,7 @@ import {
   ExclamationTriangleIcon,
   UserGroupIcon,
   BuildingOfficeIcon,
+  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import { orderService } from "../../services/orderService";
 import { customerService } from "../../services/customerService";
@@ -72,6 +73,7 @@ const OrdersPage: React.FC = () => {
   );
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // Common Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -363,6 +365,7 @@ const OrdersPage: React.FC = () => {
     maxAmountFilter,
   ]);
 
+
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
@@ -428,6 +431,22 @@ const OrdersPage: React.FC = () => {
   useEffect(() => {
     loadGodowns();
   }, [loadGodowns]);
+  // Sync function to refresh all data
+  const handleSync = useCallback(async () => {
+    setSyncing(true);
+    try {
+      await Promise.all([
+        loadOrders(),
+        loadCustomers(),
+        fetchStats(),
+        loadGodowns(),
+      ]);
+    } catch (error) {
+      console.error("Failed to sync data:", error);
+    } finally {
+      setSyncing(false);
+    }
+  }, [loadOrders, loadCustomers, fetchStats, loadGodowns]);
 
   // Sync viewType with the current route
   useEffect(() => {
@@ -865,6 +884,14 @@ const OrdersPage: React.FC = () => {
                   )}
                 </Link>
               )} */}
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="inline-flex cursor-pointer items-center justify-center px-3 py-1.5 text-sm font-medium rounded-lg text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ArrowPathIcon className={`h-4 w-4 mr-1 ${syncing ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Sync</span>
+              </button>
               <Link
                 to={viewType === "orders" ? "/orders/new" : "/visits/new"}
                 className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"

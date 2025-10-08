@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { customerService } from '../../services/customerService';
 import type { Customer, TableColumn } from '../../types';
-import { MagnifyingGlassIcon, PlusIcon, FunnelIcon, XMarkIcon, BuildingOfficeIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, PlusIcon, FunnelIcon, XMarkIcon, BuildingOfficeIcon, TrashIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import Table from '../../components/ui/Table';
 import Pagination from '../../components/ui/Pagination';
 import Avatar from '../../components/ui/Avatar';
@@ -29,6 +29,7 @@ const CustomersPage: React.FC = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // Check if current user is super admin
   const isSuperAdmin = hasRole('Super Admin');
@@ -55,6 +56,28 @@ const CustomersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Sync function to refresh all data
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await loadCustomers();
+    } catch (error) {
+      console.error("Failed to sync data:", error);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // Clear all filters function
+  const clearFilters = () => {
+    setSearch('');
+    setType('');
+    setStateFilter('');
+    setCity('');
+    setStatus('');
+    setPage(1);
   };
 
   useEffect(() => {
@@ -164,11 +187,21 @@ const CustomersPage: React.FC = () => {
                 <p className="text-xs text-gray-500 hidden sm:block">Manage and filter customers by location</p>
               </div>
             </div>
-            <Link to="/customers/create" className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors">
-              <PlusIcon className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Add Customer</span>
-              <span className="sm:hidden">Add</span>
-            </Link>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="inline-flex cursor-pointer items-center justify-center px-3 py-1.5 text-sm font-medium rounded-lg text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ArrowPathIcon className={`h-4 w-4 mr-1 ${syncing ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Sync</span>
+              </button>
+              <Link to="/customers/create" className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+                <PlusIcon className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">Add Customer</span>
+                <span className="sm:hidden">Add</span>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -193,15 +226,26 @@ const CustomersPage: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-between">
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
-                  showFilters ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-700'
-                }`}
-              >
-                <FunnelIcon className="h-3.5 w-3.5" />
-                Filters
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
+                    showFilters ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  <FunnelIcon className="h-3.5 w-3.5" />
+                  Filters
+                </button>
+                {(search || type || stateFilter || city || status) && (
+                  <button
+                    onClick={clearFilters}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                  >
+                    <XMarkIcon className="h-3.5 w-3.5" />
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
 
             {showFilters && (
