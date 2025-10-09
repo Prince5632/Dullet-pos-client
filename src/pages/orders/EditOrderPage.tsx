@@ -142,6 +142,13 @@ const EditOrderPage: React.FC = () => {
     return normalizedCity;
   };
 
+  // Helper function to format quantity with bags
+  const formatQuantity = (item: any) => {
+    if (item.isBagSelection) {
+      return `${item.bagPieces} × ${item.packaging}`;
+    }
+    return `${item.quantityKg}kg`;
+  };
   const currentProducts = useMemo(() => {
     const city = getCurrentCity();
     const area = godowns.find(g => g._id === order?.godown?._id)?.location?.area?.toLowerCase();
@@ -954,7 +961,7 @@ const EditOrderPage: React.FC = () => {
                           </span>
                         </div>
                         <div className="text-xs text-gray-600 mt-1">
-                          {kg}kg • {it.packaging || "Loose"} • ₹{formatNumber(lineTotal)}
+                          {formatQuantity(it)}  • ₹{formatNumber(lineTotal)}
                         </div>
                       </div>
                       <button

@@ -410,11 +410,11 @@ const QuickOrderPage: React.FC = () => {
 
       if (it.bagPieces && it.bagPieces > 0) {
         const displayBagSize = Math.round(actualBagSize * 100) / 100;
-        return `${it.bagPieces} × ${displayBagSize}kg (${normalizedKg}kg)`;
+        return `${it.bagPieces} × ${displayBagSize}kg Bags`;
       }
       if (it.bags && it.bags > 0) {
         const displayBagSize = Math.round(actualBagSize * 100) / 100;
-        return `${it.bags} × ${displayBagSize}kg (${normalizedKg}kg)`;
+        return `${it.bags} × ${displayBagSize}kg Bags`;
       }
       return `${normalizedKg}kg (bag)`;
     }
