@@ -32,7 +32,11 @@ import type { Order } from "../../types";
 import { toast } from "react-hot-toast";
 import Modal from "../../components/ui/Modal";
 import { resolveCapturedImageSrc } from "../../utils/image";
-import { generateDeliveryNotePDF, getDeliveryNotePDFFileName } from "../../utils/deliveryNotePdf";
+import {
+  generateDeliveryNotePDF,
+  getDeliveryNotePDFFileName,
+} from "../../utils/deliveryNotePdf";
+import { formatCurrency } from "../../utils";
 
 const OrderDetailsPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -58,7 +62,10 @@ const OrderDetailsPage: React.FC = () => {
     useState(false);
   const [deliverySummaryLoading, setDeliverySummaryLoading] = useState(false);
   const [isAutoOpenedModal, setIsAutoOpenedModal] = useState(false);
+  const { user: currentUser, hasRole } = useAuth();
 
+  // Check if current user is super admin or admin
+  const showBalance = hasRole("Super Admin") || hasRole("Manager");
   useEffect(() => {
     if (!orderId) {
       setError("Order ID is required");
@@ -79,18 +86,20 @@ const OrderDetailsPage: React.FC = () => {
     }
   }, [location.state, order]);
   const calculateNoOfBags = (item: any) => {
-    const bagSize= item.packaging?.includes("Bag")? item.packaging.replace("kg Bags",""): "0";
-    const bagSizeNumber= Number(bagSize);
+    const bagSize = item.packaging?.includes("Bag")
+      ? item.packaging.replace("kg Bags", "")
+      : "0";
+    const bagSizeNumber = Number(bagSize);
     if (item.isBagSelection && bagSizeNumber > 0) {
       return Math.ceil(item.quantity / bagSizeNumber);
     }
     return 0;
-  }
+  };
   // Helper function to format quantity with bags
   const formatQuantity = (item: any) => {
     if (item.isBagSelection) {
-      const noOfBags= calculateNoOfBags(item);
-      return `${noOfBags} × ${item.quantity/noOfBags}kg Bags`;
+      const noOfBags = calculateNoOfBags(item);
+      return `${noOfBags} × ${item.quantity / noOfBags}kg Bags`;
     }
     return `Loose`;
   };
@@ -165,19 +174,23 @@ const OrderDetailsPage: React.FC = () => {
     activitiesLoading,
     fetchActivities,
   ]);
-  const handleOrderUpdate = useCallback(async (updatedOrder: Order) => {
-    const wasDelivered = order?.status !== 'delivered' && updatedOrder.status === 'delivered';
-    await fetchOrder();
-    toast.success("Order updated successfully");
-    
-    // Auto-open delivery share modal when order is marked as delivered
-    if (wasDelivered) {
-      setTimeout(() => {
-        setIsAutoOpenedModal(true);
-        setShowDeliverySummaryModal(true);
-      }, 500);
-    }
-  }, [order?.status]);
+  const handleOrderUpdate = useCallback(
+    async (updatedOrder: Order) => {
+      const wasDelivered =
+        order?.status !== "delivered" && updatedOrder.status === "delivered";
+      await fetchOrder();
+      toast.success("Order updated successfully");
+
+      // Auto-open delivery share modal when order is marked as delivered
+      if (wasDelivered) {
+        setTimeout(() => {
+          setIsAutoOpenedModal(true);
+          setShowDeliverySummaryModal(true);
+        }, 500);
+      }
+    },
+    [order?.status]
+  );
 
   const handlePrint = () => {
     window.print();
@@ -187,7 +200,7 @@ const OrderDetailsPage: React.FC = () => {
     if (!order) return;
     try {
       generateDeliveryNotePDF(order);
-      toast.success("Delivery note PDF downloaded successfully!");
+      toast.success("Delivery note PDF started downloading!");
     } catch (error) {
       console.error("Error generating PDF:", error);
       toast.error("Failed to generate PDF");
@@ -341,16 +354,22 @@ Generated on: ${new Date().toLocaleString("en-IN")}`;
     try {
       // Generate PDF as blob
       const pdfBlob = generateDeliveryNotePDF(order, false);
-      
+
       if (!pdfBlob) {
         throw new Error("Failed to generate PDF");
       }
 
       const fileName = getDeliveryNotePDFFileName(order);
-      const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      const pdfFile = new File([pdfBlob], fileName, {
+        type: "application/pdf",
+      });
 
       // Check if Web Share API is available and supports files
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+      if (
+        navigator.share &&
+        navigator.canShare &&
+        navigator.canShare({ files: [pdfFile] })
+      ) {
         await navigator.share({
           title: `Delivery Note - ${order.orderNumber}`,
           text: `Delivery note for order ${order.orderNumber}`,
@@ -379,14 +398,16 @@ Generated on: ${new Date().toLocaleString("en-IN")}`;
           duration: 3000,
           icon: "📥",
         });
-        
+
         // Open WhatsApp Web
         setTimeout(() => {
           const message = `📄 Delivery Note for Order ${order.orderNumber}\n\nPlease find the attached PDF document.`;
-          const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+          const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
+            message
+          )}`;
           window.open(whatsappUrl, "_blank");
         }, 1000);
-        
+
         setShowDeliverySummaryModal(false);
       }
     } catch (error) {
@@ -643,7 +664,8 @@ Dullet POS Team`;
                   <PrinterIcon className="h-3.5 w-3.5 sm:mr-1" />
                   <span className="hidden sm:inline">Print</span>
                 </button>
-                {(order.status === "delivered" || order.status === "completed") && (
+                {(order.status === "delivered" ||
+                  order.status === "completed") && (
                   <button
                     onClick={handleDownloadPDF}
                     className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors flex-shrink-0"
@@ -697,12 +719,14 @@ Dullet POS Team`;
                             {order.customer.phone}
                           </div>
                         )}
+
                         {order.customer?.email && (
                           <div className="flex items-center text-xs text-gray-600">
                             <EnvelopeIcon className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
                             {order.customer.email}
                           </div>
                         )}
+
                         {order.customer?.location && (
                           <div className="flex items-center text-xs text-gray-600 sm:col-span-2">
                             <MapPinIcon className="h-3.5 w-3.5 mr-1.5 text-gray-400 flex-shrink-0" />
@@ -716,6 +740,7 @@ Dullet POS Team`;
                             </a>
                           </div>
                         )}
+
                         {order.customer?.address && (
                           <div className="flex items-start text-xs text-gray-600 sm:col-span-2">
                             <MapPinIcon className="h-3.5 w-3.5 mr-1.5 text-gray-400 mt-0.5 flex-shrink-0" />
@@ -733,6 +758,84 @@ Dullet POS Team`;
                       </div>
                     </div>
                   </div>
+                  {/* Outstanding Amount Section */}
+                  {order.customer?.outstandingAmount != null && showBalance ? (
+                    <div className="sm:col-span-2 mt-3">
+                      <div
+                        className={`
+        rounded-lg p-3 sm:p-4 border-l-4 transition-all duration-300 
+        ${
+          order.customer.outstandingAmount > 0
+            ? "bg-red-50 border-l-red-400 border border-red-200"
+            : order.customer.outstandingAmount < 0
+            ? "bg-green-50 border-l-green-400 border border-green-200"
+            : "bg-gray-50 border-l-gray-400 border border-gray-200"
+        }
+      `}
+                      >
+                        {/* Top row */}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          {/* Label + Icon */}
+                          <div className="flex items-center">
+                            <span className="text-sm sm:text-base font-medium text-gray-700">
+                              Net Balance Remaining
+                            </span>
+                          </div>
+
+                          {/* Value + Tag */}
+                          <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2">
+                            <span
+                              className={`
+              text-sm sm:text-base font-bold
+              ${
+                order.customer.outstandingAmount > 0
+                  ? "text-red-700"
+                  : order.customer.outstandingAmount < 0
+                  ? "text-green-700"
+                  : "text-gray-700"
+              }
+            `}
+                            >
+                              {formatCurrency(
+                                Math.abs(order.customer.outstandingAmount)
+                              )}
+                            </span>
+
+                            {order.customer.outstandingAmount !== 0 && (
+                              <span
+                                className={`
+                px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-medium
+                ${
+                  order.customer.outstandingAmount > 0
+                    ? "bg-red-100 text-red-800"
+                    : "bg-green-100 text-green-800"
+                }
+              `}
+                              >
+                                {order.customer.outstandingAmount > 0
+                                  ? "Due"
+                                  : "Credit"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Description text (responsive and readable) */}
+                        {order.customer.outstandingAmount > 0 && (
+                          <div className="mt-2 text-xs sm:text-sm text-red-600 flex items-center sm:items-center gap-1">
+                            <ExclamationTriangleIcon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                            <span>Payment pending from previous orders</span>
+                          </div>
+                        )}
+                        {order.customer.outstandingAmount < 0 && (
+                          <div className="mt-2 text-xs sm:text-sm text-green-600 flex items-center sm:items-center gap-1">
+                            <CheckCircleIcon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                            <span>Customer has advance credit balance</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -768,9 +871,7 @@ Dullet POS Team`;
                           </div>
                         </div>
                         <div className="flex justify-between text-[10px] text-gray-600">
-                          <span>
-                            {formatQuantity(item)}
-                          </span>
+                          <span>{formatQuantity(item)}</span>
                           <span>
                             @ {orderService.formatCurrency(item.ratePerUnit)}
                             /unit
@@ -809,7 +910,7 @@ Dullet POS Team`;
                                 </div>
                                 {item.packaging && (
                                   <div className="text-[10px] text-gray-500">
-                               {formatQuantity(item)}
+                                    {formatQuantity(item)}
                                   </div>
                                 )}
                               </div>
@@ -914,7 +1015,8 @@ Dullet POS Team`;
                             />
                             <div>
                               <p className="text-xs font-medium text-gray-900">
-                                {order?.driverAssignment?.driver?.firstName} {order?.driverAssignment?.driver?.lastName}
+                                {order?.driverAssignment?.driver?.firstName}{" "}
+                                {order?.driverAssignment?.driver?.lastName}
                               </p>
                               <p className="text-[10px] text-gray-600">
                                 {order.driverAssignment.driver.email}
@@ -926,7 +1028,8 @@ Dullet POS Team`;
                               )}
                               {order.driverAssignment.vehicleNumber && (
                                 <p className="text-[10px] text-gray-900 font-medium mt-1">
-                                  Vehicle: {order.driverAssignment.vehicleNumber}
+                                  Vehicle:{" "}
+                                  {order.driverAssignment.vehicleNumber}
                                 </p>
                               )}
                             </div>
@@ -1079,8 +1182,7 @@ Dullet POS Team`;
                                   />
                                 </div>
                                 <p className="text-[10px] text-gray-500 text-center">
-                                  {order.customer?.businessName ||
-                                    "Customer"}
+                                  {order.customer?.businessName || "Customer"}
                                 </p>
                               </div>
                             )}
@@ -1294,7 +1396,11 @@ Dullet POS Team`;
             setShowDeliverySummaryModal(false);
             setIsAutoOpenedModal(false);
           }}
-          title={isAutoOpenedModal ? "🎉 Order Delivered - Share Details" : "Share Delivery Summary"}
+          title={
+            isAutoOpenedModal
+              ? "🎉 Order Delivered - Share Details"
+              : "Share Delivery Summary"
+          }
         >
           <div className="p-6">
             {/* Order Summary */}
@@ -1373,7 +1479,8 @@ Dullet POS Team`;
                 )}
               </button>
               <p className="text-xs text-gray-500 mt-2 text-center">
-                📄 Professional PDF with signatures, vehicle details, and complete order information
+                📄 Professional PDF with signatures, vehicle details, and
+                complete order information
               </p>
             </div>
 

@@ -4,17 +4,13 @@ interface DeliveryInvoiceProps {
   data: any;
 }
 
-const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
-  data,
-}) => {
-  
-
+const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({ data }) => {
   // Helper function to safely access nested properties
   const getOrderData = () => {
     // Support both direct data and nested order structure
     return data.order || data;
   };
-
+  console.log({ data });
   const orderData = getOrderData();
   const company = data.company || {};
   const customer = orderData.customer || {};
@@ -30,47 +26,49 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
       year: "numeric",
     });
   };
-
-  // Calculate total amount
+function formatPriceWithCommas(price: number | string) {
+  if (price == null || isNaN(Number(price))) return "0";
+  return Number(price).toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}  // Calculate total amount
   const calculateTotal = () => {
     return items.reduce((total: number, item: any) => {
       return total + (item.totalAmount || item.taxableValue || 0);
     }, 0);
   };
   const calculateNoOfBags = (item: any) => {
-    const bagSize= item.packaging?.includes("Bag")? item.packaging.replace("kg Bags",""): "0";
-    const bagSizeNumber= Number(bagSize);
+    const bagSize = item.packaging?.includes("Bag")
+      ? item.packaging.replace("kg Bags", "")
+      : "0";
+    const bagSizeNumber = Number(bagSize);
     if (item.isBagSelection && bagSizeNumber > 0) {
       return Math.ceil(item.quantity / bagSizeNumber);
     }
     return 0;
-  }
+  };
   // Check if any item is taxable to show tax columns
   const hasAnyTaxableItem = orderData.isTaxable;
 
   // Helper function to calculate individual item tax
   const calculateItemTax = (item: any) => {
-    console.log(item.totalAmount, orderData.taxPercentage)
     return (item.totalAmount * orderData.taxPercentage) / 100;
   };
-
-
 
   // Helper function to format quantity with bags
   const formatQuantity = (item: any) => {
     if (item.isBagSelection) {
-      const noOfBags= calculateNoOfBags(item);
-      return `${item.quantity/noOfBags}kg Bags`;
+      const noOfBags = calculateNoOfBags(item);
+      return `${item.quantity / noOfBags}`;
     }
     return `${item.quantity} ${item.unit || ""}`;
   };
 
   // Simple number to words conversion (basic implementation)
 
-
   return (
     <div className="delivery-invoice">
-     
       {/* Invoice Content - Mimicking the exact SVG layout */}
       <div className="invoice-page p-6">
         {/* Main Border Container */}
@@ -78,18 +76,15 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
           {/* Header Section with Logo and Tax Invoice */}
           <div className=" flex flex-col justify-center ">
             <div className="logo-section text-center">
-              <div className="blinkit-logo py-2">
-                Delivery Challan
-              </div>
+              <div className="blinkit-logo py-2">Delivery Challan</div>
             </div>
             <div className=" border text-[20px] border-l-0 border-r-0 py-3 flex justify-center items-center font-bold">
-                {company.name || "Dullet Industries"}
-              
+              {company.name || "Dullet Industries"}
             </div>
           </div>
           <div className="border border-l-0 p-1 border-t-0 border-r-0">
             <strong>Challan Number:</strong>{" "}
-            {orderData.orderNumber?.replace("ORD","CHL")}
+            {orderData.orderNumber?.replace("ORD", "CHL")}
           </div>
           <div className="border border-l-0 p-1 border-t-0 border-r-0">
             <strong>Date:</strong>{" "}
@@ -98,8 +93,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
             )}
           </div>
           <div className="border border-l-0 p-1 border-t-0 border-r-0">
-            <strong>GSTIN:</strong>{" "}
-            {company.gstin || "N/A"}
+            <strong>GSTIN:</strong> {company.gstin || "N/A"}
           </div>
 
           {/* Company and Customer Info Section */}
@@ -130,24 +124,27 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
                   <div className="detail-row">
                     <span className="detail-label">Phone</span>
                     <span className="detail-colon">:</span>
-                    <span className="detail-value">{orderData.godown.contact.phone}</span>
+                    <span className="detail-value">
+                      {orderData.godown.contact.phone}
+                    </span>
                   </div>
                 )}
                 {orderData.godown?.contact?.email && (
                   <div className="detail-row">
                     <span className="detail-label">Email</span>
                     <span className="detail-colon">:</span>
-                    <span className="detail-value">{orderData.godown.contact.email}</span>
+                    <span className="detail-value">
+                      {orderData.godown.contact.email}
+                    </span>
                   </div>
                 )}
-                
               </div>
             </div>
 
             <div className="invoice-to-section">
               <div className="invoice-meta">
                 <div className="invoice-to">
-                  <div className="section-title">Challan To</div>
+                  <div className="section-title">Issued To</div>
                   <div className="customer-name capitalize">
                     {customer.businessName || customer.name || "N/A"}
                   </div>
@@ -180,21 +177,28 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
               </div>
             </div>
           </div>
-         { orderData.driverAssignment?.driver?.firstName ?<div className="border border-l-0 p-1 border-t-0 border-r-0">
-            <strong>Delivery Partner Name:</strong>{" "}
-            {orderData.driverAssignment?.driver?.firstName +
-              " " +
-              orderData.driverAssignment?.driver?.lastName || "N/A"}
-          </div>:null}
-          {orderData.driverAssignment?.vehicleNumber ?<div className="border border-l-0 p-1 border-t-0 border-r-0">
-            <strong>Vehicle Number:</strong>{" "}
-            {orderData.driverAssignment?.vehicleNumber || "N/A"}
-          </div>:null}
-          
+          {orderData.driverAssignment?.driver?.firstName ? (
+            <div className="border border-l-0 p-1 border-t-0 border-r-0">
+              <strong>Delivery Partner Name:</strong>{" "}
+              {orderData.driverAssignment?.driver?.firstName +
+                " " +
+                orderData.driverAssignment?.driver?.lastName || "N/A"}
+            </div>
+          ) : null}
+          {orderData.driverAssignment?.vehicleNumber ? (
+            <div className="border border-l-0 p-1 border-t-0 border-r-0">
+              <strong>Vehicle Number:</strong>{" "}
+              {orderData.driverAssignment?.vehicleNumber || "N/A"}
+            </div>
+          ) : null}
 
           {/* Items Table */}
           <div className="items-table-container">
-            <table className={`items-table ${hasAnyTaxableItem ? 'with-tax-columns' : ''}`}>
+            <table
+              className={`items-table ${
+                hasAnyTaxableItem ? "with-tax-columns" : ""
+              }`}
+            >
               <thead>
                 <tr>
                   <th>SR NO</th>
@@ -203,8 +207,15 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
                   <th>QUANTITY</th>
                   <th>PACKAGING</th>
                   <th>RATE</th>
-                  {hasAnyTaxableItem && <th>TAX AMOUNT({orderData?.taxPercentage || "N/A"}%)</th>}
                   <th>ITEM PRICE</th>
+                  {/* {hasAnyTaxableItem && ( */}
+                  <th>
+                    TAX AMOUNT{" "}
+                    {hasAnyTaxableItem
+                      ? "(" + orderData?.taxPercentage + "%)"
+                      : ""}
+                  </th>
+                  {/* )} */}
                 </tr>
               </thead>
               <tbody>
@@ -214,70 +225,95 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
                     <td>{item.productName || item.description || "N/A"}</td>
                     <td>{company?.hsnCode || "N/A"}</td>
                     <td className="">
-                      {item?.packaging?.includes("Bag") ?<span className="text-[11px] me-1">{`${calculateNoOfBags(item)} ×`}</span>:null}
-                 {formatQuantity(item)}
+                      {`${item.quantity}KG`}
+                      {item?.packaging?.includes("Bag") ? (
+                        <span className="text-[11px] text-gray-500 block me-1">
+                          {`${calculateNoOfBags(item)} ×`}{" "}
+                          {formatQuantity(item)}
+                        </span>
+                      ) : null}
                     </td>
                     <td>
-                      {item.isBagSelection ? 
-                        (item.packaging === "5kg Bags" ? "40kg Bags" : (item.packaging || "N/A")) 
+                      {item.isBagSelection
+                        ? item.packaging === "5kg Bags"
+                          ? "40kg Bags"
+                          : item.packaging === "10kg Bags"
+                          ? "40kg Bags"
+                           : item.packaging === "50kg Bags"
+                          ? "40kg Bags"
+                          : item.packaging || "N/A"
                         : "Loose"}
-                     
                     </td>
-                    <td>₹{(item.ratePerUnit || item.rate || 0).toFixed(2)}</td>
-                 
-                    {hasAnyTaxableItem && (
-                      <td>
-                        {`₹${calculateItemTax(item).toFixed(2)}`}
-                      </td>
-                    )}
                     <td>
-                      ₹{(item.totalAmount || 0).toFixed(2)}
+                      ₹{formatPriceWithCommas(item.ratePerUnit || item.rate || 0)}
                     </td>
+                    <td>
+                      ₹{formatPriceWithCommas(item.totalAmount || 0)}
+                    </td>
+                    {hasAnyTaxableItem ? (
+                      <td>
+                        ₹{formatPriceWithCommas(calculateItemTax(item) || 0)}
+                      </td>
+                    ) : (
+                      <td>-</td>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
 
-<div className="flex justify-end">
-            {/* Order Summary - Simple Design Below Table */}
-            <div className="table-summary">
-              <div className="summary-row-simple">
-                <span>Sub Total:</span>
-                <span>
-                  ₹{(orderData.subtotal || calculateTotal()).toFixed(2)}
-                </span>
-              </div>
-              {orderData.taxAmount && orderData.taxAmount > 0 ? (
+            <div className="flex justify-end">
+              {/* Order Summary - Simple Design Below Table */}
+              <div className="table-summary">
                 <div className="summary-row-simple">
-                  <span>Tax Amount ({orderData?.taxPercentage}%):</span>
-                  <span>₹{orderData.taxAmount.toFixed(2)}</span>
+                  <span>Sub Total:</span>
+                  <span>
+                    ₹{formatPriceWithCommas(orderData.subtotal || calculateTotal())}
+                  </span>
                 </div>
-              ) : null}
-              <div className="summary-row-simple total-row-simple">
-                <span>Total Amount:</span>
-                <span>
-                  ₹
-                  {(
-                    orderData.finalAmount ||
-                    orderData.totalAmount ||
-                    calculateTotal()
-                  ).toFixed(2)}
-                </span>
-              </div>
-              {orderData.paidAmount !== undefined && (
+                {/* {orderData.taxAmount && orderData.taxAmount > 0 ? ( */}
                 <div className="summary-row-simple">
-                  <span>Paid Amount:</span>
-                  <span>₹{orderData.paidAmount.toFixed(2)}</span>
+                  <span>
+                    Tax Amount{" "}
+                    {hasAnyTaxableItem
+                      ? "(" + orderData?.taxPercentage + "%)"
+                      : ""}
+                    :
+                  </span>
+                  <span>
+                    ₹{formatPriceWithCommas(orderData?.taxAmount || 0)}
+                  </span>
                 </div>
-              )}
-              <div className="summary-row-simple">
-                <span>Net Balance:</span>
-                <span>
-                  ₹{
-                    (orderData?.customer?.outstandingAmount)?.toFixed(2)}
-                </span>
+                {/* ) : null} */}
+                <div className="summary-row-simple total-row-simple">
+                  <span>Total Amount:</span>
+                  <span>
+                    ₹
+                    {formatPriceWithCommas(
+                      orderData.finalAmount ||
+                      orderData.totalAmount ||
+                      calculateTotal()
+                    )}
+                  </span>
+                </div>
+                {orderData.paidAmount !== undefined && (
+                  <div className="summary-row-simple">
+                    <span>Paid Amount:</span>
+                    <span>
+                      ₹{formatPriceWithCommas(orderData.paidAmount || 0)}
+                    </span>
+                  </div>
+                )}
+                <div className="summary-row-simple">
+                  <span>Net Balance Remaining:</span>
+                  <span>
+                    ₹{formatPriceWithCommas(
+                      orderData?.customer?.outstandingAmount || 0
+                    )}
+                  </span>
+                </div>
               </div>
-            </div></div>
+            </div>
           </div>
           {/* Delivery Partner and Customer Signatures */}
           <div className="signatures-section">
@@ -296,7 +332,6 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
                   />
                 )}
               </div>
-             
             </div>
             <div className="customer-signature">
               <div className="signature-title">Customer Signature</div>
@@ -316,20 +351,22 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
             </div>
           </div>
 
-
           {/* Footer Section */}
           <div className="invoice-footer">
             <div className="footer-content">
               <p>Thank you for your business!</p>
-              <p>Generated on: {new Date().toLocaleString('en-IN', { 
-                day: '2-digit', 
-                month: '2-digit', 
-                year: 'numeric', 
-                hour: '2-digit', 
-                minute: '2-digit', 
-                second: '2-digit',
-                hour12: true 
-              })}</p>
+              <p>
+                Generated on:{" "}
+                {new Date().toLocaleString("en-IN", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                  hour12: true,
+                })}
+              </p>
               <p>Dullet POS - Delivery Management System</p>
             </div>
           </div>
@@ -551,7 +588,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
 
         .items-table th:nth-child(2),
         .items-table td:nth-child(2) {
-          width: 28%;
+          width: 20%;
           text-align: left;
         }
 
@@ -572,7 +609,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
 
         .items-table th:nth-child(6),
         .items-table td:nth-child(6) {
-          width: 14%;
+          width: 10%;
         }
 
         .items-table th:nth-child(7),
@@ -631,7 +668,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
         .table-summary {
           margin-top: 10px;
           padding: 10px 0;
-          max-width: 220px;
+          max-width: 280px;
         }
 
         .summary-row-simple {

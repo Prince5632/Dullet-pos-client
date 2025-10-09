@@ -261,7 +261,7 @@ const DashboardPage: React.FC = () => {
               <div className="h-8 w-px bg-emerald-300/50"></div>
               <div className="text-right">
                 <p className="text-lg md:text-xl font-bold text-white">
-                  ₹{((stats?.revenue.today || 0) / 1000).toFixed(0)}k
+                  ₹{((stats?.revenue.today || 0) / 1000).toFixed(1)}k
                 </p>
                 <p className="text-xs text-emerald-100">Revenue</p>
               </div>
