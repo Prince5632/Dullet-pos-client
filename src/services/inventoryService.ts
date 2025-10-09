@@ -107,6 +107,9 @@ class InventoryService {
 
   // Format quantity with unit
   formatQuantityWithUnit(quantity: number, unit: string): string {
+    if(unit === "40Kg Bag"){
+      return `${quantity} × ${this.formatUnit(unit)}`;
+    }
     return `${quantity} ${this.formatUnit(unit)}`;
   }
 
