@@ -1,54 +1,62 @@
-import { useEffect } from 'react';
-import { authService } from '../services/authService';
+import { useEffect } from "react";
+import { authService } from "../services/authService";
+import apiService from "../services/api";
 
 /**
- * Hook to synchronize authentication state across browser tabs
- * Listens for localStorage changes and updates auth state accordingly
+ * Hook to sync authentication state across browser tabs.
+ * It listens for auth-related changes in localStorage
+ * and triggers login/logout updates accordingly.
  */
 export const useSessionSync = (onAuthChange: (isAuthenticated: boolean) => void) => {
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
-      // Only handle auth-related storage changes
-      if (!event.key || !['auth_token', 'user_data', 'refresh_token', 'login_timestamp'].includes(event.key)) {
+      if (!event.key) return;
+
+      const relevantKeys = ["auth_token", "user_data", "refresh_token", "login_timestamp"];
+      if (!relevantKeys.includes(event.key)) return;
+
+      apiService.getToken();
+
+      // Handle logout in another tab
+      if (event.key === "auth_token" && !event.newValue) {
+        setTimeout(() => {
+          const token = localStorage.getItem("auth_token");
+          const userData = localStorage.getItem("user_data");
+          const loginTimestamp = localStorage.getItem("login_timestamp");
+
+          if (!token && (!userData || !loginTimestamp)) {
+            console.log("Detected logout in another tab");
+            authService.clearAuthData();
+            onAuthChange(false);
+          }
+        }, 200);
         return;
       }
 
-      // Check if user was logged out in another tab
-      if (event.key === 'auth_token' && !event.newValue) {
-        console.log('User logged out in another tab');
-        authService.clearAuthData();
-        onAuthChange(false);
+      // Handle login in another tab
+      if (event.key === "auth_token" && !event.newValue && event.oldValue) {
+        console.log("Detected login in another tab");
+        setTimeout(() => onAuthChange(true), 100);
         return;
       }
 
-      // Check if user logged in in another tab
-      if (event.key === 'auth_token' && event.newValue && !event.oldValue) {
-        console.log('User logged in in another tab');
-        onAuthChange(true);
-        return;
-      }
-
-      // Check if session was refreshed in another tab
-      if (event.key === 'login_timestamp' && event.newValue) {
-        console.log('Session refreshed in another tab');
+      // Handle session refresh in another tab
+      if (event.key === "login_timestamp" && event.newValue) {
+        console.log("Session refreshed in another tab");
         // No need to trigger auth change, just acknowledge the refresh
+         // Add a small delay to ensure all login-related storage operations are complete
+        setTimeout(() => {
+          onAuthChange(true);
+        }, 100);
         return;
       }
     };
 
-    // Listen for storage changes (cross-tab communication)
-    window.addEventListener('storage', handleStorageChange);
-
-    // Cleanup listener on unmount
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, [onAuthChange]);
 
-  // Function to refresh session timestamp (call on user activity)
-  const refreshSession = () => {
-    authService.refreshSession();
-  };
+  const refreshSession = () => authService.refreshSession();
 
   return { refreshSession };
 };

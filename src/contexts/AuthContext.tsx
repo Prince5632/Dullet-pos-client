@@ -1,32 +1,38 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
-import type { ReactNode } from 'react';
-import type { User, LoginRequest } from '../types';
-import { authService } from '../services/authService';
-import { useSessionSync } from '../hooks/useSessionSync';
-import { APP_CONFIG } from '../config/api';
-import toast from 'react-hot-toast';
+import React, {
+  createContext,
+  useContext,
+  useReducer,
+  useEffect,
+  useCallback,
+  useMemo,
+  useState,
+} from "react";
+import type { ReactNode } from "react";
+import type { User, LoginRequest } from "../types";
+import { authService } from "../services/authService";
+import { useSessionSync } from "../hooks/useSessionSync";
+import { APP_CONFIG } from "../config/api";
+import toast from "react-hot-toast";
 
 // Auth State
 interface AuthState {
   user: User | null;
-  isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
 }
 
 // Auth Actions
 type AuthAction =
-  | { type: 'AUTH_START' }
-  | { type: 'AUTH_SUCCESS'; payload: User }
-  | { type: 'AUTH_FAILURE'; payload: string }
-  | { type: 'LOGOUT' }
-  | { type: 'UPDATE_USER'; payload: User }
-  | { type: 'CLEAR_ERROR' };
+  | { type: "AUTH_START" }
+  | { type: "AUTH_SUCCESS"; payload: User }
+  | { type: "AUTH_FAILURE"; payload: string }
+  | { type: "LOGOUT" }
+  | { type: "UPDATE_USER"; payload: User }
+  | { type: "CLEAR_ERROR" };
 
 // Initial state
 const initialState: AuthState = {
   user: null,
-  isAuthenticated: false,
   isLoading: true,
   error: null,
 };
@@ -34,42 +40,39 @@ const initialState: AuthState = {
 // Auth reducer
 const authReducer = (state: AuthState, action: AuthAction): AuthState => {
   switch (action.type) {
-    case 'AUTH_START':
+    case "AUTH_START":
       return {
         ...state,
         isLoading: true,
         error: null,
       };
-    case 'AUTH_SUCCESS':
+    case "AUTH_SUCCESS":
       return {
         ...state,
         user: action.payload,
-        isAuthenticated: true,
         isLoading: false,
         error: null,
       };
-    case 'AUTH_FAILURE':
+    case "AUTH_FAILURE":
       return {
         ...state,
         user: null,
-        isAuthenticated: false,
         isLoading: false,
         error: action.payload,
       };
-    case 'LOGOUT':
+    case "LOGOUT":
       return {
         ...state,
         user: null,
-        isAuthenticated: false,
         isLoading: false,
         error: null,
       };
-    case 'UPDATE_USER':
+    case "UPDATE_USER":
       return {
         ...state,
         user: action.payload,
       };
-    case 'CLEAR_ERROR':
+    case "CLEAR_ERROR":
       return {
         ...state,
         error: null,
@@ -84,7 +87,11 @@ interface AuthContextType extends AuthState {
   login: (credentials: LoginRequest) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: () => Promise<void>;
-  changePassword: (data: { currentPassword: string; newPassword: string; confirmPassword: string }) => Promise<void>;
+  changePassword: (data: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) => Promise<void>;
   hasPermission: (permission: string) => boolean;
   hasAnyPermission: (permissions: string[]) => boolean;
   hasAllPermissions: (permissions: string[]) => boolean;
@@ -94,6 +101,7 @@ interface AuthContextType extends AuthState {
   getUserId: () => string | null;
   clearError: () => void;
   refreshSession: () => void;
+  isAuthenticated: boolean;
 }
 
 // Create context
@@ -106,22 +114,39 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
-
+  
+  // Force re-render trigger for token changes
+  const [tokenStateVersion, setTokenStateVersion] = useState(0);
+  
+  // Computed isAuthenticated based on actual token presence and session validity
+  const isAuthenticated = useMemo(() => {
+    // Include tokenStateVersion to ensure re-computation when token changes
+    return authService.isAuthenticated();
+  }, [state.user, tokenStateVersion]); 
   // Handle cross-tab authentication changes
   const handleAuthChange = useCallback(async (isAuthenticated: boolean) => {
     if (isAuthenticated) {
       // User logged in in another tab, refresh our state
       try {
-        dispatch({ type: 'AUTH_START' });
+        dispatch({ type: "AUTH_START" });
         const user = await authService.getProfile();
-        dispatch({ type: 'AUTH_SUCCESS', payload: user });
+        dispatch({ type: "AUTH_SUCCESS", payload: user });
+        // Trigger re-computation of isAuthenticated
+        setTokenStateVersion(prev => prev + 1);
       } catch (error) {
-        console.error('Failed to sync login from another tab:', error);
-        dispatch({ type: 'AUTH_FAILURE', payload: 'Failed to sync authentication' });
+        console.error("Failed to sync login from another tab:", error);
+        dispatch({
+          type: "AUTH_FAILURE",
+          payload: "Failed to sync authentication",
+        });
+        // Trigger re-computation of isAuthenticated
+        setTokenStateVersion(prev => prev + 1);
       }
     } else {
       // User logged out in another tab
-      dispatch({ type: 'LOGOUT' });
+      dispatch({ type: "LOGOUT" });
+      // Trigger re-computation of isAuthenticated
+      setTokenStateVersion(prev => prev + 1);
     }
   }, []);
 
@@ -131,7 +156,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Initialize auth state on app load
   useEffect(() => {
     let mounted = true; // Flag to prevent state updates after unmount
-    
+
     const initializeAuth = async () => {
       try {
         // Only initialize if we're still in loading state
@@ -140,20 +165,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Check if user has valid session
         if (authService.isAuthenticated()) {
           if (!mounted) return;
-          dispatch({ type: 'AUTH_START' });
+          dispatch({ type: "AUTH_START" });
           try {
             const user = await authService.getProfile();
             if (!mounted) return;
-            dispatch({ type: 'AUTH_SUCCESS', payload: user });
+            dispatch({ type: "AUTH_SUCCESS", payload: user });
+            // Trigger re-computation of isAuthenticated
+            setTokenStateVersion(prev => prev + 1);
           } catch (error) {
             // If profile fetch fails, try to refresh token
-            console.log('Profile fetch failed, attempting token refresh...');
+            console.log("Profile fetch failed, attempting token refresh...");
             const refreshSuccess = await authService.attemptTokenRefresh();
-            
+
             if (refreshSuccess && mounted) {
               const user = await authService.getProfile();
               if (!mounted) return;
-              dispatch({ type: 'AUTH_SUCCESS', payload: user });
+              dispatch({ type: "AUTH_SUCCESS", payload: user });
+              // Trigger re-computation of isAuthenticated
+              setTokenStateVersion(prev => prev + 1);
             } else {
               throw error;
             }
@@ -161,31 +190,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } else {
           // Check if we can restore session using refresh token
           const refreshSuccess = await authService.attemptTokenRefresh();
-          
+
           if (refreshSuccess && mounted) {
-            dispatch({ type: 'AUTH_START' });
+            dispatch({ type: "AUTH_START" });
             const user = await authService.getProfile();
             if (!mounted) return;
-            dispatch({ type: 'AUTH_SUCCESS', payload: user });
+            dispatch({ type: "AUTH_SUCCESS", payload: user });
+            // Trigger re-computation of isAuthenticated
+            setTokenStateVersion(prev => prev + 1);
           } else {
             // No existing session - this is normal, don't show error
             if (mounted) {
-              dispatch({ type: 'LOGOUT' });
+              dispatch({ type: "LOGOUT" });
+              // Trigger re-computation of isAuthenticated
+              setTokenStateVersion(prev => prev + 1);
             }
           }
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        console.error("Auth initialization error:", error);
         authService.clearAuthData();
         // Don't show error message during initialization - just set to logged out state
         if (mounted) {
-          dispatch({ type: 'LOGOUT' });
+          dispatch({ type: "LOGOUT" });
+          // Trigger re-computation of isAuthenticated
+          setTokenStateVersion(prev => prev + 1);
         }
       }
     };
 
     // Only run once on mount when initial loading state
-    if (state.isLoading && !state.isAuthenticated) {
+    if (state.isLoading) {
       initializeAuth();
     }
 
@@ -196,23 +231,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Set up user activity tracking to refresh session
   useEffect(() => {
-    if (!state.isAuthenticated) return;
+    if (!isAuthenticated) return;
 
-    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    const activityEvents = [
+      "mousedown",
+      "mousemove",
+      "keypress",
+      "scroll",
+      "touchstart",
+      "click",
+    ];
     let activityTimer: number;
 
     const handleUserActivity = () => {
       // Debounce activity tracking to avoid excessive calls
       clearTimeout(activityTimer);
+
       activityTimer = setTimeout(() => {
-        if (state.isAuthenticated) {
+        if (isAuthenticated) {
+          
           refreshSession();
         }
       }, 30000); // Refresh session every 30 seconds of activity
     };
 
     // Add event listeners for user activity
-    activityEvents.forEach(event => {
+    activityEvents.forEach((event) => {
       document.addEventListener(event, handleUserActivity, true);
     });
 
@@ -222,32 +266,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Cleanup
     return () => {
       clearTimeout(activityTimer);
-      activityEvents.forEach(event => {
+      activityEvents.forEach((event) => {
         document.removeEventListener(event, handleUserActivity, true);
       });
     };
-  }, [state.isAuthenticated, refreshSession]);
-
+  }, [isAuthenticated, refreshSession]);
 
   // Login function
   const login = async (credentials: LoginRequest): Promise<void> => {
-    console.log('[AuthContext] Login started');
-    dispatch({ type: 'AUTH_START' });
-    
+    console.log("[AuthContext] Login started");
+    dispatch({ type: "AUTH_START" });
+
     try {
       const loginResponse = await authService.login(credentials);
-      console.log('[AuthContext] Login API success, user:', loginResponse.user.email);
-      
-      // Small delay to ensure localStorage operations are complete
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
-      dispatch({ type: 'AUTH_SUCCESS', payload: loginResponse.user });
-      console.log('[AuthContext] Auth state updated to SUCCESS');
+      console.log(
+        "[AuthContext] Login API success, user:",
+        loginResponse.user.email
+      );
+      dispatch({ type: "AUTH_SUCCESS", payload: loginResponse.user });
+      // Trigger re-computation of isAuthenticated
+      setTokenStateVersion(prev => prev + 1);
+      console.log("[AuthContext] Auth state updated to SUCCESS");
       toast.success(`Welcome back, ${loginResponse.user.firstName}!`);
     } catch (error: any) {
-      console.error('[AuthContext] Login failed:', error.message);
-      const errorMessage = error.message || 'Login failed';
-      dispatch({ type: 'AUTH_FAILURE', payload: errorMessage });
+      console.error("[AuthContext] Login failed:", error.message);
+      const errorMessage = error.message || "Login failed";
+      dispatch({ type: "AUTH_FAILURE", payload: errorMessage });
+      // Trigger re-computation of isAuthenticated
+      setTokenStateVersion(prev => prev + 1);
       throw error; // Re-throw to handle in component
     }
   };
@@ -256,13 +302,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async (): Promise<void> => {
     try {
       await authService.logout();
-      dispatch({ type: 'LOGOUT' });
-      toast.success('Logged out successfully');
+      dispatch({ type: "LOGOUT" });
+      // Trigger re-computation of isAuthenticated
+      setTokenStateVersion(prev => prev + 1);
+      toast.success("Logged out successfully");
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
       // Still dispatch logout even if API call fails
-      dispatch({ type: 'LOGOUT' });
-      toast.success('Logged out successfully');
+      dispatch({ type: "LOGOUT" });
+      // Trigger re-computation of isAuthenticated
+      setTokenStateVersion(prev => prev + 1);
+      toast.success("Logged out successfully");
     }
   };
 
@@ -270,26 +320,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateProfile = async (): Promise<void> => {
     try {
       const user = await authService.getProfile();
-      dispatch({ type: 'UPDATE_USER', payload: user });
-      toast.success('Profile updated successfully');
+      dispatch({ type: "UPDATE_USER", payload: user });
+      toast.success("Profile updated successfully");
     } catch (error: any) {
-      const errorMessage = error.message || 'Failed to update profile';
+      const errorMessage = error.message || "Failed to update profile";
       toast.error(errorMessage);
       throw error;
     }
   };
 
   // Change password
-  const changePassword = async (data: { currentPassword: string; newPassword: string; confirmPassword: string }): Promise<void> => {
+  const changePassword = async (data: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }): Promise<void> => {
     if (data.newPassword !== data.confirmPassword) {
-      throw new Error('New password and confirm password do not match');
+      throw new Error("New password and confirm password do not match");
     }
 
     try {
       await authService.changePassword(data);
-      toast.success('Password changed successfully');
+      toast.success("Password changed successfully");
     } catch (error: any) {
-      const errorMessage = error.message || 'Failed to change password';
+      const errorMessage = error.message || "Failed to change password";
       toast.error(errorMessage);
       throw error;
     }
@@ -321,10 +375,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const hasOrderManageAccess = (): boolean => {
     if (!state.user) return false;
     return (
-      hasPermission('orders.manage') ||
-      hasRole('Manager') ||
-      hasRole('Admin') ||
-      hasRole('Super Admin')
+      hasPermission("orders.manage") ||
+      hasRole("Manager") ||
+      hasRole("Admin") ||
+      hasRole("Super Admin")
     );
   };
 
@@ -334,28 +388,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Clear error
   const clearError = (): void => {
-    dispatch({ type: 'CLEAR_ERROR' });
+    dispatch({ type: "CLEAR_ERROR" });
   };
 
   // Session expiration warning logic
   useEffect(() => {
-    if (!state.isAuthenticated) return;
+    if (!isAuthenticated) return;
 
     const checkSessionExpiration = () => {
-      const loginTimestamp = localStorage.getItem('login_timestamp');
+      const loginTimestamp = localStorage.getItem("login_timestamp");
       if (!loginTimestamp) return;
 
       const loginTime = parseInt(loginTimestamp);
       const currentTime = Date.now();
       const sessionTimeout = APP_CONFIG.SESSION_TIMEOUT;
       const warningTime = 5 * 60 * 1000; // 5 minutes before expiration
-      
+
       const timeElapsed = currentTime - loginTime;
       const timeRemaining = sessionTimeout - timeElapsed;
 
       // If session has expired, logout automatically
       if (timeRemaining <= 0) {
-        toast.error('Your session has expired. Please login again.');
+        toast.error("Your session has expired. Please login again.");
         logout();
         return;
       }
@@ -364,10 +418,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (timeRemaining <= warningTime && timeRemaining > 0) {
         const minutesRemaining = Math.ceil(timeRemaining / (60 * 1000));
         toast.error(
-          `Your session will expire in ${minutesRemaining} minute${minutesRemaining !== 1 ? 's' : ''}. Please save your work.`,
+          `Your session will expire in ${minutesRemaining} minute${
+            minutesRemaining !== 1 ? "s" : ""
+          }. Please save your work.`,
           {
             duration: 10000, // Show for 10 seconds
-            id: 'session-warning', // Prevent duplicate toasts
+            id: "session-warning", // Prevent duplicate toasts
           }
         );
       }
@@ -380,10 +436,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkSessionExpiration();
 
     return () => clearInterval(interval);
-  }, [state.isAuthenticated, logout]);
+  }, [isAuthenticated, logout]);
 
   const contextValue: AuthContextType = {
     ...state,
+    isAuthenticated,
     login,
     logout,
     updateProfile,
@@ -400,9 +457,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 };
 
@@ -410,7 +465,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

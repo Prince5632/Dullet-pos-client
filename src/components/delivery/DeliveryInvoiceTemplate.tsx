@@ -37,6 +37,33 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
       return total + (item.totalAmount || item.taxableValue || 0);
     }, 0);
   };
+  const calculateNoOfBags = (item: any) => {
+    const bagSize= item.packaging?.includes("Bag")? item.packaging.replace("kg Bags",""): "0";
+    const bagSizeNumber= Number(bagSize);
+    if (item.isBagSelection && bagSizeNumber > 0) {
+      return Math.ceil(item.quantity / bagSizeNumber);
+    }
+    return 0;
+  }
+  // Check if any item is taxable to show tax columns
+  const hasAnyTaxableItem = orderData.isTaxable;
+
+  // Helper function to calculate individual item tax
+  const calculateItemTax = (item: any) => {
+    console.log(item.totalAmount, orderData.taxPercentage)
+    return (item.totalAmount * orderData.taxPercentage) / 100;
+  };
+
+
+
+  // Helper function to format quantity with bags
+  const formatQuantity = (item: any) => {
+    if (item.isBagSelection) {
+      const noOfBags= calculateNoOfBags(item);
+      return `${item.quantity/noOfBags}kg Bags`;
+    }
+    return `${item.quantity} ${item.unit || ""}`;
+  };
 
   // Simple number to words conversion (basic implementation)
 
@@ -167,7 +194,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
 
           {/* Items Table */}
           <div className="items-table-container">
-            <table className="items-table">
+            <table className={`items-table ${hasAnyTaxableItem ? 'with-tax-columns' : ''}`}>
               <thead>
                 <tr>
                   <th>SR NO</th>
@@ -176,6 +203,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
                   <th>QUANTITY</th>
                   <th>PACKAGING</th>
                   <th>RATE</th>
+                  {hasAnyTaxableItem && <th>TAX AMOUNT({orderData?.taxPercentage || "N/A"}%)</th>}
                   <th>ITEM PRICE</th>
                 </tr>
               </thead>
@@ -185,17 +213,25 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
                     <td>{index + 1}</td>
                     <td>{item.productName || item.description || "N/A"}</td>
                     <td>{company?.hsnCode || "N/A"}</td>
-                    <td>
-                      {item.quantity} {item.unit || ""}
+                    <td className="">
+                      {item?.packaging?.includes("Bag") ?<span className="text-[11px] me-1">{`${calculateNoOfBags(item)} ×`}</span>:null}
+                 {formatQuantity(item)}
                     </td>
                     <td>
                       {item.isBagSelection ? 
                         (item.packaging === "5kg Bags" ? "40kg Bags" : (item.packaging || "N/A")) 
                         : "Loose"}
+                     
                     </td>
                     <td>₹{(item.ratePerUnit || item.rate || 0).toFixed(2)}</td>
+                 
+                    {hasAnyTaxableItem && (
+                      <td>
+                        {`₹${calculateItemTax(item).toFixed(2)}`}
+                      </td>
+                    )}
                     <td>
-                      ₹{(item.totalAmount || item.taxableValue || 0).toFixed(2)}
+                      ₹{(item.totalAmount || 0).toFixed(2)}
                     </td>
                   </tr>
                 ))}
@@ -235,14 +271,10 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
                 </div>
               )}
               <div className="summary-row-simple">
-                <span>Remaining Payment:</span>
+                <span>Net Balance:</span>
                 <span>
-                  ₹{(
-                    (orderData.totalAmount ||
-                      orderData.subtotal ||
-                      calculateTotal()) -
-                    (orderData.paidAmount || 0)
-                  ).toFixed(2)}
+                  ₹{
+                    (orderData?.customer?.outstandingAmount)?.toFixed(2)}
                 </span>
               </div>
             </div></div>
@@ -429,7 +461,6 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
         .detail-label {
           font-weight: bold;
           color: #000;
-          min-width: 60px;
         }
 
         .detail-colon {
@@ -512,6 +543,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
           font-size: 12px;
         }
 
+        /* Column widths for table without tax columns */
         .items-table th:nth-child(1),
         .items-table td:nth-child(1) {
           width: 6%;
@@ -546,6 +578,53 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
         .items-table th:nth-child(7),
         .items-table td:nth-child(7) {
           width: 14%;
+        }
+
+        /* Adjusted column widths when tax columns are present */
+        .items-table.with-tax-columns th:nth-child(1),
+        .items-table.with-tax-columns td:nth-child(1) {
+          width: 5%;
+        }
+
+        .items-table.with-tax-columns th:nth-child(2),
+        .items-table.with-tax-columns td:nth-child(2) {
+          width: 22%;
+          text-align: left;
+        }
+
+        .items-table.with-tax-columns th:nth-child(3),
+        .items-table.with-tax-columns td:nth-child(3) {
+          width: 10%;
+        }
+
+        .items-table.with-tax-columns th:nth-child(4),
+        .items-table.with-tax-columns td:nth-child(4) {
+          width: 12%;
+        }
+
+        .items-table.with-tax-columns th:nth-child(5),
+        .items-table.with-tax-columns td:nth-child(5) {
+          width: 12%;
+        }
+
+        .items-table.with-tax-columns th:nth-child(6),
+        .items-table.with-tax-columns td:nth-child(6) {
+          width: 10%;
+        }
+
+        .items-table.with-tax-columns th:nth-child(7),
+        .items-table.with-tax-columns td:nth-child(7) {
+          width: 12%;
+        }
+
+        .items-table.with-tax-columns th:nth-child(8),
+        .items-table.with-tax-columns td:nth-child(8) {
+          width: 12%;
+        }
+
+        .items-table.with-tax-columns th:nth-child(9),
+        .items-table.with-tax-columns td:nth-child(9) {
+          width: 12%;
         }
 
         /* Table Summary Section - Simple Design */

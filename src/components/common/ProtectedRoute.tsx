@@ -31,8 +31,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <LoadingSpinner fullScreen text="Authenticating..." />;
   }
 
-  // Redirect to login if not authenticated
-  if (!isAuthenticated) {
+  // Double-check authentication with token presence
+  const hasToken = !!localStorage.getItem('auth_token');
+  
+  // Redirect to login if not authenticated or no token
+  if (!isAuthenticated || !hasToken) {
     return <Navigate to="/auth/login" state={{ from: location }} replace />;
   }
 

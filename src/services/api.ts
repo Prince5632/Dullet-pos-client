@@ -177,6 +177,7 @@ class ApiService {
 
   // Token management
   public setToken(token: string) {
+    console.log(token)
     this.token = token;
     localStorage.setItem('auth_token', token);
   }
@@ -187,6 +188,7 @@ class ApiService {
   }
 
   public getToken(): string | null {
+    this.loadTokenFromStorage();
     return this.token;
   }
 
