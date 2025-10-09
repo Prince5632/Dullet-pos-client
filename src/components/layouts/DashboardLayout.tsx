@@ -12,6 +12,7 @@ import {
   ChartBarIcon,
   BuildingOfficeIcon,
   CubeIcon,
+  TruckIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../contexts/AuthContext";
 import type { NavItem } from "../../types";
@@ -54,6 +55,12 @@ const navigationItems: NavItem[] = [
     href: "/inventory",
     icon: CubeIcon,
     permission: "stock.read",
+  },
+  {
+    name: "Transits",
+    href: "/transits",
+    icon: TruckIcon,
+    permission: "transits.read",
   },
   {
     name: "Reports",

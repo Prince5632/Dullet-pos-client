@@ -59,6 +59,10 @@ const CustomerDetailPage = lazy(() => import('../pages/reports/CustomerDetailPag
 // Delivery Pages
 const DeliveryInvoicePreview = lazy(() => import('../pages/delivery/DeliveryInvoicePreview'));
 
+// Transit Management Pages
+const TransitsPage = lazy(() => import('../pages/transits/TransitsPage'));
+const CreateTransitPage = lazy(() => import('../pages/transits/CreateTransitPage'));
+
 // Settings Pages
 
 
@@ -414,6 +418,29 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute requiredPermission="reports.read">
                 <CustomerDetailPage />
+              </ProtectedRoute>
+            ),
+          },
+        ],
+      },
+
+      // Transit Management
+      {
+        path: 'transits',
+        children: [
+          {
+            index: true,
+            element: (
+              <ProtectedRoute requiredPermission="transits.read">
+                <TransitsPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'create',
+            element: (
+              <ProtectedRoute requiredPermission="transits.create">
+                <CreateTransitPage />
               </ProtectedRoute>
             ),
           },

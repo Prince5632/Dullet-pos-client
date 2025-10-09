@@ -74,6 +74,18 @@ export const API_CONFIG = {
     ATTENDANCE_CHECK_OUT_BY_ID: (id: string) =>
       `/api/attendance/${id}/check-out`,
 
+    // Transit endpoints
+    TRANSITS: "/api/transits",
+    TRANSIT_BY_ID: (id: string) => `/api/transits/${id}`,
+    TRANSIT_BY_TRANSIT_ID: (transitId: string) => `/api/transits/transit/${transitId}`,
+    TRANSIT_UPDATE_STATUS: (id: string) => `/api/transits/${id}/status`,
+    TRANSIT_ASSIGN_DRIVER: (id: string) => `/api/transits/${id}/assign-driver`,
+    TRANSIT_STATS: "/api/transits/stats",
+    TRANSIT_BY_LOCATION: (location: string) => `/api/transits/location/${location}`,
+    TRANSIT_BULK_UPDATE_STATUS: "/api/transits/bulk/status",
+    TRANSIT_PENDING: "/api/transits/pending",
+    TRANSIT_MY_TRANSITS: "/api/transits/my-transits",
+
     // System endpoints
     HEALTH: "/api/health",
   },

@@ -600,4 +600,119 @@ export interface ChartData {
   color?: string;
 }
 
+// Transit types
+export interface Transit {
+  _id: string;
+  transitId: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  unit: string;
+  fromLocation: string;
+  toLocation: string;
+  dateOfDispatch: string;
+  expectedArrivalDate: string;
+  vehicleNumber: string;
+  driverId: string;
+  assignedTo: string;
+  productDetails?: string;
+  transporterName?: string;
+  remarks?: string;
+  attachments?: string[];
+  status: 'pending' | 'in_transit' | 'delivered' | 'cancelled';
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TransitItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unit: string;
+  productDetails?: string;
+}
+
+export interface TransitVehicle {
+  vehicleNumber: string;
+  transporterName?: string;
+}
+
+export interface TransitStatusHistory {
+  _id: string;
+  status: string;
+  timestamp: string;
+  updatedBy: string;
+  notes?: string;
+}
+
+export interface TransitLocation {
+  fromLocation: string;
+  toLocation: string;
+}
+
+export interface CreateTransitForm {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unit: string;
+  fromLocation: string;
+  toLocation: string;
+  dateOfDispatch: string;
+  expectedArrivalDate: string;
+  vehicleNumber: string;
+  driverId: string;
+  assignedTo: string;
+  productDetails?: string;
+  transporterName?: string;
+  remarks?: string;
+  attachments?: string[];
+}
+
+export interface UpdateTransitForm {
+  productId?: string;
+  productName?: string;
+  quantity?: number;
+  unit?: string;
+  fromLocation?: string;
+  toLocation?: string;
+  dateOfDispatch?: string;
+  expectedArrivalDate?: string;
+  vehicleNumber?: string;
+  driverId?: string;
+  assignedTo?: string;
+  productDetails?: string;
+  transporterName?: string;
+  remarks?: string;
+  attachments?: string[];
+}
+
+export interface TransitStatusUpdate {
+  status: 'pending' | 'in_transit' | 'delivered' | 'cancelled';
+  remarks?: string;
+}
+
+export interface TransitListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  driverId?: string;
+  assignedTo?: string;
+  fromLocation?: string;
+  toLocation?: string;
+  startDate?: string;
+  endDate?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface TransitStats {
+  total: number;
+  pending: number;
+  inTransit: number;
+  delivered: number;
+  cancelled: number;
+}
+
 // Table Types (moved to avoid duplication)
