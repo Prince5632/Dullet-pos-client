@@ -666,7 +666,7 @@ export interface CreateTransitForm {
   productDetails?: string;
   transporterName?: string;
   remarks?: string;
-  attachments?: string[];
+  attachments?: File[];
 }
 
 export interface UpdateTransitForm {
