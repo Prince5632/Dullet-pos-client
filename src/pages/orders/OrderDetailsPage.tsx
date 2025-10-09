@@ -78,7 +78,22 @@ const OrderDetailsPage: React.FC = () => {
       window.history.replaceState({}, document.title);
     }
   }, [location.state, order]);
-
+  const calculateNoOfBags = (item: any) => {
+    const bagSize= item.packaging?.includes("Bag")? item.packaging.replace("kg Bags",""): "0";
+    const bagSizeNumber= Number(bagSize);
+    if (item.isBagSelection && bagSizeNumber > 0) {
+      return Math.ceil(item.quantity / bagSizeNumber);
+    }
+    return 0;
+  }
+  // Helper function to format quantity with bags
+  const formatQuantity = (item: any) => {
+    if (item.isBagSelection) {
+      const noOfBags= calculateNoOfBags(item);
+      return `${noOfBags} × ${item.quantity/noOfBags}kg Bags`;
+    }
+    return `Loose`;
+  };
   const fetchOrder = async () => {
     try {
       setLoading(true);
@@ -754,7 +769,7 @@ Dullet POS Team`;
                         </div>
                         <div className="flex justify-between text-[10px] text-gray-600">
                           <span>
-                            {item.quantity} {item.unit}
+                            {formatQuantity(item)}
                           </span>
                           <span>
                             @ {orderService.formatCurrency(item.ratePerUnit)}
@@ -794,7 +809,7 @@ Dullet POS Team`;
                                 </div>
                                 {item.packaging && (
                                   <div className="text-[10px] text-gray-500">
-                                    {item.packaging}
+                               {formatQuantity(item)}
                                   </div>
                                 )}
                               </div>

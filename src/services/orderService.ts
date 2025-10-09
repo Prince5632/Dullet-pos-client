@@ -528,7 +528,7 @@ class OrderService {
     };
     return priorityColors[priority] || 'bg-gray-100 text-gray-800';
   }
-
+  
   // Formatting helpers
   formatCurrency(amount: number): string {
     return new Intl.NumberFormat('en-IN', {
