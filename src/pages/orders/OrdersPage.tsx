@@ -164,13 +164,18 @@ const OrdersPage: React.FC = () => {
     try {
       setDeleteLoading(true);
       await orderService.deleteOrder(orderToDelete._id);
-      toast.success(`${viewType === 'visits' ? 'Visit' : 'Order'} deleted successfully`);
+      toast.success(
+        `${viewType === "visits" ? "Visit" : "Order"} deleted successfully`
+      );
       setDeleteModalOpen(false);
       setOrderToDelete(null);
       handleSync(); // Sync all data after deletion
     } catch (error: any) {
-      console.error('Failed to delete order:', error);
-      toast.error(error.message || `Failed to delete ${viewType === 'visits' ? 'visit' : 'order'}`);
+      console.error("Failed to delete order:", error);
+      toast.error(
+        error.message ||
+          `Failed to delete ${viewType === "visits" ? "visit" : "order"}`
+      );
     } finally {
       setDeleteLoading(false);
     }
@@ -211,7 +216,7 @@ const OrdersPage: React.FC = () => {
               visitStatus: visitStatusFilter,
               hasImage: hasImageFilter,
               address: addressFilter,
-                godownId: godownFilter,
+              godownId: godownFilter,
             };
 
       const response =
@@ -282,27 +287,28 @@ const OrdersPage: React.FC = () => {
 
       if (hasPermission("orders.read")) {
         // Build params for stats based on view type and current filters
-        const statsParams = viewType === "orders" 
-          ? {
-              godownId: godownFilter,
-              search: debouncedSearchTerm,
-              status: statusFilter,
-              paymentStatus: paymentStatusFilter,
-              customerId: customerFilter,
-              dateFrom: dateFromFilter,
-              dateTo: dateToFilter,
-              priority: priorityFilter,
-              minAmount: minAmountFilter,
-              maxAmount: maxAmountFilter,
-            }
-          : {
-              godownId: godownFilter,
-              search: debouncedSearchTerm,
-              customerId: customerFilter,
-              dateFrom: dateFromFilter,
-              dateTo: dateToFilter,
-            };
-        
+        const statsParams =
+          viewType === "orders"
+            ? {
+                godownId: godownFilter,
+                search: debouncedSearchTerm,
+                status: statusFilter,
+                paymentStatus: paymentStatusFilter,
+                customerId: customerFilter,
+                dateFrom: dateFromFilter,
+                dateTo: dateToFilter,
+                priority: priorityFilter,
+                minAmount: minAmountFilter,
+                maxAmount: maxAmountFilter,
+              }
+            : {
+                godownId: godownFilter,
+                search: debouncedSearchTerm,
+                customerId: customerFilter,
+                dateFrom: dateFromFilter,
+                dateTo: dateToFilter,
+              };
+
         promises.push(orderService.getOrderStats(statsParams));
       }
 
@@ -378,9 +384,9 @@ const OrdersPage: React.FC = () => {
       setStatsLoading(false);
     }
   }, [
-    godownFilter, 
-    hasPermission, 
-    user, 
+    godownFilter,
+    hasPermission,
+    user,
     viewType,
     debouncedSearchTerm,
     customerFilter,
@@ -393,7 +399,6 @@ const OrdersPage: React.FC = () => {
     minAmountFilter,
     maxAmountFilter,
   ]);
-
 
   useEffect(() => {
     loadOrders();
@@ -410,28 +415,29 @@ const OrdersPage: React.FC = () => {
   // Load godowns with filtered counts
   const loadGodowns = useCallback(async () => {
     try {
-      const godownParams = viewType === "orders" 
-        ? {
-            search: debouncedSearchTerm,
-            status: statusFilter,
-            paymentStatus: paymentStatusFilter,
-            customerId: customerFilter,
-            dateFrom: dateFromFilter,
-            dateTo: dateToFilter,
-            priority: priorityFilter,
-            minAmount: minAmountFilter,
-            maxAmount: maxAmountFilter,
-          }
-        : {
-            search: debouncedSearchTerm,
-            customerId: customerFilter,
-            dateFrom: dateFromFilter,
-            dateTo: dateToFilter,
-            scheduleStatus: scheduleStatusFilter,
-            visitStatus: visitStatusFilter,
-            hasImage: hasImageFilter,
-            address: addressFilter,
-          };
+      const godownParams =
+        viewType === "orders"
+          ? {
+              search: debouncedSearchTerm,
+              status: statusFilter,
+              paymentStatus: paymentStatusFilter,
+              customerId: customerFilter,
+              dateFrom: dateFromFilter,
+              dateTo: dateToFilter,
+              priority: priorityFilter,
+              minAmount: minAmountFilter,
+              maxAmount: maxAmountFilter,
+            }
+          : {
+              search: debouncedSearchTerm,
+              customerId: customerFilter,
+              dateFrom: dateFromFilter,
+              dateTo: dateToFilter,
+              scheduleStatus: scheduleStatusFilter,
+              visitStatus: visitStatusFilter,
+              hasImage: hasImageFilter,
+              address: addressFilter,
+            };
 
       const res = await godownService.getGodowns(godownParams);
       if (res.success && res.data) setGodowns(res.data.godowns);
@@ -595,6 +601,24 @@ const OrdersPage: React.FC = () => {
                 <div className="font-semibold text-gray-900 text-sm">
                   {visit.orderNumber}
                 </div>
+                {visit.capturedImage && (
+                  <button
+                    onClick={() =>
+                      handleViewImage(
+                        visit.capturedImage,
+                        `Visit Image - ${visit.orderNumber}`
+                      )
+                    }
+                    className="inline-flex items-center justify-center w-6 h-6 rounded-md overflow-hidden border border-gray-200 hover:border-green-300 transition-all duration-200 group"
+                    title="View Visit Image"
+                  >
+                    <img
+                      src={resolveCapturedImageSrc(visit.capturedImage) || ""}
+                      alt="Visit"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                    />
+                  </button>
+                )}
               </div>
               <div className="text-xs text-gray-500">
                 Created: {orderService.formatDate(visit.orderDate)}
@@ -699,26 +723,7 @@ const OrdersPage: React.FC = () => {
               >
                 <PencilIcon className="h-4 w-4" />
               </Link>
-              {visit.capturedImage && (
-                <button
-                  onClick={() =>
-                    handleViewImage(
-                      visit.capturedImage,
-                      `Visit Image - ${
-                        visit.customer?.businessName || "Unknown Customer"
-                      }`
-                    )
-                  }
-                  className="inline-flex items-center justify-center w-8 h-8 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-all duration-200"
-                  title="View Image"
-                >
-                  <img
-                    src={resolveCapturedImageSrc(visit.capturedImage) || ""}
-                    alt="Check In"
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                  />
-                </button>
-              )}
+
               {user?.role?.name?.toLowerCase() === "super admin" && (
                 <button
                   onClick={() => {
@@ -744,9 +749,9 @@ const OrdersPage: React.FC = () => {
         label: "Order",
         sortable: true,
         render: (_value, order) => (
-          <div className="py-0.5">
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <div className="font-medium text-gray-900 text-xs">
+          <div className="min-w-0 py-1">
+            <div className="flex items-center  gap-2 mb-1">
+              <div className="font-semibold text-gray-900 text-sm">
                 {order.orderNumber}
               </div>
               {order.priority !== "normal" && (
@@ -766,10 +771,40 @@ const OrdersPage: React.FC = () => {
                     : "N"}
                 </span>
               )}
+              {order.capturedImage && (
+                <button
+                  onClick={() =>
+                    handleViewImage(
+                      order.capturedImage,
+                      `Order Image - ${order.orderNumber}`
+                    )
+                  }
+                  className="inline-flex items-center justify-center w-6 h-6 rounded-md overflow-hidden border border-gray-200 hover:border-blue-300 transition-all duration-200 group"
+                  title="View Order Image"
+                >
+                  <img
+                    src={resolveCapturedImageSrc(order.capturedImage) || ""}
+                    alt="Order"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                  />
+                </button>
+              )}
             </div>
-            <div className="text-xs text-gray-500">
-              {orderService.formatDate(order.orderDate)}
-            </div>
+              <div className="text-xs text-gray-500">
+                Created: {orderService.formatDate(order.orderDate)}
+              </div>
+              <div className="text-xs text-gray-400">
+                {(() => {
+                  const daysAgo = Math.floor(
+                    (new Date().getTime() -
+                      new Date(order.orderDate).getTime()) /
+                      (1000 * 60 * 60 * 24)
+                  );
+                  return daysAgo === 0
+                    ? "Today"
+                    : `${daysAgo} day${daysAgo === 1 ? "" : "s"} ago`;
+                })()}
+              </div>
           </div>
         ),
       },
@@ -942,7 +977,9 @@ const OrdersPage: React.FC = () => {
                 disabled={syncing}
                 className="inline-flex cursor-pointer items-center justify-center px-3 py-1.5 text-sm font-medium rounded-lg text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <ArrowPathIcon className={`h-4 w-4 mr-1 ${syncing ? 'animate-spin' : ''}`} />
+                <ArrowPathIcon
+                  className={`h-4 w-4 mr-1 ${syncing ? "animate-spin" : ""}`}
+                />
                 <span className="hidden sm:inline">Sync</span>
               </button>
               <Link
@@ -1087,31 +1124,31 @@ const OrdersPage: React.FC = () => {
                   </select>
 
                   {/* <div className="relative"> */}
-                    <input
-                      type="date"
-                      value={dateFromFilter}
-                      onChange={(e) => handleDateFromChange(e.target.value)}
-                      className={`px-2 py-1.5 text-xs border rounded-md focus:outline-none focus:ring-1 ${
-                        dateRangeError 
-                          ? "border-red-300 focus:ring-red-500" 
-                          : "border-gray-300 focus:ring-blue-500"
-                      }`}
-                      placeholder="From Date"
-                    />
+                  <input
+                    type="date"
+                    value={dateFromFilter}
+                    onChange={(e) => handleDateFromChange(e.target.value)}
+                    className={`px-2 py-1.5 text-xs border rounded-md focus:outline-none focus:ring-1 ${
+                      dateRangeError
+                        ? "border-red-300 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
+                    }`}
+                    placeholder="From Date"
+                  />
                   {/* </div> */}
 
                   {/* <div className="relative"> */}
-                    <input
-                      type="date"
-                      value={dateToFilter}
-                      onChange={(e) => handleDateToChange(e.target.value)}
-                      className={`px-2 py-1.5 text-xs border rounded-md focus:outline-none focus:ring-1 ${
-                        dateRangeError 
-                          ? "border-red-300 focus:ring-red-500" 
-                          : "border-gray-300 focus:ring-blue-500"
-                      }`}
-                      placeholder="To Date"
-                    />
+                  <input
+                    type="date"
+                    value={dateToFilter}
+                    onChange={(e) => handleDateToChange(e.target.value)}
+                    className={`px-2 py-1.5 text-xs border rounded-md focus:outline-none focus:ring-1 ${
+                      dateRangeError
+                        ? "border-red-300 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
+                    }`}
+                    placeholder="To Date"
+                  />
                   {/* </div> */}
 
                   {/* Date Range Error Message */}
@@ -1407,9 +1444,7 @@ const OrdersPage: React.FC = () => {
               <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
                 <div className="text-xs text-gray-500">Value</div>
                 <div className="font-semibold text-xs">
-                  {orderService.formatCurrency(
-                    totalAmountSum
-                  )}
+                  {orderService.formatCurrency(totalAmountSum)}
                 </div>
               </div>
             </div>
@@ -1478,6 +1513,24 @@ const OrdersPage: React.FC = () => {
                         <h3 className="font-medium text-sm text-gray-900">
                           {order.orderNumber}
                         </h3>
+                        {order.capturedImage && (
+                          <button
+                            onClick={() =>
+                              handleViewImage(
+                                order.capturedImage,
+                                `${viewType === "visits" ? "Visit" : "Order"} Image - ${order.orderNumber}`
+                              )
+                            }
+                            className="inline-flex items-center justify-center w-6 h-6 rounded-md overflow-hidden border border-gray-200 hover:border-blue-300 transition-all duration-200 group"
+                            title={`View ${viewType === "visits" ? "Visit" : "Order"} Image`}
+                          >
+                            <img
+                              src={resolveCapturedImageSrc(order.capturedImage) || ""}
+                              alt={viewType === "visits" ? "Visit" : "Order"}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                            />
+                          </button>
+                        )}
                         {order.priority !== "normal" && (
                           <span
                             className={`inline-flex items-center px-1 py-0.5 rounded text-xs font-medium ${
@@ -1517,30 +1570,6 @@ const OrdersPage: React.FC = () => {
                         >
                           <PencilIcon className="h-4 w-4" />
                         </Link>
-                        {viewType === "visits" && order.capturedImage && (
-                          <button
-                            onClick={() =>
-                              handleViewImage(
-                                order.capturedImage,
-                                `Visit Image - ${
-                                  order.customer?.businessName ||
-                                  "Unknown Customer"
-                                }`
-                              )
-                            }
-                            className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
-                            title="View Image"
-                          >
-                            <img
-                              src={
-                                resolveCapturedImageSrc(order.capturedImage) ||
-                                ""
-                              }
-                              alt="Visit Image"
-                              className="w-4 h-4 object-cover rounded"
-                            />
-                          </button>
-                        )}
                         {user?.role?.name?.toLowerCase() === "super admin" && (
                           <button
                             onClick={() => {
@@ -1548,7 +1577,9 @@ const OrdersPage: React.FC = () => {
                               setDeleteModalOpen(true);
                             }}
                             className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                            title={`Delete ${viewType === 'visits' ? 'Visit' : 'Order'}`}
+                            title={`Delete ${
+                              viewType === "visits" ? "Visit" : "Order"
+                            }`}
                           >
                             <TrashIcon className="h-4 w-4" />
                           </button>
@@ -1645,7 +1676,7 @@ const OrdersPage: React.FC = () => {
             setOrderToDelete(null);
           }
         }}
-        title={`Delete ${viewType === 'visits' ? 'Visit' : 'Order'}`}
+        title={`Delete ${viewType === "visits" ? "Visit" : "Order"}`}
         size="sm"
       >
         <div className="p-4">
@@ -1655,31 +1686,36 @@ const OrdersPage: React.FC = () => {
             </div>
             <div>
               <h3 className="text-sm font-medium text-gray-900">
-                Delete {viewType === 'visits' ? 'Visit' : 'Order'}
+                Delete {viewType === "visits" ? "Visit" : "Order"}
               </h3>
-              <p className="text-xs text-gray-500">This action cannot be undone</p>
+              <p className="text-xs text-gray-500">
+                This action cannot be undone
+              </p>
             </div>
           </div>
 
           {orderToDelete && (
             <div className="bg-gray-50 rounded-lg p-3 mb-4">
               <div className="flex items-center gap-2">
-                <Avatar 
-                  name={orderToDelete.customer?.businessName || "Customer"} 
-                  size="sm" 
+                <Avatar
+                  name={orderToDelete.customer?.businessName || "Customer"}
+                  size="sm"
                 />
                 <div>
                   <div className="text-sm font-medium text-gray-900">
-                    {viewType === 'visits' 
-                      ? orderToDelete.customer?.businessName || "Unknown Customer"
-                      : orderToDelete.orderNumber
-                    }
+                    {viewType === "visits"
+                      ? orderToDelete.customer?.businessName ||
+                        "Unknown Customer"
+                      : orderToDelete.orderNumber}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {viewType === 'visits' 
-                      ? `Visit on ${orderService.formatDate(orderToDelete.orderDate)}`
-                      : `Amount: ${orderService.formatCurrency(orderToDelete.totalAmount)}`
-                    }
+                    {viewType === "visits"
+                      ? `Visit on ${orderService.formatDate(
+                          orderToDelete.orderDate
+                        )}`
+                      : `Amount: ${orderService.formatCurrency(
+                          orderToDelete.totalAmount
+                        )}`}
                   </div>
                 </div>
               </div>
@@ -1687,8 +1723,10 @@ const OrdersPage: React.FC = () => {
           )}
 
           <p className="text-sm text-gray-600 mb-6">
-            Are you sure you want to delete this {viewType === 'visits' ? 'visit' : 'order'}? 
-            This action will permanently remove the {viewType === 'visits' ? 'visit' : 'order'} from the database and cannot be undone.
+            Are you sure you want to delete this{" "}
+            {viewType === "visits" ? "visit" : "order"}? This action will
+            permanently remove the {viewType === "visits" ? "visit" : "order"}{" "}
+            from the database and cannot be undone.
           </p>
 
           <div className="flex items-center gap-2">
@@ -1713,7 +1751,7 @@ const OrdersPage: React.FC = () => {
                   Deleting...
                 </>
               ) : (
-                `Delete ${viewType === 'visits' ? 'Visit' : 'Order'}`
+                `Delete ${viewType === "visits" ? "Visit" : "Order"}`
               )}
             </button>
           </div>
