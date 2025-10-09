@@ -263,6 +263,7 @@ const AddInventoryPage: React.FC = () => {
                   >
                     <option value="Kg">Kg</option>
                     <option value="Quintal">Quintal</option>
+                    <option value="40Kg Bag">40Kg Bag</option>
                   </select>
                   {errors.unit && (
                     <div className="flex items-center gap-1 mt-1">

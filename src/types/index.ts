@@ -436,6 +436,8 @@ export interface CreateOrderForm {
   discountPercentage?: number;
   discount?: number;
   taxAmount?: number;
+  isTaxable?: boolean;
+  taxPercentage?: number;
   paymentTerms: "Cash" | "Credit" | "Advance";
   priority?: "low" | "normal" | "high" | "urgent";
   requiredDate?: string;

@@ -29,19 +29,33 @@ class AuthService {
       );
 
       if (response.success && response.data) {
-        // Set token in API service
-        apiService.setToken(response.data.token);
+        console.log('[AuthService] Login API successful, storing tokens and user data');
         
-        // Store user data and refresh token
+        // Set token in API service first
+        apiService.setToken(response.data.token);
+        console.log('[AuthService] Token set in API service');
+        
+        // Store user data and refresh token synchronously
         localStorage.setItem('user_data', JSON.stringify(response.data.user));
+        console.log('[AuthService] User data stored in localStorage');
         
         // Store refresh token if provided
         if (response.data.refreshToken) {
           localStorage.setItem('refresh_token', response.data.refreshToken);
+          console.log('[AuthService] Refresh token stored');
         }
         
         // Store login timestamp for session management
         localStorage.setItem('login_timestamp', Date.now().toString());
+        console.log('[AuthService] Login timestamp stored');
+        
+        // Verify token storage
+        const storedToken = localStorage.getItem('auth_token');
+        if (!storedToken) {
+          console.error('[AuthService] WARNING: Token not found in localStorage after storage attempt');
+        } else {
+          console.log('[AuthService] Token storage verified successfully');
+        }
         
         return response.data;
       }

@@ -18,6 +18,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../contexts/AuthContext";
 import { userService } from "../../services/userService";
+import auditService from "../../services/auditService";
 import type { User } from "../../types";
 import { formatDateTime, formatDate } from "../../utils";
 import Avatar from "../../components/ui/Avatar";
@@ -145,20 +146,17 @@ const UserDetailsPage: React.FC = () => {
     }
   };
 
-  // Load user activity
+  // Load user activity for the specific user
   const loadUserActivity = useCallback(
     async (page: number = 1, append: boolean = false) => {
-      if (!user) return;
-
+      if (!user?._id) return;
+      
       try {
         setActivityLoading(true);
-        const response = await userService.getUserActivity(user._id, {
-          page,
-          limit: 20,
-        });
+        const response = await auditService.getAllSystemActivity(page, 20, {}, user._id);
 
         // Handle paginated response
-        const { activities, pagination } = response;
+        const { activities, pagination } = response.data;
 
         if (append) {
           setActivityLogs((prev) => [...prev, ...activities]);
@@ -174,13 +172,13 @@ const UserDetailsPage: React.FC = () => {
           hasMore: pagination.currentPage < pagination.totalPages,
         }));
       } catch (error) {
-        console.error("Failed to load activity:", error);
+        console.error("Failed to load user activity:", error);
         toast.error("Failed to load user activity");
       } finally {
         setActivityLoading(false);
       }
     },
-    [user]
+    [user?._id]
   );
 
   // Load more activities for infinite scroll
@@ -196,10 +194,10 @@ const UserDetailsPage: React.FC = () => {
   ]);
 
   useEffect(() => {
-    if (showActivity && user && activityLogs.length === 0) {
+    if (showActivity && activityLogs.length === 0) {
       loadUserActivity();
     }
-  }, [showActivity, user?._id]);
+  }, [showActivity, loadUserActivity]);
 
   if (loading) {
     return (
@@ -597,9 +595,14 @@ const UserDetailsPage: React.FC = () => {
           {!showActivity && (
             <div className="bg-white shadow-sm rounded-lg border border-gray-200">
               <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Recent Activity
-                </h3>
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">
+                    User Activity
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    View activity logs for this user across all modules
+                  </p>
+                </div>
                 <button
                   onClick={() => {
                     setShowActivity(!showActivity);
@@ -616,7 +619,7 @@ const UserDetailsPage: React.FC = () => {
                   className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
                 >
                   <ClockIcon className="h-4 w-4 mr-1" />
-                  Show Activity
+                  Show System Activity
                 </button>
               </div>
             </div>
@@ -638,7 +641,7 @@ const UserDetailsPage: React.FC = () => {
                 className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
               >
                 <ClockIcon className="h-4 w-4 mr-1" />
-                Hide Activity
+                Hide System Activity
               </button>
             </div>
           )}

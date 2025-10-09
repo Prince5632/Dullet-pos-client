@@ -59,6 +59,8 @@ const schema = yup.object({
   deliveryInstructions: yup.string().optional(),
   notes: yup.string().optional(),
   paidAmount: yup.number().min(0, "Paid amount must be positive").optional(),
+  isTaxable: yup.boolean().optional(),
+  taxPercentage: yup.number().min(0, "Tax percentage must be positive").max(100, "Tax percentage cannot exceed 100").optional(),
 });
 
 const EditOrderPage: React.FC = () => {
@@ -91,6 +93,10 @@ const EditOrderPage: React.FC = () => {
   // Godown state
   const [godowns, setGodowns] = useState<Godown[]>([]);
 
+  // Tax state
+  const [isTaxable, setIsTaxable] = useState(false);
+  const [taxPercentage, setTaxPercentage] = useState(5);
+
   const {
     register,
     handleSubmit,
@@ -103,6 +109,8 @@ const EditOrderPage: React.FC = () => {
       paymentTerms: "Cash",
       priority: "normal",
       paidAmount: 0,
+      isTaxable: false,
+      taxPercentage: 5,
     },
   });
 
@@ -223,6 +231,14 @@ const EditOrderPage: React.FC = () => {
         if (data.notes) setValue("notes", data.notes);
         if (typeof data.paidAmount === "number")
           setValue("paidAmount", data.paidAmount);
+        
+        // Set tax fields
+        const orderIsTaxable = data.isTaxable || false;
+        const orderTaxPercentage = data.taxPercentage || 5;
+        setIsTaxable(orderIsTaxable);
+        setTaxPercentage(orderTaxPercentage);
+        setValue("isTaxable", orderIsTaxable);
+        setValue("taxPercentage", orderTaxPercentage);
       } catch (err) {
         console.error("Failed to load order:", err);
         toast.error(
@@ -645,11 +661,23 @@ const EditOrderPage: React.FC = () => {
     return kg;
   }, [isBagSelection, currentBagSize, kg]);
 
-  const calculateTotal = () => {
+  const calculateSubtotal = () => {
     return itemsArray.reduce(
       (sum, it) => sum + computeItemKg(it) * it.product.pricePerKg,
       0
     );
+  };
+
+  const calculateTaxAmount = () => {
+    if (!isTaxable) return 0;
+    const subtotal = calculateSubtotal();
+    return (subtotal * taxPercentage) / 100;
+  };
+
+  const calculateTotal = () => {
+    const subtotal = calculateSubtotal();
+    const taxAmount = calculateTaxAmount();
+    return subtotal + taxAmount;
   };
   const handleViewImage = (imageData: string | undefined, title: string) => {
     if (!imageData) return;
@@ -714,6 +742,9 @@ const EditOrderPage: React.FC = () => {
       const payload: UpdateOrderForm = {
         ...data,
         items: convertedOrderItems,
+        isTaxable,
+        taxPercentage,
+        taxAmount: calculateTaxAmount(),
         ...(paymentStatus ? { paymentStatus } : {}),
       };
 
@@ -1150,6 +1181,8 @@ const EditOrderPage: React.FC = () => {
                         className="w-full px-2.5 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors resize-none text-xs"
                       />
                     </div>
+
+                  
                   </div>
                 </div>
               </div>
@@ -1212,11 +1245,101 @@ const EditOrderPage: React.FC = () => {
                   </h3>
 
                   <div className="space-y-2.5">
-                    <div className="flex justify-between text-sm font-semibold">
+                    {/* Subtotal */}
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-600">Subtotal</span>
+                      <span className="text-gray-900">
+                        {orderService.formatCurrency(calculateSubtotal())}
+                      </span>
+                    </div>
+
+                    {/* Tax Amount */}
+                    {isTaxable && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600">Tax ({taxPercentage}%)</span>
+                        <span className="text-gray-900">
+                          {orderService.formatCurrency(calculateTaxAmount())}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Total */}
+                    <div className="flex justify-between text-sm font-semibold border-t border-gray-200 pt-2">
                       <span className="text-gray-900">Total</span>
                       <span className="text-emerald-600">
                         {orderService.formatCurrency(totalAmount)}
                       </span>
+                    </div>
+
+                    {/* Tax Toggle Section */}
+                    <div className="border-t border-gray-200 pt-2.5 space-y-2">
+                      <h4 className="text-[10px] font-semibold text-gray-900 uppercase tracking-wide">
+                        Tax Settings
+                      </h4>
+                      
+                      <div className="space-y-2">
+                         <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                           <div className="flex-1">
+                             <div className="flex items-center gap-2">
+                               <span className="text-xs font-medium text-gray-700">
+                                 Apply Tax {`${taxPercentage}%`}
+                               </span>
+                               <label className="relative inline-flex items-center cursor-pointer">
+                                 <input
+                                   type="checkbox"
+                                   checked={isTaxable}
+                                   onChange={(e) => {
+                                     const checked = e.target.checked;
+                                     setIsTaxable(checked);
+                                     setValue("isTaxable", checked);
+                                   }}
+                                   className="sr-only peer"
+                                 />
+                                 <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                               </label>
+                             </div>
+                             <p className="text-[10px] text-gray-500 mt-0.5">
+                               {isTaxable ? `${taxPercentage}% tax applied` : 'No tax applied'}
+                             </p>
+                           </div>
+                           
+                           {isTaxable && (
+                             <div className="text-right">
+                               <div className="text-xs font-medium text-emerald-600">
+                                 +{orderService.formatCurrency(calculateTaxAmount())}
+                               </div>
+                               <div className="text-[10px] text-gray-500">
+                                 Tax Amount
+                               </div>
+                             </div>
+                           )}
+                         </div>
+
+                         {/* Tax Percentage Input */}
+                         {isTaxable && (
+                           <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
+                             <span className="text-xs font-medium text-gray-700">
+                               Tax Rate
+                             </span>
+                             <div className="flex items-center gap-1">
+                               <input
+                                 type="number"
+                                 value={taxPercentage}
+                                 onChange={(e) => {
+                                   const value = Math.max(0, Math.min(100, parseFloat(e.target.value) || 0));
+                                   setTaxPercentage(value);
+                                   setValue("taxPercentage", value);
+                                 }}
+                                 min="0"
+                                 max="100"
+                                 step="0.1"
+                                 className="w-16 px-2 py-1 border border-gray-300 rounded text-xs text-right focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                               />
+                               <span className="text-xs text-gray-500">%</span>
+                             </div>
+                           </div>
+                         )}
+                       </div>
                     </div>
 
                     {/* Payment Section */}

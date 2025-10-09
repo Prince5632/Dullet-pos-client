@@ -56,6 +56,9 @@ const GodownSalesReportsPage = lazy(() => import('../pages/reports/GodownSalesRe
 const SalesExecutiveDetailPage = lazy(() => import('../pages/reports/SalesExecutiveDetailPage'));
 const CustomerDetailPage = lazy(() => import('../pages/reports/CustomerDetailPage'));
 
+// Delivery Pages
+const DeliveryInvoicePreview = lazy(() => import('../pages/delivery/DeliveryInvoicePreview'));
+
 // Settings Pages
 
 
@@ -413,6 +416,17 @@ export const router = createBrowserRouter([
                 <CustomerDetailPage />
               </ProtectedRoute>
             ),
+          },
+        ],
+      },
+
+      // Delivery
+      {
+        path: 'delivery',
+        children: [
+          {
+            path: 'invoice-preview',
+            element: <DeliveryInvoicePreview />,
           },
         ],
       },

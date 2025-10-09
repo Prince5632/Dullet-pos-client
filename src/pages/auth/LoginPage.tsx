@@ -72,56 +72,89 @@ const LoginPage: React.FC = () => {
         faceImage: faceImage || undefined,
       };
 
-      console.log('Attempting login...');
+      console.log('[LoginPage] Attempting login...');
       await login(loginData);
-      console.log('Login successful, preparing to navigate...');
+      console.log('[LoginPage] Login successful, preparing to navigate...');
       
-      // Wait for user data to be available in AuthContext state
+      // Wait for user data to be available in AuthContext state with timeout
       const waitForUserData = () => {
-        return new Promise<void>((resolve) => {
+        return new Promise<void>((resolve, reject) => {
+          const timeout = 10000; // 10 second timeout
+          const startTime = Date.now();
+          let attempts = 0;
+          
           const checkUserData = () => {
-            // Check if user data is available and has role/permissions
-            if (isAuthenticated && !isLoading && hasRole) {
-              console.log('User data is ready for navigation');
-              resolve();
-            } else {
-              // Check again in 10ms
-              setTimeout(checkUserData, 10);
+            attempts++;
+            const elapsed = Date.now() - startTime;
+            
+            console.log(`[LoginPage] Checking user data (attempt ${attempts}, elapsed: ${elapsed}ms)`);
+            console.log(`[LoginPage] State - isAuthenticated: ${isAuthenticated}, isLoading: ${isLoading}`);
+            
+            // Check if timeout exceeded
+            if (elapsed > timeout) {
+              console.error('[LoginPage] Timeout waiting for user data');
+              reject(new Error('Timeout waiting for user authentication data'));
+              return;
             }
+            
+            // Check if user data is available and authentication is complete
+            if (isAuthenticated && !isLoading) {
+              console.log('[LoginPage] User data is ready for navigation');
+              resolve();
+              return;
+            }
+            
+            // Check again in 50ms (reduced frequency to avoid excessive polling)
+            setTimeout(checkUserData, 50);
           };
+          
           checkUserData();
         });
       };
 
-      // Wait for user data to be ready
-      await waitForUserData();
+      // Wait for user data to be ready with timeout handling
+      try {
+        await waitForUserData();
+      } catch (timeoutError) {
+        console.error('[LoginPage] Failed to wait for user data:', timeoutError);
+        // Fallback: try to navigate anyway, the route guard will handle it
+        toast.error('Authentication completed but navigation may be delayed. Please wait...');
+      }
+
+      // Add a small delay to ensure all state updates are complete
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Role/permission-based landing using AuthContext functions
       let landing = '/dashboard';
       
-      // Drivers: send to orders (or a dedicated page if exists)
-      if (hasRole('Driver')) {
-        landing = '/orders';
-      }
-      // Sales executive: send to visits by default if they have access
-      else if (hasRole('Sales Executive') && hasPermission('orders.read')) {
-        landing = '/visits';
-      }
-      // Admin/Manager: dashboard by default
-      else if (hasRole('Super Admin') || hasRole('Admin') || hasRole('Manager')) {
-        landing = '/dashboard';
+      try {
+        // Drivers: send to orders (or a dedicated page if exists)
+        if (hasRole && hasRole('Driver')) {
+          landing = '/orders';
+        }
+        // Sales executive: send to visits by default if they have access
+        else if (hasRole && hasRole('Sales Executive') && hasPermission && hasPermission('orders.read')) {
+          landing = '/visits';
+        }
+        // Admin/Manager: dashboard by default
+        else if (hasRole && (hasRole('Super Admin') || hasRole('Admin') || hasRole('Manager'))) {
+          landing = '/dashboard';
+        }
+      } catch (roleError) {
+        console.warn('[LoginPage] Error checking roles, using default landing:', roleError);
+        // Use default landing if role checking fails
       }
       
       // If a guarded route redirected us here, prefer that
       const from = (location.state as any)?.from?.pathname;
       const destination = from || landing;
       
-      console.log('Navigating to:', destination);
+      console.log('[LoginPage] Navigating to:', destination);
       navigate(destination, { replace: true });
       
     } catch (error: any) {
       // Error is handled by the auth context and displayed via toast
-      console.error('Login error:', error);
+      console.error('[LoginPage] Login error:', error);
     }
   };
 

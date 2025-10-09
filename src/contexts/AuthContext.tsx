@@ -237,6 +237,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const loginResponse = await authService.login(credentials);
       console.log('[AuthContext] Login API success, user:', loginResponse.user.email);
+      
+      // Small delay to ensure localStorage operations are complete
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
       dispatch({ type: 'AUTH_SUCCESS', payload: loginResponse.user });
       console.log('[AuthContext] Auth state updated to SUCCESS');
       toast.success(`Welcome back, ${loginResponse.user.firstName}!`);

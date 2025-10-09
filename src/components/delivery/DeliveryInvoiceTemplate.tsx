@@ -51,20 +51,21 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
           {/* Header Section with Logo and Tax Invoice */}
           <div className=" flex flex-col justify-center ">
             <div className="logo-section text-center">
-              <div className="blinkit-logo">
-                {company.name || "Dullet Industries"}
+              <div className="blinkit-logo py-2">
+                Delivery Challan
               </div>
             </div>
             <div className=" border text-[20px] border-l-0 border-r-0 py-3 flex justify-center items-center font-bold">
-              Delivery Challan
+                {company.name || "Dullet Industries"}
+              
             </div>
           </div>
           <div className="border border-l-0 p-1 border-t-0 border-r-0">
-            <strong>Order Id:</strong>{" "}
-            {orderData.orderNumber || orderData._id || data.orderId || "N/A"}
+            <strong>Challan Number:</strong>{" "}
+            {orderData.orderNumber?.replace("ORD","CHL")}
           </div>
           <div className="border border-l-0 p-1 border-t-0 border-r-0">
-            <strong>Invoice Date:</strong>{" "}
+            <strong>Date:</strong>{" "}
             {formatDate(
               orderData.orderDate || orderData.createdAt || data.invoiceDate
             )}
@@ -119,7 +120,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
             <div className="invoice-to-section">
               <div className="invoice-meta">
                 <div className="invoice-to">
-                  <div className="section-title">Invoice To</div>
+                  <div className="section-title">Challan To</div>
                   <div className="customer-name capitalize">
                     {customer.businessName || customer.name || "N/A"}
                   </div>
@@ -152,16 +153,16 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
               </div>
             </div>
           </div>
-          <div className="border border-l-0 p-1 border-t-0 border-r-0">
+         { orderData.driverAssignment?.driver?.firstName ?<div className="border border-l-0 p-1 border-t-0 border-r-0">
             <strong>Delivery Partner Name:</strong>{" "}
             {orderData.driverAssignment?.driver?.firstName +
               " " +
               orderData.driverAssignment?.driver?.lastName || "N/A"}
-          </div>
-          <div className="border border-l-0 p-1 border-t-0 border-r-0">
+          </div>:null}
+          {orderData.driverAssignment?.vehicleNumber ?<div className="border border-l-0 p-1 border-t-0 border-r-0">
             <strong>Vehicle Number:</strong>{" "}
             {orderData.driverAssignment?.vehicleNumber || "N/A"}
-          </div>
+          </div>:null}
           
 
           {/* Items Table */}
@@ -173,6 +174,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
                   <th>ITEM NAME</th>
                   <th>HSN CODE</th>
                   <th>QUANTITY</th>
+                  <th>PACKAGING</th>
                   <th>RATE</th>
                   <th>ITEM PRICE</th>
                 </tr>
@@ -185,6 +187,11 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
                     <td>{company?.hsnCode || "N/A"}</td>
                     <td>
                       {item.quantity} {item.unit || ""}
+                    </td>
+                    <td>
+                      {item.isBagSelection ? 
+                        (item.packaging === "5kg Bags" ? "40kg Bags" : (item.packaging || "N/A")) 
+                        : "Loose"}
                     </td>
                     <td>₹{(item.ratePerUnit || item.rate || 0).toFixed(2)}</td>
                     <td>
@@ -206,7 +213,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
               </div>
               {orderData.taxAmount && orderData.taxAmount > 0 ? (
                 <div className="summary-row-simple">
-                  <span>Tax Amount:</span>
+                  <span>Tax Amount ({orderData?.taxPercentage}%):</span>
                   <span>₹{orderData.taxAmount.toFixed(2)}</span>
                 </div>
               ) : null}
@@ -507,18 +514,18 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
 
         .items-table th:nth-child(1),
         .items-table td:nth-child(1) {
-          width: 8%;
+          width: 6%;
         }
 
         .items-table th:nth-child(2),
         .items-table td:nth-child(2) {
-          width: 35%;
+          width: 28%;
           text-align: left;
         }
 
         .items-table th:nth-child(3),
         .items-table td:nth-child(3) {
-          width: 15%;
+          width: 12%;
         }
 
         .items-table th:nth-child(4),
@@ -528,12 +535,17 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({
 
         .items-table th:nth-child(5),
         .items-table td:nth-child(5) {
-          width: 15%;
+          width: 14%;
         }
 
         .items-table th:nth-child(6),
         .items-table td:nth-child(6) {
-          width: 15%;
+          width: 14%;
+        }
+
+        .items-table th:nth-child(7),
+        .items-table td:nth-child(7) {
+          width: 14%;
         }
 
         /* Table Summary Section - Simple Design */

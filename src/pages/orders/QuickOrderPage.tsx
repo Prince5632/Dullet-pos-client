@@ -234,7 +234,7 @@ const QuickOrderPage: React.FC = () => {
     if (isCreatingOrder) {
       setIsCreatingOrder(false);
       setOrderCreationStep("idle");
-      toast("Order creation cancelled");
+      // toast("Order creation cancelled");
     }
   };
 
