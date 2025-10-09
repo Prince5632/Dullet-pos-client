@@ -600,6 +600,17 @@ class OrderService {
     
     return errors;
   }
+
+  // Delete order or visit
+  async deleteOrder(id: string): Promise<void> {
+    const response = await apiService.delete<{ message: string }>(
+      API_CONFIG.ENDPOINTS.ORDER_BY_ID(id)
+    );
+
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to delete order');
+    }
+  }
 }
 
 export const orderService = new OrderService();

@@ -14,6 +14,7 @@ import {
   UserGroupIcon,
   BuildingOfficeIcon,
   ArrowPathIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import { orderService } from "../../services/orderService";
 import { customerService } from "../../services/customerService";
@@ -30,6 +31,7 @@ import Avatar from "../../components/ui/Avatar";
 import Modal from "../../components/ui/Modal";
 import OrderStatusDropdown from "../../components/orders/OrderStatusDropdown";
 import { resolveCapturedImageSrc } from "../../utils/image";
+import toast from "react-hot-toast";
 
 interface DashboardStats {
   orders: {
@@ -117,6 +119,11 @@ const OrdersPage: React.FC = () => {
   }>({ src: "", title: "" });
   const [showImageModal, setShowImageModal] = useState(false);
 
+  // Delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   const handleViewImage = (imageData: string | undefined, title: string) => {
     if (!imageData) return;
     const formattedSrc = resolveCapturedImageSrc(imageData || "");
@@ -148,6 +155,25 @@ const OrdersPage: React.FC = () => {
   const handleDateToChange = (value: string) => {
     setDateToFilter(value);
     validateDateRange(dateFromFilter, value);
+  };
+
+  // Delete order/visit function
+  const handleDeleteOrder = async () => {
+    if (!orderToDelete) return;
+
+    try {
+      setDeleteLoading(true);
+      await orderService.deleteOrder(orderToDelete._id);
+      toast.success(`${viewType === 'visits' ? 'Visit' : 'Order'} deleted successfully`);
+      setDeleteModalOpen(false);
+      setOrderToDelete(null);
+      handleSync(); // Sync all data after deletion
+    } catch (error: any) {
+      console.error('Failed to delete order:', error);
+      toast.error(error.message || `Failed to delete ${viewType === 'visits' ? 'visit' : 'order'}`);
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   // Load data functions
@@ -693,6 +719,18 @@ const OrdersPage: React.FC = () => {
                   />
                 </button>
               )}
+              {user?.role?.name?.toLowerCase() === "super admin" && (
+                <button
+                  onClick={() => {
+                    setOrderToDelete(visit);
+                    setDeleteModalOpen(true);
+                  }}
+                  className="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all duration-200"
+                  title="Delete Visit"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              )}
             </div>
           ),
         },
@@ -820,6 +858,18 @@ const OrdersPage: React.FC = () => {
             >
               <PencilIcon className="h-3.5 w-3.5" />
             </Link>
+            {user?.role?.name?.toLowerCase() === "super admin" && (
+              <button
+                onClick={() => {
+                  setOrderToDelete(order);
+                  setDeleteModalOpen(true);
+                }}
+                className="inline-flex items-center justify-center w-7 h-7 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+                title="Delete Order"
+              >
+                <TrashIcon className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         ),
       },
@@ -1491,6 +1541,18 @@ const OrdersPage: React.FC = () => {
                             />
                           </button>
                         )}
+                        {user?.role?.name?.toLowerCase() === "super admin" && (
+                          <button
+                            onClick={() => {
+                              setOrderToDelete(order);
+                              setDeleteModalOpen(true);
+                            }}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                            title={`Delete ${viewType === 'visits' ? 'Visit' : 'Order'}`}
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -1571,6 +1633,90 @@ const OrdersPage: React.FC = () => {
             alt={selectedImage.title}
             className="max-w-full max-h-96 object-contain rounded-lg"
           />
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          if (!deleteLoading) {
+            setDeleteModalOpen(false);
+            setOrderToDelete(null);
+          }
+        }}
+        title={`Delete ${viewType === 'visits' ? 'Visit' : 'Order'}`}
+        size="sm"
+      >
+        <div className="p-4">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+              <TrashIcon className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-gray-900">
+                Delete {viewType === 'visits' ? 'Visit' : 'Order'}
+              </h3>
+              <p className="text-xs text-gray-500">This action cannot be undone</p>
+            </div>
+          </div>
+
+          {orderToDelete && (
+            <div className="bg-gray-50 rounded-lg p-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Avatar 
+                  name={orderToDelete.customer?.businessName || "Customer"} 
+                  size="sm" 
+                />
+                <div>
+                  <div className="text-sm font-medium text-gray-900">
+                    {viewType === 'visits' 
+                      ? orderToDelete.customer?.businessName || "Unknown Customer"
+                      : orderToDelete.orderNumber
+                    }
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {viewType === 'visits' 
+                      ? `Visit on ${orderService.formatDate(orderToDelete.orderDate)}`
+                      : `Amount: ${orderService.formatCurrency(orderToDelete.totalAmount)}`
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <p className="text-sm text-gray-600 mb-6">
+            Are you sure you want to delete this {viewType === 'visits' ? 'visit' : 'order'}? 
+            This action will permanently remove the {viewType === 'visits' ? 'visit' : 'order'} from the database and cannot be undone.
+          </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setDeleteModalOpen(false);
+                setOrderToDelete(null);
+              }}
+              disabled={deleteLoading}
+              className="flex-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeleteOrder}
+              disabled={deleteLoading}
+              className="flex-1 px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+            >
+              {deleteLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Deleting...
+                </>
+              ) : (
+                `Delete ${viewType === 'visits' ? 'Visit' : 'Order'}`
+              )}
+            </button>
+          </div>
         </div>
       </Modal>
     </div>
