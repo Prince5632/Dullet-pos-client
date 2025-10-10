@@ -604,17 +604,7 @@ export interface ChartData {
 export interface Transit {
   _id: string;
   transitId: string;
-  fromLocation:
-    | {
-        _id: string;
-        name: string;
-        location: {
-          city: string;
-          state: string;
-          area?: string;
-        };
-      }
-    | string;
+  fromLocation: string;
   toLocation:
     | {
         _id: string;
@@ -735,6 +725,8 @@ export interface UpdateTransitForm {
   transporterName?: string;
   remarks?: string;
   attachments?: File[];
+  removedAttachments?: string[];
+  status?: "New" | "In Transit" | "Received" | "Partially Received" | "Cancelled";
 }
 
 export interface TransitStatusUpdate {

@@ -269,7 +269,15 @@ case 'expectedArrivalDate': {
   };
 
   const openPreviewModal = (file: File) => {
-    const previewUrl = file.type.startsWith('image/') ? filePreviews[file.name] : null;
+    let previewUrl = null;
+    
+    if (file.type.startsWith('image/')) {
+      previewUrl = filePreviews[file.name];
+    } else if (file.type === 'application/pdf') {
+      // Create a blob URL for PDF preview
+      previewUrl = URL.createObjectURL(file);
+    }
+    
     setPreviewModal({
       isOpen: true,
       file,
@@ -278,6 +286,11 @@ case 'expectedArrivalDate': {
   };
 
   const closePreviewModal = () => {
+    // Clean up blob URL if it exists
+    if (previewModal.previewUrl && previewModal.previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previewModal.previewUrl);
+    }
+    
     setPreviewModal({
       isOpen: false,
       file: null,
@@ -549,22 +562,16 @@ const managers = users.filter(user =>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     From Location <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <input
+                    type="text"
+                    placeholder="Enter from location"
                     value={form.fromLocation}
                     onChange={(e) => updateField('fromLocation', e.target.value)}
                     onBlur={() => handleBlur('fromLocation')}
                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       getFieldError('fromLocation') ? 'border-red-300 bg-red-50' : 'border-gray-300'
                     }`}
-                    disabled={godownsLoading}
-                  >
-                    <option value="">Select from location</option>
-                    {godowns.map(godown => (
-                      <option key={godown._id} value={godown?._id}>
-                        {godown.name} - {godown.location.city}, {godown.location.state}
-                      </option>
-                    ))}
-                  </select>
+                  />
                   {getFieldError('fromLocation') && (
                     <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
                       <ExclamationTriangleIcon className="w-4 h-4" />
@@ -983,29 +990,13 @@ const managers = users.filter(user =>
                     className="max-w-full max-h-full object-contain rounded border shadow-sm bg-white"
                   />
                 </div>
-              ) : previewModal.file.type === 'application/pdf' ? (
-                <div className="text-center py-8 sm:py-12">
-                  <DocumentIcon className="w-16 h-16 sm:w-24 sm:h-24 text-red-500 mx-auto mb-4" />
-                  <h4 className="text-lg sm:text-xl font-medium text-gray-900 mb-2">PDF Document</h4>
-                  <p className="text-gray-600 mb-4 text-sm sm:text-base px-4">
-                    This PDF file will be uploaded with your transit request.
-                  </p>
-                  <div className="bg-white rounded-lg p-4 max-w-sm mx-auto shadow-sm border">
-                    <div className="text-sm text-gray-700 space-y-2">
-                      <div className="flex justify-between">
-                        <span className="font-medium">File Name:</span>
-                        <span className="text-right truncate ml-2">{previewModal.file.name}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium">File Size:</span>
-                        <span>{(previewModal.file.size / 1024 / 1024).toFixed(2)} MB</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium">File Type:</span>
-                        <span>PDF Document</span>
-                      </div>
-                    </div>
-                  </div>
+              ) : previewModal.file.type === 'application/pdf' && previewModal.previewUrl ? (
+                <div className="h-full">
+                  <iframe
+                    src={previewModal.previewUrl}
+                    className="w-full h-full min-h-[500px] border-0 rounded"
+                    title={`PDF Preview: ${previewModal.file.name}`}
+                  />
                 </div>
               ) : (
                 <div className="text-center py-8 sm:py-12">

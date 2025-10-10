@@ -282,7 +282,7 @@ const TransitsPage: React.FC = () => {
         render: (_, transit) => (
           <div className="text-xs text-gray-700">
             <div className="truncate">
-              {transit.fromLocation?.name} → {transit.toLocation?.name}
+              {transit.fromLocation} → {transit.toLocation?.name}
             </div>
           </div>
         ),
@@ -525,18 +525,13 @@ const TransitsPage: React.FC = () => {
                       </option>
                     ))}
                   </select>
-                  <select
+                  <input
+                    type="text"
+                    placeholder="Filter by from location"
                     value={fromLocation}
                     onChange={(e) => setFromLocation(e.target.value)}
                     className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="">All From Locations</option>
-                    {godowns.map((godown) => (
-                      <option key={godown._id} value={godown._id}>
-                        {godown.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                   <select
                     value={toLocation}
                     onChange={(e) => setToLocation(e.target.value)}
@@ -666,7 +661,7 @@ const TransitsPage: React.FC = () => {
                         <div className="flex items-center gap-2 text-xs">
                           <span className="text-gray-500 w-16">Route:</span>
                           <span className="text-gray-900">
-                            {transit.fromLocation?.name} →{" "}
+                            {transit.fromLocation} →{" "}
                             {transit.toLocation?.name}
                           </span>
                         </div>

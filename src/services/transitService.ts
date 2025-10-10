@@ -100,6 +100,8 @@ class TransitService {
           value.forEach((file) => {
             formData.append('attachments', file);
           });
+        } else if (key === 'removedAttachments' && Array.isArray(value)) {
+          formData.append(key, JSON.stringify(value));
         } else {
           formData.append(key, String(value));
         }
@@ -158,6 +160,31 @@ class TransitService {
   // Get my transits (for drivers)
   async getMyTransits(): Promise<ApiResponse<{ transits: Transit[] }>> {
     return await apiService.get<{ transits: Transit[] }>(API_CONFIG.ENDPOINTS.TRANSIT_MY_TRANSITS);
+  }
+
+  // Get transit audit trail
+  async getTransitAuditTrail(id: string, page: number = 1, limit: number = 20): Promise<ApiResponse<{
+    activities: any[];
+    pagination: {
+      currentPage: number;
+      totalItems: number;
+      itemsPerPage: number;
+      totalPages: number;
+      hasMore: boolean;
+    };
+  }>> {
+    return await apiService.get<{
+      activities: any[];
+      pagination: {
+        currentPage: number;
+        totalItems: number;
+        itemsPerPage: number;
+        totalPages: number;
+        hasMore: boolean;
+      };
+    }>(API_CONFIG.ENDPOINTS.TRANSIT_AUDIT_TRAIL(id), {
+      params: { page, limit }
+    });
   }
 
   // Utility methods

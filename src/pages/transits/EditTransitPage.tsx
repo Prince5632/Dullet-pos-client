@@ -17,6 +17,13 @@ interface ValidationErrors {
   vehicleNumber?: string;
   driverId?: string;
   assignedTo?: string;
+  status?: string;
+}
+
+// Interface for file with unique identifier
+interface FileWithId {
+  id: string;
+  file: File;
 }
 
 const EditTransitPage: React.FC = () => {
@@ -42,7 +49,8 @@ const EditTransitPage: React.FC = () => {
     assignedTo: '',
     transporterName: '',
     remarks: '',
-    attachments: []
+    attachments: [],
+    status: 'New'
   });
   
   const [godowns, setGodowns] = useState<Godown[]>([]);
@@ -53,13 +61,15 @@ const EditTransitPage: React.FC = () => {
   const [productsLoading, setProductsLoading] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<FileWithId[]>([]);
   const [filePreviews, setFilePreviews] = useState<{[key: string]: string}>({});
   const [removedAttachments, setRemovedAttachments] = useState<string[]>([]);
-  const [previewModal, setPreviewModal] = useState<{isOpen: boolean, file: File | null, previewUrl: string | null}>({
+  const [previewModal, setPreviewModal] = useState<{isOpen: boolean, file: File | null, fileId: string | null, previewUrl: string | null, isExisting: boolean}>({
     isOpen: false,
     file: null,
-    previewUrl: null
+    fileId: null,
+    previewUrl: null,
+    isExisting: false
   });
 
   useEffect(() => {
@@ -91,7 +101,7 @@ const EditTransitPage: React.FC = () => {
             unit: 'KG',
             additionalNote: ''
           }],
-          fromLocation: typeof transitData.fromLocation === 'object' ? transitData.fromLocation._id : transitData.fromLocation,
+          fromLocation: transitData.fromLocation || '',
           toLocation: typeof transitData.toLocation === 'object' ? transitData.toLocation._id : transitData.toLocation,
           dateOfDispatch: transitData.dateOfDispatch ? new Date(transitData.dateOfDispatch).toISOString().split('T')[0] : '',
           expectedArrivalDate: transitData.expectedArrivalDate ? new Date(transitData.expectedArrivalDate).toISOString().split('T')[0] : '',
@@ -101,7 +111,8 @@ const EditTransitPage: React.FC = () => {
           assignedTo: typeof transitData.assignedTo === 'object' ? transitData.assignedTo?._id : transitData.assignedTo || '',
           transporterName: transitData.transporterName || '',
           remarks: transitData.remarks || '',
-          attachments: []
+          attachments: [],
+          status: transitData.status || 'New'
         });
       } else {
         toast.error('Failed to load transit details');
@@ -238,6 +249,11 @@ const EditTransitPage: React.FC = () => {
       case 'vehicleNumber':
         if (!value || !value.trim()) return 'Vehicle number is required';
         break;
+      case 'status':
+        if (!value || !value.trim()) return 'Status is required';
+        const validStatuses = ['New', 'In Transit', 'Received', 'Partially Received', 'Cancelled'];
+        if (!validStatuses.includes(value)) return 'Invalid status selected';
+        break;
     }
     return undefined;
   };
@@ -254,6 +270,7 @@ const EditTransitPage: React.FC = () => {
     newErrors.toLocation = validateField('toLocation', form.toLocation);
     newErrors.dateOfDispatch = validateField('dateOfDispatch', form.dateOfDispatch);
     newErrors.vehicleNumber = validateField('vehicleNumber', form.vehicleNumber);
+    newErrors.status = validateField('status', form.status);
 
     // Remove undefined errors
     Object.keys(newErrors).forEach(key => {
@@ -264,6 +281,11 @@ const EditTransitPage: React.FC = () => {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  // Generate unique ID for files
+  const generateFileId = () => {
+    return `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -285,28 +307,38 @@ const EditTransitPage: React.FC = () => {
       return true;
     });
 
-    setSelectedFiles(prev => [...prev, ...validFiles]);
+    // Create FileWithId objects with unique identifiers
+    const filesWithIds: FileWithId[] = validFiles.map(file => ({
+      id: generateFileId(),
+      file
+    }));
+
+    setSelectedFiles(prev => [...prev, ...filesWithIds]);
     
-    // Generate previews for images
-    validFiles.forEach(file => {
-      if (file.type.startsWith('image/')) {
+    // Generate previews for images using unique file IDs
+    filesWithIds.forEach(fileWithId => {
+      if (fileWithId.file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onload = (e) => {
           setFilePreviews(prev => ({
             ...prev,
-            [file.name]: e.target?.result as string
+            [fileWithId.id]: e.target?.result as string
           }));
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(fileWithId.file);
       }
     });
   };
 
-  const removeFile = (fileName: string) => {
-    setSelectedFiles(prev => prev.filter(file => file.name !== fileName));
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
     setFilePreviews(prev => {
       const newPreviews = { ...prev };
-      delete newPreviews[fileName];
+      // Remove preview for the file at this index
+      const fileToRemove = selectedFiles[index];
+      if (fileToRemove) {
+        delete newPreviews[fileToRemove.id];
+      }
       return newPreviews;
     });
   };
@@ -323,20 +355,45 @@ const EditTransitPage: React.FC = () => {
     return <DocumentIcon className="w-8 h-8 text-gray-500" />;
   };
 
-  const openPreviewModal = (file: File) => {
-    const previewUrl = file.type.startsWith('image/') ? filePreviews[file.name] : null;
+  const openPreviewModal = (file: File, identifier?: string | number, isExisting: boolean = false) => {
+    let previewUrl = null;
+    
+    if (file.type.startsWith('image/')) {
+      if (isExisting) {
+        // For existing attachments, create blob URL
+        previewUrl = URL.createObjectURL(file);
+      } else {
+        // For new files, use the preview from filePreviews
+        const fileWithId = typeof identifier === 'string' ? selectedFiles.find(f => f.id === identifier) : 
+                          typeof identifier === 'number' ? selectedFiles[identifier] : null;
+        previewUrl = fileWithId ? filePreviews[fileWithId.id] : null;
+      }
+    } else if (file.type === 'application/pdf') {
+      // Create a blob URL for PDF preview
+      previewUrl = URL.createObjectURL(file);
+    }
+    
     setPreviewModal({
       isOpen: true,
       file,
-      previewUrl
+      fileId: typeof identifier === 'string' ? identifier : null,
+      previewUrl,
+      isExisting
     });
   };
 
   const closePreviewModal = () => {
+    // Clean up blob URL if it exists
+    if (previewModal.previewUrl && previewModal.previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previewModal.previewUrl);
+    }
+    
     setPreviewModal({
       isOpen: false,
       file: null,
-      previewUrl: null
+      fileId: null,
+      previewUrl: null,
+      isExisting: false
     });
   };
 
@@ -426,7 +483,7 @@ const EditTransitPage: React.FC = () => {
     try {
       const formWithFiles = {
         ...form,
-        attachments: selectedFiles,
+        attachments: selectedFiles.map(fileWithId => fileWithId.file), // Extract File objects
         removedAttachments: removedAttachments
       };
       const updated = await transitService.updateTransit(id, formWithFiles);
@@ -646,22 +703,16 @@ const EditTransitPage: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     From Location <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <input
+                    type="text"
+                    placeholder="Enter from location"
                     value={form.fromLocation}
                     onChange={(e) => updateField('fromLocation', e.target.value)}
                     onBlur={() => handleBlur('fromLocation')}
                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       getFieldError('fromLocation') ? 'border-red-300 bg-red-50' : 'border-gray-300'
                     }`}
-                    disabled={godownsLoading}
-                  >
-                    <option value="">Select from location</option>
-                    {godowns.map(godown => (
-                      <option key={godown._id} value={godown._id}>
-                        {godown.name} - {godown.location.city}, {godown.location.state}
-                      </option>
-                    ))}
-                  </select>
+                  />
                   {getFieldError('fromLocation') && (
                     <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
                       <ExclamationTriangleIcon className="w-4 h-4" />
@@ -872,6 +923,51 @@ const EditTransitPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Status Information */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 text-gray-600">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h2 className="text-lg font-medium text-gray-900">Status Information</h2>
+              </div>
+            </div>
+            <div className="p-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Transit Status <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={form.status}
+                  onChange={(e) => updateField('status', e.target.value)}
+                  onBlur={() => handleBlur('status')}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    getFieldError('status') ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
+                >
+                  <option value="">Select status</option>
+                  <option value="New">New</option>
+                  <option value="In Transit">In Transit</option>
+                  <option value="Received">Received</option>
+                  <option value="Partially Received">Partially Received</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+                {getFieldError('status') && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                    <ExclamationTriangleIcon className="w-4 h-4" />
+                    {getFieldError('status')}
+                  </p>
+                )}
+                <p className="mt-1 text-sm text-gray-500">
+                  Note: Status transitions are validated on the server. Some transitions may not be allowed based on current status.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Additional Information */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
             <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
@@ -898,12 +994,12 @@ const EditTransitPage: React.FC = () => {
                 </label>
                 
                 {/* Existing Attachments */}
-                {transit?.attachments && transit.attachments.filter(attachment => !removedAttachments.includes(attachment.fileName)).length > 0 && (
+                {transit?.attachments && transit.attachments.filter(attachment => !removedAttachments.includes(attachment._id)).length > 0 && (
                   <div className="mb-4">
                     <h4 className="text-sm font-medium text-gray-700 mb-2">Current Attachments:</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {transit.attachments
-                        .filter(attachment => !removedAttachments.includes(attachment.fileName))
+                        .filter(attachment => !removedAttachments.includes(attachment._id))
                         .map((attachment, index) => (
                         <div key={attachment.fileName || index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -922,13 +1018,17 @@ const EditTransitPage: React.FC = () => {
                             </div>
                           </div>
                           <div className="flex items-center gap-1">
-                            {attachment.fileType?.startsWith('image/') && attachment.base64Data && (
+                            {attachment.base64Data && (attachment.fileType?.startsWith('image/') || attachment.fileType === 'application/pdf') && (
                               <button
                                 type="button"
                                 onClick={() => {
                                   setPreviewModal({
                                     isOpen: true,
-                                    file: null,
+                                    file: {
+                                      name: attachment.fileName,
+                                      type: attachment.fileType,
+                                      size: attachment.fileSize
+                                    } as File,
                                     previewUrl: `data:${attachment.fileType};base64,${attachment.base64Data}`
                                   });
                                 }}
@@ -940,7 +1040,7 @@ const EditTransitPage: React.FC = () => {
                             )}
                             <button
                               type="button"
-                              onClick={() => removeExistingAttachment(attachment.fileName)}
+                              onClick={() => removeExistingAttachment(attachment?._id)}
                               className="p-1 text-red-600 hover:text-red-800"
                               title="Remove attachment"
                             >
@@ -980,20 +1080,20 @@ const EditTransitPage: React.FC = () => {
                   <div className="mt-4 space-y-2">
                     <h4 className="text-sm font-medium text-gray-700">Selected Files:</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {selectedFiles.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                      {selectedFiles.map((fileWithId) => (
+                        <div key={fileWithId.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
-                            {getFileIcon(file)}
+                            {getFileIcon(fileWithId.file)}
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
-                              <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                              <p className="text-sm font-medium text-gray-900 truncate">{fileWithId.file.name}</p>
+                              <p className="text-xs text-gray-500">{(fileWithId.file.size / 1024 / 1024).toFixed(2)} MB</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-1">
-                            {file.type.startsWith('image/') && (
+                            {(fileWithId.file.type.startsWith('image/') || fileWithId.file.type === 'application/pdf') && (
                               <button
                                 type="button"
-                                onClick={() => openPreviewModal(file)}
+                                onClick={() => openPreviewModal(fileWithId.file, fileWithId.id, false)}
                                 className="p-1 text-blue-600 hover:text-blue-800"
                                 title="Preview"
                               >
@@ -1002,7 +1102,10 @@ const EditTransitPage: React.FC = () => {
                             )}
                             <button
                               type="button"
-                              onClick={() => removeFile(file.name)}
+                              onClick={() => {
+                                const index = selectedFiles.findIndex(f => f.id === fileWithId.id);
+                                if (index !== -1) removeFile(index);
+                              }}
                               className="p-1 text-red-600 hover:text-red-800"
                               title="Remove"
                             >
@@ -1089,6 +1192,14 @@ const EditTransitPage: React.FC = () => {
                     className="max-w-full max-h-full object-contain rounded border shadow-sm bg-white"
                   />
                 </div>
+              ) : previewModal.file?.type === 'application/pdf' && previewModal.previewUrl ? (
+                <div className="h-full flex flex-col">
+                  <iframe
+                    src={previewModal.previewUrl}
+                    className="w-full flex-1 min-h-[500px] border-0 rounded"
+                    title={`PDF Preview - ${previewModal.file.name}`}
+                  />
+                </div>
               ) : previewModal.file?.type === 'application/pdf' ? (
                 <div className="text-center py-8 sm:py-12">
                   <DocumentIcon className="w-16 h-16 sm:w-24 sm:h-24 text-red-500 mx-auto mb-4" />
@@ -1127,15 +1238,31 @@ const EditTransitPage: React.FC = () => {
             {/* Modal Footer - Fixed */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 sm:p-4 border-t border-gray-200 bg-white flex-shrink-0 gap-3 sm:gap-0">
               <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
-                File attached to your transit
+                {previewModal.isExisting ? 'Existing attachment' : 'File attached to your transit'}
               </div>
               <div className="flex gap-2 justify-center sm:justify-end">
-                <button
-                  onClick={() => removeFile(previewModal.file!.name)}
-                  className="px-3 sm:px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors border border-red-200"
-                >
-                  Remove File
-                </button>
+                {previewModal.file && !previewModal.isExisting && previewModal.fileId && (
+                  <button
+                    onClick={() => {
+                      removeFile(previewModal.fileId!);
+                      closePreviewModal();
+                    }}
+                    className="px-3 sm:px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors border border-red-200"
+                  >
+                    Remove File
+                  </button>
+                )}
+                {previewModal.isExisting && (
+                  <button
+                    onClick={() => {
+                      removeExistingAttachment(previewModal.file!.name);
+                      closePreviewModal();
+                    }}
+                    className="px-3 sm:px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors border border-red-200"
+                  >
+                    Remove Attachment
+                  </button>
+                )}
                 <button
                   onClick={closePreviewModal}
                   className="px-3 sm:px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"

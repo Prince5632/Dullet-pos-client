@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { transitService } from '../../services/transitService';
 import type { Transit } from '../../types';
@@ -13,11 +13,14 @@ import {
   TrashIcon,
   DocumentTextIcon,
   CubeIcon,
-  BuildingOfficeIcon
+  BuildingOfficeIcon,
+  XMarkIcon,
+  EyeIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import Avatar from '../../components/ui/Avatar';
 import Modal from '../../components/ui/Modal';
+import OrderActivityTimeline from '../../components/orders/OrderActivityTimeline';
 import toast from 'react-hot-toast';
 
 const ViewTransitPage: React.FC = () => {
@@ -28,7 +31,57 @@ const ViewTransitPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [previewModal, setPreviewModal] = useState<{
+    isOpen: boolean;
+    attachment: any;
+    previewUrl: string | null;
+  }>({
+    isOpen: false,
+    attachment: null,
+    previewUrl: null
+  });
 
+  // Activity timeline state
+  const [activities, setActivities] = useState<any[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const [activitiesPagination, setActivitiesPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    hasMore: false,
+  });
+
+  const fetchActivities = useCallback(
+    async (page: number = 1, append: boolean = false) => {
+      if (!id) return;
+
+      try {
+        setActivitiesLoading(true);
+        const response = await transitService.getTransitAuditTrail(id, {
+          page,
+          limit: 5,
+        });
+        if (append) {
+          setActivities((prev) => [...prev, ...response?.data?.activities]);
+        } else {
+          setActivities(response?.data?.activities);
+        }
+
+        setActivitiesPagination({
+          currentPage: response?.data.pagination.currentPage,
+          totalPages: response?.data?.pagination.totalPages,
+          totalCount: response?.data?.pagination.totalItems,
+          hasMore: response?.data?.pagination.hasMore,
+        });
+      } catch (err: any) {
+        console.error("Error fetching activities:", err);
+        // Don't show error toast for activities as it's not critical
+      } finally {
+        setActivitiesLoading(false);
+      }
+    },
+    [id]
+  );
   useEffect(() => {
     if (!hasPermission("transits.read")) {
       navigate('/transits');
@@ -36,8 +89,9 @@ const ViewTransitPage: React.FC = () => {
     }
     if (id) {
       loadTransit();
+      fetchActivities();
     }
-  }, [id, hasPermission, navigate]);
+  }, [id, hasPermission, navigate, fetchActivities]);
 
   const loadTransit = async () => {
     if (!id) return;
@@ -59,6 +113,22 @@ const ViewTransitPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+
+  const loadMoreActivities = useCallback(() => {
+    if (
+      activitiesPagination?.hasMore &&
+      !activitiesLoading &&
+      activitiesPagination?.currentPage
+    ) {
+      fetchActivities(activitiesPagination.currentPage + 1, true);
+    }
+  }, [
+    activitiesPagination?.hasMore,
+    activitiesPagination?.currentPage,
+    activitiesLoading,
+    fetchActivities,
+  ]);
 
   const handleDelete = async () => {
     if (!id || !transit) return;
@@ -104,6 +174,39 @@ const ViewTransitPage: React.FC = () => {
       month: 'long',
       day: 'numeric',
     });
+  };
+
+  const openPreviewModal = (attachment: any) => {
+    let previewUrl = null;
+    
+    if (attachment.fileType?.startsWith('image/') && attachment.base64Data) {
+      previewUrl = `data:${attachment.fileType};base64,${attachment.base64Data}`;
+    } else if (attachment.fileType === 'application/pdf' && attachment.base64Data) {
+      previewUrl = `data:${attachment.fileType};base64,${attachment.base64Data}`;
+    }
+    
+    setPreviewModal({
+      isOpen: true,
+      attachment,
+      previewUrl
+    });
+  };
+
+  const closePreviewModal = () => {
+    setPreviewModal({
+      isOpen: false,
+      attachment: null,
+      previewUrl: null
+    });
+  };
+
+  const getFileIcon = (attachment: any) => {
+    if (attachment.fileType === 'application/pdf') {
+      return <DocumentTextIcon className="w-8 h-8 text-red-500" />;
+    } else if (attachment.fileType?.startsWith('image/')) {
+      return <CubeIcon className="w-8 h-8 text-blue-500" />;
+    }
+    return <DocumentTextIcon className="w-8 h-8 text-gray-500" />;
   };
 
   if (loading) {
@@ -236,14 +339,8 @@ const ViewTransitPage: React.FC = () => {
                       <MapPinIcon className="h-4 w-4 text-gray-400 mr-2" />
                       <div>
                         <p className="text-sm text-gray-900">
-                          {typeof transit.fromLocation === 'string' ? transit.fromLocation : transit.fromLocation?.name}
+                          {transit.fromLocation}
                         </p>
-                        {typeof transit.fromLocation === 'object' && transit.fromLocation?.location && (
-                          <p className="text-xs text-gray-500">
-                            {transit.fromLocation.location.city}, {transit.fromLocation.location.state}
-                            {transit.fromLocation.location.area && ` - ${transit.fromLocation.location.area}`}
-                          </p>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -336,30 +433,14 @@ const ViewTransitPage: React.FC = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
-                          {attachment.fileType?.startsWith('image/') && attachment.base64Data && (
+                          {((attachment.fileType?.startsWith('image/') || attachment.fileType === 'application/pdf') && attachment.base64Data) && (
                             <button
                               type="button"
-                              onClick={() => {
-                                // Create a modal or new window to view the image
-                                const newWindow = window.open();
-                                if (newWindow) {
-                                  newWindow.document.write(`
-                                    <html>
-                                      <head><title>${attachment.fileName || 'Image Preview'}</title></head>
-                                      <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f3f4f6;">
-                                        <img src="data:${attachment.fileType};base64,${attachment.base64Data}" style="max-width:100%;max-height:100vh;" alt="${attachment.fileName || 'Image'}" />
-                                      </body>
-                                    </html>
-                                  `);
-                                }
-                              }}
+                              onClick={() => openPreviewModal(attachment)}
                               className="p-1 text-blue-600 hover:text-blue-800"
                               title="Preview"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
+                              <EyeIcon className="w-4 h-4" />
                             </button>
                           )}
                           {attachment.base64Data && attachment.fileType && (
@@ -480,10 +561,102 @@ const ViewTransitPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Activity Timeline */}
+            <OrderActivityTimeline
+              activities={activities}
+              loading={activitiesLoading}
+              hasMore={activitiesPagination.hasMore}
+              onLoadMore={loadMoreActivities}
+              totalCount={activitiesPagination.totalCount}
+              clampDescriptionLines={3}
+              text="transit"
+            />
          
           </div>
         </div>
       </div>
+
+      {/* Preview Modal */}
+      <Modal
+        isOpen={previewModal.isOpen}
+        onClose={closePreviewModal}
+        title="Attachment Preview"
+        size="lg"
+      >
+        <div className="space-y-4">
+          {previewModal.attachment && (
+            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+              {getFileIcon(previewModal.attachment)}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {previewModal.attachment.fileName || 'Unknown file'}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {previewModal.attachment.fileSize 
+                    ? `${(previewModal.attachment.fileSize / 1024 / 1024).toFixed(2)} MB` 
+                    : 'Unknown size'}
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <div className="border rounded-lg overflow-hidden bg-gray-50" style={{ minHeight: '400px' }}>
+            {previewModal.previewUrl ? (
+              previewModal.attachment?.fileType?.startsWith('image/') ? (
+                <img
+                  src={previewModal.previewUrl}
+                  alt={previewModal.attachment?.fileName || 'Preview'}
+                  className="w-full h-auto max-h-96 object-contain"
+                />
+              ) : previewModal.attachment?.fileType === 'application/pdf' ? (
+                <iframe
+                  src={previewModal.previewUrl}
+                  className="w-full h-96"
+                  title={previewModal.attachment?.fileName || 'PDF Preview'}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-96 text-gray-500">
+                  <div className="text-center">
+                    <DocumentTextIcon className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                    <p>Preview not available for this file type</p>
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="flex items-center justify-center h-96 text-gray-500">
+                <div className="text-center">
+                  <DocumentTextIcon className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                  <p>No preview available</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="mt-6 flex justify-between">
+          <span className="text-sm text-gray-500">
+            Existing attachment
+          </span>
+          <div className="flex space-x-3">
+            {previewModal.attachment?.base64Data && previewModal.attachment?.fileType && (
+              <a
+                href={`data:${previewModal.attachment.fileType};base64,${previewModal.attachment.base64Data}`}
+                download={previewModal.attachment.fileName || 'download'}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Download
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={closePreviewModal}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
       <Modal
