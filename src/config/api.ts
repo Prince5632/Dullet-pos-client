@@ -87,6 +87,10 @@ export const API_CONFIG = {
     TRANSIT_MY_TRANSITS: "/api/transits/my-transits",
     TRANSIT_AUDIT_TRAIL: (id: string) => `/api/transits/${id}/audit-trail`,
 
+    // Transaction endpoints
+    TRANSACTIONS: "/api/transactions",
+    TRANSACTION_BY_ID: (id: string) => `/api/transactions/${id}`,
+
     // System endpoints
     HEALTH: "/api/health",
   },

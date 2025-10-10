@@ -87,7 +87,7 @@ const QuickOrderPage: React.FC = () => {
 
   // Other minimal fields
   const [paymentTerms, setPaymentTerms] = useState<
-    "Cash" | "Credit" | "Advance"
+    "Cash" | "Credit" | "Cheque" | "Online"
   >("Cash");
   const [priority, setPriority] = useState<
     "low" | "normal" | "high" | "urgent"
@@ -238,7 +238,6 @@ const QuickOrderPage: React.FC = () => {
     }
   };
 
-
   const openQtyModalForNewItem = (product: QuickProduct) => {
     setActiveProduct(product);
     // Always start fresh for new items, ignore existing selections
@@ -273,11 +272,9 @@ const QuickOrderPage: React.FC = () => {
     // Set currentBagSize based on existing selection packaging
     if (item.isBagSelection && item.packaging === "5kg Bags") {
       setCurrentBagSize(5);
-    }
-    else if (item.isBagSelection && item.packaging === "10kg Bags") {
+    } else if (item.isBagSelection && item.packaging === "10kg Bags") {
       setCurrentBagSize(10);
-    }
-     else if (item.isBagSelection && item.packaging === "40kg Bags") {
+    } else if (item.isBagSelection && item.packaging === "40kg Bags") {
       setCurrentBagSize(40);
     } else if (item.isBagSelection && item.packaging === "50kg Bags") {
       setCurrentBagSize(50);
@@ -348,9 +345,9 @@ const QuickOrderPage: React.FC = () => {
       isBagSelection: isBagSelection,
       bagPieces: pieceCount,
     };
-    
+
     let itemKey: string;
-    
+
     if (editingItemKey) {
       // If editing an existing item, use the existing key
       itemKey = editingItemKey;
@@ -358,7 +355,7 @@ const QuickOrderPage: React.FC = () => {
       // If adding a new item, generate unique key for multiple items of same product
       const existingItem = selectedItems[activeProduct.key];
       itemKey = activeProduct.key;
-      
+
       if (existingItem) {
         // If item already exists, create a new unique key
         let counter = 1;
@@ -368,7 +365,7 @@ const QuickOrderPage: React.FC = () => {
         itemKey = `${activeProduct.key}_${counter}`;
       }
     }
-    
+
     setSelectedItems((prev) => ({ ...prev, [itemKey]: item }));
     setActiveProduct(null);
     setIsBagSelection(false);
@@ -422,7 +419,8 @@ const QuickOrderPage: React.FC = () => {
   };
 
   const itemsArray = useMemo(
-    () => Object.entries(selectedItems).map(([key, item]) => ({ key, ...item })),
+    () =>
+      Object.entries(selectedItems).map(([key, item]) => ({ key, ...item })),
     [selectedItems]
   );
   const totalAmount = useMemo(() => {
@@ -693,7 +691,7 @@ const QuickOrderPage: React.FC = () => {
                       <div className="text-sm font-semibold text-gray-900">
                         ₹{formatNumber(lineTotal)}
                       </div>
-                      
+
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -708,11 +706,13 @@ const QuickOrderPage: React.FC = () => {
                 );
               })}
             </div>
-            
+
             {/* Total Summary */}
             <div className="mt-3 pt-3 border-t border-blue-200">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-700">Total Amount:</span>
+                <span className="text-sm font-medium text-gray-700">
+                  Total Amount:
+                </span>
                 <span className="text-lg font-bold text-blue-600">
                   ₹{formatNumber(totalAmount)}
                 </span>
@@ -745,12 +745,23 @@ const QuickOrderPage: React.FC = () => {
           {!selectedGodownId && (
             <div className="text-center py-8">
               <div className="text-gray-400 mb-2">
-                <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                <svg
+                  className="w-12 h-12 mx-auto"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                  />
                 </svg>
               </div>
               <div className="text-sm text-gray-600">
-                Please select a godown to view available products for that location.
+                Please select a godown to view available products for that
+                location.
               </div>
             </div>
           )}
@@ -759,12 +770,23 @@ const QuickOrderPage: React.FC = () => {
           {selectedGodownId && currentProducts.length === 0 && (
             <div className="text-center py-8">
               <div className="text-amber-400 mb-2">
-                <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                <svg
+                  className="w-12 h-12 mx-auto"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
                 </svg>
               </div>
               <div className="text-sm text-amber-600">
-                No products available for the selected godown. Please confirm that this location has assigned catalog items.
+                No products available for the selected godown. Please confirm
+                that this location has assigned catalog items.
               </div>
             </div>
           )}
@@ -786,64 +808,82 @@ const QuickOrderPage: React.FC = () => {
               );
 
               // Show all products as "add new" options
-               const availableGroups = Object.entries(baseProductGroups).map(([baseName, variants]) => {
-                 return { baseName, variants };
-               });
+              const availableGroups = Object.entries(baseProductGroups).map(
+                ([baseName, variants]) => {
+                  return { baseName, variants };
+                }
+              );
 
-               return availableGroups.map(({ baseName, variants }) => (
-                 <div key={baseName} className="mb-4 last:mb-0">
+              return availableGroups.map(({ baseName, variants }) => (
+                <div key={baseName} className="mb-4 last:mb-0">
+                  <div className="grid grid-cols-1 gap-2">
+                    {variants.map((variant) => {
+                      // Check for any items of this product (including numbered variants)
+                      const productItemsInCart = Object.keys(
+                        selectedItems
+                      ).filter(
+                        (key) =>
+                          key === variant.key ||
+                          key.startsWith(`${variant.key}_`)
+                      );
+                      const hasItemsInCart = productItemsInCart.length > 0;
 
-                   <div className="grid grid-cols-1 gap-2">
-                     {variants.map((variant) => {
-                       // Check for any items of this product (including numbered variants)
-                       const productItemsInCart = Object.keys(selectedItems).filter(key => 
-                         key === variant.key || key.startsWith(`${variant.key}_`)
-                       );
-                       const hasItemsInCart = productItemsInCart.length > 0;
-                       
-                       return (
-                         <button
-                           key={variant.key}
-                           onClick={() => openQtyModalForNewItem(variant)}
-                           className={`w-full text-left p-3 rounded-lg border transition-all duration-200 active:scale-[0.99] ${
-                             hasItemsInCart
-                               ? "border-emerald-200 bg-emerald-50 hover:border-emerald-300 hover:bg-emerald-100"
-                               : "border-gray-200 bg-white hover:border-emerald-300 hover:bg-emerald-50"
-                           }`}
-                         >
-                           <div className="flex items-center justify-between">
-                             <div className="flex-1 min-w-0">
-                               <div className="flex items-center gap-2">
-                                 <h4 className="text-sm font-medium text-gray-900 truncate">
-                                   {variant.name}
-                                 </h4>
-                                 <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                                   ₹{formatNumber(variant.pricePerKg)}/kg
-                                 </span>
-                                 {hasItemsInCart && (
-                                   <span className="text-xs text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-medium">
-                                     In Cart {productItemsInCart.length > 1 ? `(${productItemsInCart.length})` : ''}
-                                   </span>
-                                 )}
-                               </div>
-                             {variant.bagSizeKg && (
-                               <div className="text-xs text-gray-500 mt-1">
-                                 Available in {variant.bagSizeKg}kg bags
-                               </div>
-                             )}
-                           </div>
-                           <div className="flex items-center text-emerald-600">
-                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                             </svg>
-                           </div>
-                         </div>
-                       </button>
-                     );
-                   })}
-                   </div>
-                 </div>
-               ));
+                      return (
+                        <button
+                          key={variant.key}
+                          onClick={() => openQtyModalForNewItem(variant)}
+                          className={`w-full text-left p-3 rounded-lg border transition-all duration-200 active:scale-[0.99] ${
+                            hasItemsInCart
+                              ? "border-emerald-200 bg-emerald-50 hover:border-emerald-300 hover:bg-emerald-100"
+                              : "border-gray-200 bg-white hover:border-emerald-300 hover:bg-emerald-50"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-sm font-medium text-gray-900 truncate">
+                                  {variant.name}
+                                </h4>
+                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                                  ₹{formatNumber(variant.pricePerKg)}/kg
+                                </span>
+                                {hasItemsInCart && (
+                                  <span className="text-xs text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-medium">
+                                    In Cart{" "}
+                                    {productItemsInCart.length > 1
+                                      ? `(${productItemsInCart.length})`
+                                      : ""}
+                                  </span>
+                                )}
+                              </div>
+                              {variant.bagSizeKg && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Available in {variant.bagSizeKg}kg bags
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center text-emerald-600">
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                />
+                              </svg>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ));
             })()}
         </div>
 
@@ -856,11 +896,11 @@ const QuickOrderPage: React.FC = () => {
             </h3>
             <div className="flex items-center gap-2">
               <div className="inline-flex gap-0.5">
-                {(["Cash", "Credit", "Advance"] as const).map((term) => (
+                {orderService.getPaymentTerms().map((term) => (
                   <button
                     key={term}
                     type="button"
-                    onClick={() => setPaymentTerms(term)}
+                    onClick={() => setPaymentTerms(term as any)}
                     className={`px-2 py-1 rounded text-[10px] border ${
                       paymentTerms === term
                         ? "bg-emerald-50 border-emerald-300 text-emerald-700"
@@ -1048,7 +1088,9 @@ const QuickOrderPage: React.FC = () => {
                   <div className="text-center">
                     <div className="text-lg mb-1">📦</div>
                     <div>Loose Packaging</div>
-                    <div className="text-xs text-gray-500 mt-1">Custom weight</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Custom weight
+                    </div>
                   </div>
                 </button>
                 <button
@@ -1068,7 +1110,9 @@ const QuickOrderPage: React.FC = () => {
                   <div className="text-center">
                     <div className="text-lg mb-1">🛍️</div>
                     <div>Bag Packaging</div>
-                    <div className="text-xs text-gray-500 mt-1">Standard bags</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Standard bags
+                    </div>
                   </div>
                 </button>
               </div>
@@ -1081,10 +1125,10 @@ const QuickOrderPage: React.FC = () => {
               </label>
               <div className="grid grid-cols-4 gap-2">
                 {[5, 10, 40, 50].map((weight) => {
-                  const isActive = isBagSelection 
-                    ? (currentBagSize === weight && bagPieces === 1)
-                    : (kg === weight);
-                  
+                  const isActive = isBagSelection
+                    ? currentBagSize === weight && bagPieces === 1
+                    : kg === weight;
+
                   return (
                     <button
                       key={weight}
@@ -1120,7 +1164,9 @@ const QuickOrderPage: React.FC = () => {
                 <div className="flex items-center">
                   <button
                     type="button"
-                    onClick={() => setKg((prev) => Math.max(0, (Number(prev) || 0) - 0.5))}
+                    onClick={() =>
+                      setKg((prev) => Math.max(0, (Number(prev) || 0) - 0.5))
+                    }
                     disabled={kg <= 0}
                     className="px-4 py-2 border border-gray-300 rounded-l-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-medium active:scale-95"
                   >
@@ -1165,67 +1211,69 @@ const QuickOrderPage: React.FC = () => {
                 <label className="block text-xs font-medium text-gray-700 mb-2">
                   Number of Bags
                 </label>
-             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3 gap-2 w-full">
-  {/* Quantity Controls */}
-  <div className="flex items-center justify-center sm:justify-start w-full sm:w-auto">
-    <button
-      type="button"
-      onClick={() => {
-        const newPieces = Math.max(1, (Number(bagPieces) || 1) - 1);
-        setBagPieces(newPieces);
-        setKg(newPieces * currentBagSize);
-      }}
-      disabled={bagPieces <= 1}
-      className="px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-l-lg bg-gray-50 hover:bg-gray-100 
+                <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3 gap-2 w-full">
+                  {/* Quantity Controls */}
+                  <div className="flex items-center justify-center sm:justify-start w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPieces = Math.max(
+                          1,
+                          (Number(bagPieces) || 1) - 1
+                        );
+                        setBagPieces(newPieces);
+                        setKg(newPieces * currentBagSize);
+                      }}
+                      disabled={bagPieces <= 1}
+                      className="px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-l-lg bg-gray-50 hover:bg-gray-100 
       disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500 
       text-sm sm:text-base font-medium active:scale-95 transition-transform duration-100 w-10 sm:w-auto"
-    >
-      -
-    </button>
+                    >
+                      -
+                    </button>
 
-    <input
-      type="number"
-      min={1}
-      step={1}
-      value={bagPieces || ""}
-      onChange={(e) => {
-        const value = e.target.value;
-        if (value === "") {
-          setBagPieces(1);
-          setKg(currentBagSize);
-          return;
-        }
-        const count = Math.max(1, Math.floor(Number(value)));
-        setBagPieces(count);
-        setKg(count * currentBagSize);
-      }}
-      className="flex-1 px-2 py-2 sm:px-3 border-t border-b border-gray-300 text-center text-sm sm:text-base font-medium 
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={bagPieces || ""}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === "") {
+                          setBagPieces(1);
+                          setKg(currentBagSize);
+                          return;
+                        }
+                        const count = Math.max(1, Math.floor(Number(value)));
+                        setBagPieces(count);
+                        setKg(count * currentBagSize);
+                      }}
+                      className="flex-1 px-2 py-2 sm:px-3 border-t border-b border-gray-300 text-center text-sm sm:text-base font-medium 
       focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 w-16 sm:w-20"
-      placeholder="1"
-    />
+                      placeholder="1"
+                    />
 
-    <button
-      type="button"
-      onClick={() => {
-        const newPieces = (Number(bagPieces) || 1) + 1;
-        setBagPieces(newPieces);
-        setKg(newPieces * currentBagSize);
-      }}
-      className="px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-r-lg bg-gray-50 hover:bg-gray-100 
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPieces = (Number(bagPieces) || 1) + 1;
+                        setBagPieces(newPieces);
+                        setKg(newPieces * currentBagSize);
+                      }}
+                      className="px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-r-lg bg-gray-50 hover:bg-gray-100 
       focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm sm:text-base font-medium active:scale-95 
       transition-transform duration-100 w-10 sm:w-auto"
-    >
-      +
-    </button>
-  </div>
+                    >
+                      +
+                    </button>
+                  </div>
 
-  {/* Total Display */}
-  <div className="text-center sm:text-left text-xs sm:text-sm text-gray-600">
-    × {currentBagSize}kg ={" "}
-    <span className="font-semibold text-gray-900">{kg}kg</span>
-  </div>
-</div>
-
+                  {/* Total Display */}
+                  <div className="text-center sm:text-left text-xs sm:text-sm text-gray-600">
+                    × {currentBagSize}kg ={" "}
+                    <span className="font-semibold text-gray-900">{kg}kg</span>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1233,7 +1281,9 @@ const QuickOrderPage: React.FC = () => {
             <div className="mb-4 p-3 bg-gray-50 rounded-lg">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Total Weight:</span>
-                <span className="text-sm font-medium text-gray-900">{kg}kg</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {kg}kg
+                </span>
               </div>
               <div className="flex justify-between items-center mt-1">
                 <span className="text-sm text-gray-600">Total Amount:</span>

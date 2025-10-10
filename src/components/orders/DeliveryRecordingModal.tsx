@@ -30,8 +30,10 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
   const [activeStep, setActiveStep] = useState(1);
   const [formData, setFormData] = useState({
     notes: "",
-    amountCollected: order.remainingAmount || order.totalAmount || 0,
+    amountCollected: order.paidAmount || 0,
+    remainingAmount: order.totalAmount - order.paidAmount || 0,
     settlementNotes: "",
+    paymentTerms: order.paymentTerms || "Cash",
     location: {
       address: "",
     },
@@ -46,7 +48,6 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
 
   const driverSignatureRef = useRef<SignaturePadRef>(null);
   const receiverSignatureRef = useRef<SignaturePadRef>(null);
-
   const handleInputChange = (field: string, value: string | number) => {
     if (field.startsWith("location.")) {
       const locationField = field.split(".")[1];
@@ -230,6 +231,7 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
       setLoading(true);
       const payload = {
         notes: formData.notes,
+        paymentTerms: formData.paymentTerms,
         location: formData.location.address
           ? {
               address: formData.location.address,
@@ -242,7 +244,7 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
           receiver: receiverSigToSend,
         },
         settlement: {
-          amountCollected: formData.amountCollected,
+          amountCollected:formData.remainingAmount,
           notes: formData.settlementNotes,
         },
       };
@@ -269,13 +271,14 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
       setLoading(false);
     }
   };
-
   const resetForm = () => {
     setActiveStep(1);
     setFormData({
       notes: "",
-      amountCollected: order.remainingAmount || order.totalAmount || 0,
+      amountCollected: order.paidAmount || 0,
+      remainingAmount: order.totalAmount - order.paidAmount || 0,
       settlementNotes: "",
+      paymentTerms: order.paymentTerms || "Cash",
       location: { address: "" },
     });
     driverSignatureRef.current?.clear();
@@ -342,10 +345,47 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
             </p>
           </div>
           <div>
-            <span className="text-gray-600">Payment Terms:</span>
+            <span className="text-gray-600">Already Paid:</span>
+            <p className="font-medium text-green-600">
+              ₹{(order.paidAmount || 0).toLocaleString()}
+            </p>
+          </div>
+          <div>
+            <span className="text-gray-600">Remaining Amount:</span>
+            <p className="font-medium text-orange-600">
+              ₹{(order.totalAmount - order.paidAmount || 0).toLocaleString()}
+            </p>
+          </div>
+          <div>
+            <span className="text-gray-600">Original Payment Terms:</span>
             <p className="font-medium">{order.paymentTerms}</p>
           </div>
         </div>
+      </div>
+
+      {/* Payment Terms Update */}
+      <div>
+        <label
+          htmlFor="payment-terms"
+          className="block text-sm font-medium text-gray-700 mb-2"
+        >
+          Payment Terms <span className="text-red-500">*</span>
+        </label>
+        <select
+          id="payment-terms"
+          value={formData.paymentTerms}
+          onChange={(e) => handleInputChange("paymentTerms", e.target.value)}
+          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+        >
+          {orderService.getPaymentTerms().map((term) => (
+            <option key={term} value={term}>
+              {term}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-gray-500 mt-1">
+          You can update the payment terms if needed during delivery
+        </p>
       </div>
 
       {/* Amount Collection */}
@@ -354,7 +394,7 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
           htmlFor="amount-collected"
           className="block text-sm font-medium text-gray-700 mb-2"
         >
-          Amount Collected <span className="text-red-500">*</span>
+          Amount to Collect (Remaining) <span className="text-red-500">*</span>
         </label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -364,21 +404,27 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
             id="amount-collected"
             type="number"
             min="0"
-            max={order.totalAmount}
-            value={formData.amountCollected}
+            max={order.totalAmount - order.paidAmount || 0}
+            value={formData.remainingAmount}
             onChange={(e) =>
               handleInputChange(
-                "amountCollected",
+                "remainingAmount",
                 parseFloat(e.target.value) || 0
               )
             }
             className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             placeholder="0"
+            disabled={order.paidAmount === order.totalAmount}
           />
         </div>
         <p className="text-xs text-gray-500 mt-1">
-          Maximum: ₹{order.totalAmount?.toLocaleString()}
+          Maximum remaining amount: ₹{(order.totalAmount - order.paidAmount - formData.remainingAmount || 0).toLocaleString()}
         </p>
+        {(order.paidAmount || 0) > 0 && (
+          <p className="text-xs text-green-600 mt-1">
+            ₹{(order.paidAmount || 0).toLocaleString()} already paid
+          </p>
+        )}
       </div>
 
       {/* Settlement Notes */}

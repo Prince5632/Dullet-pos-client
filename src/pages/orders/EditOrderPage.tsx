@@ -48,8 +48,8 @@ type SelectedItem = {
 
 const schema = yup.object({
   paymentTerms: yup
-    .mixed<"Cash" | "Credit" | "Advance">()
-    .oneOf(["Cash", "Credit", "Advance"])
+    .mixed<"Cash" | "Credit" | "Advance" | "Cheque" | "Online">()
+    .oneOf(["Cash", "Credit", "Advance", "Cheque", "Online"])
     .required("Payment terms are required"),
   priority: yup
     .mixed<"low" | "normal" | "high" | "urgent">()
@@ -96,6 +96,10 @@ const EditOrderPage: React.FC = () => {
   // Tax state
   const [isTaxable, setIsTaxable] = useState(false);
   const [taxPercentage, setTaxPercentage] = useState(5);
+
+  // Payment state
+  const [originalPaidAmount, setOriginalPaidAmount] = useState(0);
+  const [additionalPayment, setAdditionalPayment] = useState(0);
 
   const {
     register,
@@ -236,8 +240,12 @@ const EditOrderPage: React.FC = () => {
         if (data.deliveryInstructions)
           setValue("deliveryInstructions", data.deliveryInstructions);
         if (data.notes) setValue("notes", data.notes);
-        if (typeof data.paidAmount === "number")
-          setValue("paidAmount", data.paidAmount);
+        
+        // Set original paid amount and reset additional payment
+        const originalPaid = typeof data.paidAmount === "number" ? data.paidAmount : 0;
+        setOriginalPaidAmount(originalPaid);
+        setAdditionalPayment(0);
+        setValue("paidAmount", originalPaid); // Keep form in sync
         
         // Set tax fields
         const orderIsTaxable = data.isTaxable || false;
@@ -738,20 +746,20 @@ const EditOrderPage: React.FC = () => {
         return;
       }
 
-      // Determine payment status from paid amount
+      // Determine payment status from total paid amount
       const effectiveTotal = calculateTotal();
+      const finalPaidAmount = originalPaidAmount + additionalPayment;
       let paymentStatus: Order["paymentStatus"] | undefined = undefined;
-      if (typeof data.paidAmount === "number") {
-        if (data.paidAmount >= effectiveTotal) paymentStatus = "paid";
-        else if (data.paidAmount > 0) paymentStatus = "partial";
-        else paymentStatus = "pending";
-      }
+      if (finalPaidAmount >= effectiveTotal) paymentStatus = "paid";
+      else if (finalPaidAmount > 0) paymentStatus = "partial";
+      else paymentStatus = "pending";
       const payload: UpdateOrderForm = {
         ...data,
         items: convertedOrderItems,
         isTaxable,
         taxPercentage,
         taxAmount: calculateTaxAmount(),
+        paidAmount: finalPaidAmount,
         ...(paymentStatus ? { paymentStatus } : {}),
       };
 
@@ -804,8 +812,8 @@ const EditOrderPage: React.FC = () => {
   }
 
   const totalAmount = calculateTotal();
-  const paidAmount = watchedValues.paidAmount || 0;
-  const remainingAmount = Math.max(0, totalAmount - paidAmount);
+  const totalPaidAmount = originalPaidAmount + additionalPayment;
+  const remainingAmount = Math.max(0, totalAmount - totalPaidAmount);
 
   return (
     <>
@@ -1356,20 +1364,51 @@ const EditOrderPage: React.FC = () => {
                       </h4>
 
                       <div className="space-y-1.5">
+                        {/* Original Paid Amount (Read-only) */}
+                        {originalPaidAmount > 0 && (
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-gray-600">Already Paid</span>
+                            <span className="font-medium text-green-600">
+                              {orderService.formatCurrency(originalPaidAmount)}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Additional Payment Input */}
                         <div className="flex justify-between items-center text-xs">
-                          <span className="text-gray-600">Paid</span>
+                          <span className="text-gray-600">
+                            {originalPaidAmount > 0 ? "Additional Payment" : "Payment Amount"}
+                          </span>
                           <div className="flex items-center gap-0.5">
                             <span className="text-gray-500 text-xs">₹</span>
                             <input
                               type="number"
-                              {...register("paidAmount")}
+                              value={additionalPayment}
+                              onChange={(e) => {
+                                const value = parseFloat(e.target.value) || 0;
+                                const maxAdditional = Math.max(0, totalAmount - originalPaidAmount);
+                                const clampedValue = Math.min(value, maxAdditional);
+                                setAdditionalPayment(clampedValue);
+                                setValue("paidAmount", originalPaidAmount + clampedValue);
+                              }}
                               placeholder="0"
                               min="0"
+                              max={Math.max(0, totalAmount - originalPaidAmount)}
                               step="0.01"
                               className="w-20 px-1.5 py-1 border border-gray-300 rounded text-xs text-right focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                             />
                           </div>
                         </div>
+
+                        {/* Total Paid Amount */}
+                        {originalPaidAmount > 0 && additionalPayment > 0 && (
+                          <div className="flex justify-between items-center text-xs border-t border-gray-100 pt-1">
+                            <span className="text-gray-600 font-medium">Total Paid</span>
+                            <span className="font-medium text-blue-600">
+                              {orderService.formatCurrency(totalPaidAmount)}
+                            </span>
+                          </div>
+                        )}
 
                         <div className="flex justify-between text-xs">
                           <span className="text-gray-600">Remaining</span>
@@ -1381,17 +1420,24 @@ const EditOrderPage: React.FC = () => {
                         <div className="flex items-center gap-1 pt-1">
                           <button
                             type="button"
-                            onClick={() => setValue("paidAmount", totalAmount)}
+                            onClick={() => {
+                              const maxAdditional = Math.max(0, totalAmount - originalPaidAmount);
+                              setAdditionalPayment(maxAdditional);
+                              setValue("paidAmount", totalAmount);
+                            }}
                             className="flex-1 px-2 py-1.5 text-[10px] font-medium rounded text-white bg-emerald-600 hover:bg-emerald-700 transition-colors active:scale-95"
                           >
-                            Mark Paid
+                            Pay Remaining
                           </button>
                           <button
                             type="button"
-                            onClick={() => setValue("paidAmount", 0)}
+                            onClick={() => {
+                              setAdditionalPayment(0);
+                              setValue("paidAmount", originalPaidAmount);
+                            }}
                             className="flex-1 px-2 py-1.5 text-[10px] font-medium rounded border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors active:scale-95"
                           >
-                            Clear
+                            Clear Additional
                           </button>
                         </div>
                       </div>

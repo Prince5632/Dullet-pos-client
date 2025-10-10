@@ -400,7 +400,7 @@ export interface Order {
     recordedBy?: User;
     recordedAt?: string;
   }>;
-  paymentTerms: "Cash" | "Credit" | "Advance";
+  paymentTerms: "Cash" | "Credit" | "Advance" | "Cheque" | "Online";
   paymentStatus: "pending" | "partial" | "paid" | "overdue";
   paidAmount: number;
   deliveryAddress?: {
@@ -438,7 +438,7 @@ export interface CreateOrderForm {
   taxAmount?: number;
   isTaxable?: boolean;
   taxPercentage?: number;
-  paymentTerms: "Cash" | "Credit" | "Advance";
+  paymentTerms: "Cash" | "Credit" | "Advance" | "Cheque" | "Online";
   priority?: "low" | "normal" | "high" | "urgent";
   requiredDate?: string;
   deliveryAddress?: {
@@ -789,6 +789,48 @@ export interface TransitStats {
   received: number;
   partiallyReceived: number;
   cancelled: number;
+}
+
+// Transaction Types
+export interface Transaction {
+  _id: string;
+  transactionId: string;
+  transactionMode: 'Cash' | 'Credit' | 'Cheque' | 'Online';
+  transactionForModel: 'Order' | 'Customer';
+  transactionFor: string;
+  amountPaid: number;
+  customer: {
+    _id: string;
+    customerId: string;
+    businessName: string;
+    contactPersonName: string;
+  };
+  order?: {
+    _id: string;
+    orderNumber: string;
+    totalAmount: number;
+  };
+  notes?: string;
+  createdBy: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TransactionListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  transactionMode?: string;
+  transactionForModel?: string;
+  customerId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 // Table Types (moved to avoid duplication)

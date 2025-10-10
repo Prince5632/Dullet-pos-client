@@ -303,6 +303,7 @@ class OrderService {
     location?: { latitude: number; longitude: number; address?: string };
     signatures: { driver: string; receiver: string };
     settlement: { amountCollected: number; notes?: string };
+    paymentTerms?: string;
   }): Promise<Order> {
     const response = await apiService.patch<{ order: Order }>(
       API_CONFIG.ENDPOINTS.ORDER_RECORD_DELIVERY(id),
@@ -491,7 +492,7 @@ class OrderService {
   }
 
   getPaymentTerms(): string[] {
-    return ['Cash', 'Credit', 'Advance'];
+    return ['Cash', 'Credit', 'Cheque', 'Online'];
   }
 
   // Status color helpers
