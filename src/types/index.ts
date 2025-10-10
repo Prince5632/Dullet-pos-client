@@ -653,6 +653,17 @@ export interface Transit {
     | "Received"
     | "Partially Received"
     | "Cancelled";
+  statusHistory?: {
+    status: string;
+    notes?: string;
+    changedBy: string | {
+      _id: string;
+      firstName: string;
+      lastName?: string;
+      email: string;
+    };
+    changedAt: string;
+  }[];
   createdBy:
     | {
         _id: string;
@@ -737,6 +748,7 @@ export interface TransitStatusUpdate {
     | "Partially Received"
     | "Cancelled";
   remarks?: string;
+  notes?: string;
 }
 
 export interface TransitListParams {

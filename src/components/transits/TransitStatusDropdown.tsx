@@ -141,7 +141,7 @@ const TransitStatusDropdown: React.FC<TransitStatusDropdownProps> = ({
         notes: notes.trim() || undefined,
       });
 
-      if (response.success && response.data) {
+      if (response?.success && response.data) {
         toast.success(`Transit status updated to ${selectedAction.key}`);
         onTransitUpdate(response.data);
       } else {
@@ -151,8 +151,8 @@ const TransitStatusDropdown: React.FC<TransitStatusDropdownProps> = ({
       setModalOpen(false);
       setSelectedAction(null);
       setNotes("");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to update status";
+    } catch (error: any) {
+      const message = error?.message || "Failed to update status";
       toast.error(message);
     } finally {
       setLoading(false);
@@ -303,7 +303,7 @@ const TransitStatusDropdown: React.FC<TransitStatusDropdownProps> = ({
               </div>
             </div>
 
-            {/* <div>
+            <div>
               <label
                 htmlFor="action-notes"
                 className="block text-sm font-medium text-gray-700 mb-2"
@@ -320,7 +320,7 @@ const TransitStatusDropdown: React.FC<TransitStatusDropdownProps> = ({
                 className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 required={selectedAction.requiresNotes}
               />
-            </div> */}
+            </div>
 
             <div className="flex justify-end space-x-3 pt-4">
               <button

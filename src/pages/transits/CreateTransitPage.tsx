@@ -23,8 +23,10 @@ import {
   PhotoIcon,
   XMarkIcon,
   EyeIcon,
+  CameraIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "react-hot-toast";
+import PhotoCaptureModal from "../../components/common/PhotoCaptureModal";
 
 interface ValidationErrors {
   productDetails?: string[];
@@ -83,6 +85,7 @@ const CreateTransitPage: React.FC = () => {
     file: null,
     previewUrl: null,
   });
+  const [cameraModalOpen, setCameraModalOpen] = useState(false);
 
   useEffect(() => {
     loadGodowns();
@@ -190,6 +193,9 @@ const CreateTransitPage: React.FC = () => {
       case "driverId":
         if (!value || !value.trim()) return "Driver is required";
         break;
+      case "assignedTo":
+        if (!value || !value.trim()) return "Assigned to is required";
+        break;
       case "dateOfDispatch":
       case "expectedArrivalDate": {
         if (!value || !value.trim()) {
@@ -243,7 +249,14 @@ const CreateTransitPage: React.FC = () => {
       "vehicleNumber",
       form.vehicleNumber
     );
-
+newErrors.driverId = validateField(
+      "driverId",
+      form.driverId
+    );
+    newErrors.assignedTo = validateField(
+      "assignedTo",
+      form.assignedTo
+    );
     // Remove undefined errors
     Object.keys(newErrors).forEach((key) => {
       if (!newErrors[key as keyof ValidationErrors]) {
@@ -345,6 +358,19 @@ const CreateTransitPage: React.FC = () => {
     });
   };
 
+  const handleCameraCapture = (imageData: string, imageFile: File) => {
+    // Add the captured image to selected files
+    setSelectedFiles((prev) => [...prev, imageFile]);
+
+    // Generate preview for the captured image
+    setFilePreviews((prev) => ({
+      ...prev,
+      [imageFile.name]: imageData,
+    }));
+
+    toast.success("Photo captured successfully!");
+  };
+
   const updateField = (field: string, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     setTouched((prev) => ({ ...prev, [field]: true }));
@@ -418,7 +444,7 @@ const CreateTransitPage: React.FC = () => {
     }
 
     if (!validateForm()) {
-      toast.error("Please fix the validation errors before submitting");
+      toast.error("Please fix the validation errors or fill all the required fields before submitting");
       return;
     }
 
@@ -596,6 +622,7 @@ const CreateTransitPage: React.FC = () => {
                           <option value="Quintal">Quintal</option>
                           <option value="Ton">Ton</option>
                           <option value="Bags">Bags</option>
+                          <option value="40Kg Bags">40Kg Bags</option>
                         </select>
                       </div>
 
@@ -894,7 +921,7 @@ const CreateTransitPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Assigned To
+                      Assigned To <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={form.assignedTo}
@@ -950,33 +977,53 @@ const CreateTransitPage: React.FC = () => {
               </div>
 
               <div className="space-y-4">
-                {/* File Upload Area */}
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                  <input
-                    type="file"
-                    id="file-upload"
-                    multiple
-                    accept=".pdf,.jpg,.jpeg,.png,.gif"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="file-upload"
-                    className="cursor-pointer flex flex-col items-center gap-2"
-                  >
-                    <div className="flex items-center gap-2 text-gray-500">
-                      <DocumentIcon className="w-8 h-8" />
-                      <PhotoIcon className="w-8 h-8" />
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium text-blue-600 hover:text-blue-500">
-                        Click to upload files
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      PDF, PNG, JPG, GIF up to 2MB each
-                    </div>
-                  </label>
+                {/* File Upload and Camera Capture Area */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* File Upload */}
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                    <input
+                      type="file"
+                      id="file-upload"
+                      multiple
+                      accept=".pdf,.jpg,.jpeg,.png,.gif"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="file-upload"
+                      className="cursor-pointer flex flex-col items-center gap-2"
+                    >
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <DocumentIcon className="w-8 h-8" />
+                        <PhotoIcon className="w-8 h-8" />
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium text-blue-600 hover:text-blue-500">
+                          Click to upload files
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        PDF, PNG, JPG, GIF up to 2MB each
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Camera Capture */}
+                  <div className="border-2 border-dashed border-blue-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors bg-blue-50/50">
+                    <button
+                      type="button"
+                      onClick={() => setCameraModalOpen(true)}
+                      className="w-full flex flex-col items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors"
+                    >
+                      <CameraIcon className="w-8 h-8" />
+                      <div className="text-sm font-medium">
+                        Capture with Camera
+                      </div>
+                      <div className="text-xs text-blue-500">
+                        Take photos directly from your camera
+                      </div>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Selected Files Preview */}
@@ -1169,6 +1216,15 @@ const CreateTransitPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Photo Capture Modal */}
+      <PhotoCaptureModal
+        isOpen={cameraModalOpen}
+        onClose={() => setCameraModalOpen(false)}
+        onCapture={handleCameraCapture}
+        title="Capture Transit Photo"
+        instructions="Take a photo to attach to your transit request"
+      />
     </div>
   );
 };

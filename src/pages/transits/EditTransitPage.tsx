@@ -5,8 +5,9 @@ import { godownService } from '../../services/godownService';
 import { userService } from '../../services/userService';
 import { orderService } from '../../services/orderService';
 import type { Transit, UpdateTransitForm, ProductDetail, Godown, User, QuickProduct } from '../../types';
-import { TruckIcon, ExclamationTriangleIcon, CheckCircleIcon, MapPinIcon, CalendarIcon, UserIcon, CubeIcon, DocumentIcon, PhotoIcon, XMarkIcon, EyeIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { TruckIcon, ExclamationTriangleIcon, CheckCircleIcon, MapPinIcon, CalendarIcon, UserIcon, CubeIcon, DocumentIcon, PhotoIcon, XMarkIcon, EyeIcon, ArrowLeftIcon, CameraIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
+import PhotoCaptureModal from '../../components/common/PhotoCaptureModal';
 
 interface ValidationErrors {
   productDetails?: string[];
@@ -71,6 +72,7 @@ const EditTransitPage: React.FC = () => {
     previewUrl: null,
     isExisting: false
   });
+  const [cameraModalOpen, setCameraModalOpen] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -224,6 +226,9 @@ const EditTransitPage: React.FC = () => {
       case 'driverId':
         if (!value || !value.trim()) return 'Driver is required';
         break;
+       case 'assignedTo':
+        if (!value || !value.trim()) return 'Manager is required';
+        break;
       case 'dateOfDispatch':
       case 'expectedArrivalDate': {
         if (!value || !value.trim()) {
@@ -274,7 +279,14 @@ const EditTransitPage: React.FC = () => {
     newErrors.dateOfDispatch = validateField('dateOfDispatch', form.dateOfDispatch);
     newErrors.vehicleNumber = validateField('vehicleNumber', form.vehicleNumber);
     newErrors.status = validateField('status', form.status);
-
+newErrors.driverId = validateField(
+      "driverId",
+      form.driverId
+    );
+    newErrors.assignedTo = validateField(
+      "assignedTo",
+      form.assignedTo
+    );
     // Remove undefined errors
     Object.keys(newErrors).forEach(key => {
       if (!newErrors[key as keyof ValidationErrors]) {
@@ -331,6 +343,25 @@ const EditTransitPage: React.FC = () => {
         reader.readAsDataURL(fileWithId.file);
       }
     });
+  };
+
+  const handleCameraCapture = (imageData: string, imageFile: File) => {
+    // Create FileWithId object with unique identifier
+    const fileWithId: FileWithId = {
+      id: generateFileId(),
+      file: imageFile
+    };
+
+    // Add the captured image to selected files
+    setSelectedFiles(prev => [...prev, fileWithId]);
+
+    // Generate preview for the captured image
+    setFilePreviews(prev => ({
+      ...prev,
+      [fileWithId.id]: imageData,
+    }));
+
+    toast.success('Photo captured successfully!');
   };
 
   const removeFile = (index: number) => {
@@ -473,7 +504,7 @@ const EditTransitPage: React.FC = () => {
     }
     
     if (!validateForm()) {
-      toast.error('Please fix the validation errors before submitting');
+      toast.error('Please fix the validation errors or fill all the required fields before submitting');
       return;
     }
 
@@ -685,6 +716,7 @@ const EditTransitPage: React.FC = () => {
                         <option value="Quintal">Quintal</option>
                         <option value="Ton">Ton</option>
                         <option value="Bags">Bags</option>
+                        <option value="40Kg Bags">40Kg Bags</option>
                       </select>
                     </div>
 
@@ -931,7 +963,7 @@ const EditTransitPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Assigned Manager
+                    Assigned Manager <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={form.assignedTo}
@@ -952,7 +984,7 @@ const EditTransitPage: React.FC = () => {
           </div>
 
           {/* Status Information */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+          {/* <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
             <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 text-gray-600">
@@ -994,7 +1026,7 @@ const EditTransitPage: React.FC = () => {
                 </p>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Additional Information */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
@@ -1090,17 +1122,42 @@ const EditTransitPage: React.FC = () => {
                     className="hidden"
                     id="file-upload"
                   />
-                  <label htmlFor="file-upload" className="cursor-pointer">
-                    <DocumentIcon className="mx-auto h-12 w-12 text-gray-400" />
-                    <div className="mt-2">
-                      <span className="text-sm font-medium text-blue-600 hover:text-blue-500">
-                        Click to upload files
-                      </span>
-                      <p className="text-xs text-gray-500 mt-1">
-                      PDF, PNG, JPG, GIF up to 2MB each
-                    </p>
-                    </div>
-                  </label>
+                  
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    {/* File Upload Option */}
+                    <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
+                      <DocumentIcon className="h-12 w-12 text-gray-400" />
+                      <div className="mt-2">
+                        <span className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                          Upload Files
+                        </span>
+                        <p className="text-xs text-gray-500 mt-1">
+                          PDF, PNG, JPG, GIF up to 2MB each
+                        </p>
+                      </div>
+                    </label>
+
+                    {/* Divider */}
+                    <div className="hidden sm:block w-px h-16 bg-gray-300"></div>
+                    <div className="sm:hidden w-16 h-px bg-gray-300"></div>
+
+                    {/* Camera Capture Option */}
+                    <button
+                      type="button"
+                      onClick={() => setCameraModalOpen(true)}
+                      className="cursor-pointer flex flex-col items-center hover:text-blue-600 transition-colors"
+                    >
+                      <CameraIcon className="h-12 w-12 text-gray-400" />
+                      <div className="mt-2">
+                        <span className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                          Take Photo
+                        </span>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Capture with camera
+                        </p>
+                      </div>
+                    </button>
+                  </div>
                 </div>
 
                 {/* File Preview */}
@@ -1302,6 +1359,15 @@ const EditTransitPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Camera Capture Modal */}
+      <PhotoCaptureModal
+        isOpen={cameraModalOpen}
+        onClose={() => setCameraModalOpen(false)}
+        onCapture={handleCameraCapture}
+        title="Capture Transit Photo"
+        instructions="Take a photo to attach to this transit record"
+      />
     </div>
   );
 };
