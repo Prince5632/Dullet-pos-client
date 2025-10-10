@@ -637,6 +637,22 @@ export interface Transit {
         email: string;
       }
     | string;
+  partiallyReceivedBy?:
+    | {
+        _id: string;
+        firstName: string;
+        lastName?: string;
+        email: string;
+      }
+    | string;
+  receivedBy?:
+    | {
+        _id: string;
+        firstName: string;
+        lastName?: string;
+        email: string;
+      }
+    | string;
   productDetails: ProductDetail[];
   transporterName?: string;
   remarks?: string;

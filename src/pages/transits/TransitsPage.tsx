@@ -276,18 +276,6 @@ const TransitsPage: React.FC = () => {
     });
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusClasses = transitService.getStatusColor(status);
-    const statusText = transitService.getStatusDisplayName(status);
-
-    return (
-      <span
-        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${statusClasses}`}
-      >
-        {statusText}
-      </span>
-    );
-  };
 
   const columns: TableColumn<Transit>[] = useMemo(
     () => [
@@ -320,7 +308,7 @@ const TransitsPage: React.FC = () => {
               transit.productDetails.map((item, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <span className="text-gray-900">
-                    {item.productName} ({item.quantity} {item.unit})
+                    {item.productName} ({item.quantity} {item.unit?.toLowerCase()?.includes("bag") ? `× ${item.unit}` : item.unit})
                   </span>
                  
                 </div>
@@ -767,8 +755,8 @@ const TransitsPage: React.FC = () => {
                                 className="flex items-center gap-2"
                               >
                                 <span className="text-gray-900">
-                                  {item.productName} ({item.quantity}{" "}
-                                  {item.unit})
+                                                     {item.productName} ({item.quantity} {item.unit?.toLowerCase()?.includes("bag") ? `× ${item.unit}` : item.unit})
+
                                 </span>
                                 
                               </div>

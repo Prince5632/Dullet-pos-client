@@ -329,41 +329,57 @@ const ViewTransitPage: React.FC = () => {
                   Product Details
                 </h3>
                 {transit.productDetails && transit.productDetails.length > 0 ? (
-                  <div className="space-y-4">
-                    {transit.productDetails.map((product, index) => (
-                      <div
-                        key={index}
-                        className="border border-gray-200 rounded-lg p-4"
-                      >
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-500">
-                              Product Name
-                            </label>
-                            <p className="mt-1 text-sm text-gray-900">
-                              {product.productName}
-                            </p>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-500">
-                              Quantity
-                            </label>
-                            <p className="mt-1 text-sm text-gray-900">
-                              {product.quantity}
-                            </p>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-500">
-                              Unit
-                            </label>
-                            <p className="mt-1 text-sm text-gray-900">
-                              {product.unit}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+            <div className="space-y-4">
+  {transit.productDetails.map((product, index) => (
+    <div
+      key={index}
+      className="border border-gray-200 bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow duration-200"
+    >
+      {/* Header with index or product name */}
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-800">
+          {product.productName}
+        </h3>
+        <span className="text-xs text-gray-500">
+          Item #{index + 1}
+        </span>
+      </div>
+
+      {/* Details Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="flex flex-col">
+          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+            Quantity
+          </span>
+          <span className="mt-1 text-sm sm:text-base text-gray-900 font-medium">
+            {product.quantity}
+          </span>
+        </div>
+
+        <div className="flex flex-col">
+          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+            Unit
+          </span>
+          <span className="mt-1 text-sm sm:text-base text-gray-900 font-medium">
+            {product.unit}
+          </span>
+        </div>
+
+        {product.remarks && (
+          <div className="flex flex-col">
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              Remarks
+            </span>
+            <span className="mt-1 text-sm sm:text-base text-gray-900">
+              {product.remarks}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  ))}
+</div>
+
                 ) : (
                   <p className="text-sm text-gray-500">
                     No product details available
@@ -669,6 +685,76 @@ const ViewTransitPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
+                  {transit?.partiallyReceivedBy ?<div>
+                    <label className="block text-sm font-medium text-gray-500">
+                      Partially Received By
+                    </label>
+                    <div className="mt-1 flex items-center">
+                      <Avatar
+                        name={
+                          typeof transit.partiallyReceivedBy === "string"
+                            ? transit.partiallyReceivedBy
+                            : transit.partiallyReceivedBy?.firstName &&
+                              transit.partiallyReceivedBy?.lastName
+                            ? `${transit.partiallyReceivedBy.firstName} ${transit.partiallyReceivedBy.lastName}`
+                            : "Unknown"
+                        }
+                        size="sm"
+                        className="mr-2"
+                      />
+                      <div>
+                        <p className="text-sm text-gray-900">
+                          {typeof transit.partiallyReceivedBy === "string"
+                            ? transit.partiallyReceivedBy
+                            : transit.partiallyReceivedBy?.firstName &&
+                              transit.partiallyReceivedBy?.lastName
+                            ? `${transit.partiallyReceivedBy.firstName} ${transit.partiallyReceivedBy.lastName}`
+                            : "Unknown"}
+                        </p>
+                        {typeof transit.partiallyReceivedBy === "object" &&
+                          transit.partiallyReceivedBy?.email && (
+                            <p className="text-xs text-gray-500">
+                              {transit.partiallyReceivedBy.email}
+                            </p>
+                          )}
+                      </div>
+                    </div>
+                  </div>:null}
+                    {transit?.receivedBy ?<div>
+                    <label className="block text-sm font-medium text-gray-500">
+                      Received By
+                    </label>
+                    <div className="mt-1 flex items-center">
+                      <Avatar
+                        name={
+                          typeof transit.receivedBy === "string"
+                            ? transit.receivedBy
+                            : transit.receivedBy?.firstName &&
+                              transit.receivedBy?.lastName
+                            ? `${transit.receivedBy.firstName} ${transit.receivedBy.lastName}`
+                            : "Unknown"
+                        }
+                        size="sm"
+                        className="mr-2"
+                      />
+                      <div>
+                        <p className="text-sm text-gray-900">
+                          {typeof transit.receivedBy === "string"
+                            ? transit.receivedBy
+                            : transit.receivedBy?.firstName &&
+                              transit.receivedBy?.lastName
+                            ? `${transit.receivedBy.firstName} ${transit.receivedBy.lastName}`
+                            : "Unknown"}
+                        </p>
+                        {typeof transit.receivedBy === "object" &&
+                          transit.receivedBy?.email && (
+                            <p className="text-xs text-gray-500">
+                              {transit.receivedBy.email}
+                            </p>
+                          )}
+                      </div>
+                    </div>
+                  </div>:null}
                 </div>
               </div>
             </div>

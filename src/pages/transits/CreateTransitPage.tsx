@@ -978,49 +978,48 @@ newErrors.driverId = validateField(
 
               <div className="space-y-4">
                 {/* File Upload and Camera Capture Area */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* File Upload */}
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                    <input
-                      type="file"
-                      id="file-upload"
-                      multiple
-                      accept=".pdf,.jpg,.jpeg,.png,.gif"
-                      onChange={handleFileSelect}
-                      className="hidden"
-                    />
-                    <label
-                      htmlFor="file-upload"
-                      className="cursor-pointer flex flex-col items-center gap-2"
-                    >
-                      <div className="flex items-center gap-2 text-gray-500">
-                        <DocumentIcon className="w-8 h-8" />
-                        <PhotoIcon className="w-8 h-8" />
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium text-blue-600 hover:text-blue-500">
-                          Click to upload files
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,.jpg,.jpeg,.png,.gif"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    id="file-upload"
+                  />
+                  
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    {/* File Upload Option */}
+                    <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
+                      <DocumentIcon className="h-12 w-12 text-gray-400" />
+                      <div className="mt-2">
+                        <span className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                          Upload Files
                         </span>
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        PDF, PNG, JPG, GIF up to 2MB each
+                        <p className="text-xs text-gray-500 mt-1">
+                          PDF, PNG, JPG, GIF up to 2MB each
+                        </p>
                       </div>
                     </label>
-                  </div>
 
-                  {/* Camera Capture */}
-                  <div className="border-2 border-dashed border-blue-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors bg-blue-50/50">
+                    {/* Divider */}
+                    <div className="hidden sm:block w-px h-16 bg-gray-300"></div>
+                    <div className="sm:hidden w-16 h-px bg-gray-300"></div>
+
+                    {/* Camera Capture Option */}
                     <button
                       type="button"
                       onClick={() => setCameraModalOpen(true)}
-                      className="w-full flex flex-col items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors"
+                      className="cursor-pointer flex flex-col items-center hover:text-blue-600 transition-colors"
                     >
-                      <CameraIcon className="w-8 h-8" />
-                      <div className="text-sm font-medium">
-                        Capture with Camera
-                      </div>
-                      <div className="text-xs text-blue-500">
-                        Take photos directly from your camera
+                      <CameraIcon className="h-12 w-12 text-gray-400" />
+                      <div className="mt-2">
+                        <span className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                          Take Photo
+                        </span>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Capture with camera
+                        </p>
                       </div>
                     </button>
                   </div>
