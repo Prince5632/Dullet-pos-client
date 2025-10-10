@@ -62,6 +62,8 @@ const DeliveryInvoicePreview = lazy(() => import('../pages/delivery/DeliveryInvo
 // Transit Management Pages
 const TransitsPage = lazy(() => import('../pages/transits/TransitsPage'));
 const CreateTransitPage = lazy(() => import('../pages/transits/CreateTransitPage'));
+const ViewTransitPage = lazy(() => import('../pages/transits/ViewTransitPage'));
+const EditTransitPage = lazy(() => import('../pages/transits/EditTransitPage'));
 
 // Settings Pages
 
@@ -441,6 +443,22 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute requiredPermission="transits.create">
                 <CreateTransitPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: ':id',
+            element: (
+              <ProtectedRoute requiredPermission="transits.read">
+                <ViewTransitPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: ':id/edit',
+            element: (
+              <ProtectedRoute requiredPermission="transits.update">
+                <EditTransitPage />
               </ProtectedRoute>
             ),
           },

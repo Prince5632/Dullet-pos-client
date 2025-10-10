@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { transitService } from '../../services/transitService';
 import { godownService } from '../../services/godownService';
 import { userService } from '../../services/userService';
 import { orderService } from '../../services/orderService';
-import type { CreateTransitForm, ProductDetail, Godown, User, QuickProduct } from '../../types';
+import type { Transit, UpdateTransitForm, ProductDetail, Godown, User, QuickProduct } from '../../types';
 import { TruckIcon, ExclamationTriangleIcon, CheckCircleIcon, MapPinIcon, CalendarIcon, UserIcon, CubeIcon, DocumentIcon, PhotoIcon, XMarkIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 
@@ -19,14 +19,17 @@ interface ValidationErrors {
   assignedTo?: string;
 }
 
-const CreateTransitPage: React.FC = () => {
+const EditTransitPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState<CreateTransitForm>({
+  const [loading, setLoading] = useState(true);
+  const [transit, setTransit] = useState<Transit | null>(null);
+  const [form, setForm] = useState<UpdateTransitForm>({
     productDetails: [{
       productName: '',
       quantity: 0,
-      unit: 'Kg',
+      unit: 'KG',
       additionalNote: ''
     }],
     fromLocation: '',
@@ -34,7 +37,7 @@ const CreateTransitPage: React.FC = () => {
     dateOfDispatch: '',
     expectedArrivalDate: '',
     vehicleNumber: '',
-    vehicleType: '',
+    vehicleType: undefined,
     driverId: '',
     assignedTo: '',
     transporterName: '',
@@ -52,6 +55,7 @@ const CreateTransitPage: React.FC = () => {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [filePreviews, setFilePreviews] = useState<{[key: string]: string}>({});
+  const [removedAttachments, setRemovedAttachments] = useState<string[]>([]);
   const [previewModal, setPreviewModal] = useState<{isOpen: boolean, file: File | null, previewUrl: string | null}>({
     isOpen: false,
     file: null,
@@ -59,10 +63,58 @@ const CreateTransitPage: React.FC = () => {
   });
 
   useEffect(() => {
+    if (!id) {
+      navigate('/transits');
+      return;
+    }
+    loadTransit();
     loadGodowns();
     loadUsers();
     loadProducts();
-  }, []);
+  }, [id]);
+
+  const loadTransit = async () => {
+    if (!id) return;
+    
+    try {
+      setLoading(true);
+      const response = await transitService.getTransitById(id);
+      if (response.success && response.data) {
+        const transitData = response.data;
+        setTransit(transitData);
+        
+        // Initialize form with existing data
+        setForm({
+          productDetails: transitData.productDetails || [{
+            productName: '',
+            quantity: 0,
+            unit: 'KG',
+            additionalNote: ''
+          }],
+          fromLocation: typeof transitData.fromLocation === 'object' ? transitData.fromLocation._id : transitData.fromLocation,
+          toLocation: typeof transitData.toLocation === 'object' ? transitData.toLocation._id : transitData.toLocation,
+          dateOfDispatch: transitData.dateOfDispatch ? new Date(transitData.dateOfDispatch).toISOString().split('T')[0] : '',
+          expectedArrivalDate: transitData.expectedArrivalDate ? new Date(transitData.expectedArrivalDate).toISOString().split('T')[0] : '',
+          vehicleNumber: transitData.vehicleNumber || '',
+          vehicleType: transitData.vehicleType || undefined,
+          driverId: typeof transitData.driverId === 'object' ? transitData.driverId?._id : transitData.driverId || '',
+          assignedTo: typeof transitData.assignedTo === 'object' ? transitData.assignedTo?._id : transitData.assignedTo || '',
+          transporterName: transitData.transporterName || '',
+          remarks: transitData.remarks || '',
+          attachments: []
+        });
+      } else {
+        toast.error('Failed to load transit details');
+        navigate('/transits');
+      }
+    } catch (error) {
+      console.error('Error loading transit:', error);
+      toast.error('Failed to load transit details');
+      navigate('/transits');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadGodowns = async () => {
     try {
@@ -158,34 +210,34 @@ const CreateTransitPage: React.FC = () => {
       case 'toLocation':
         if (!value || !value.trim()) return 'To location is required';
         break;
-     case 'dateOfDispatch':
-case 'expectedArrivalDate': {
-  if (!value || !value.trim()) {
-    if (field === 'dateOfDispatch') {
-      return 'Dispatch date is required';
-    }
-    break; // expectedArrivalDate is optional
-  }
+      case 'dateOfDispatch':
+      case 'expectedArrivalDate': {
+        if (!value || !value.trim()) {
+          if (field === 'dateOfDispatch') {
+            return 'Dispatch date is required';
+          }
+          break; // expectedArrivalDate is optional
+        }
 
-  const selectedDate = new Date(value);
-  const today = new Date(new Date().toDateString());
-  const dispatchDate = form.dateOfDispatch ? new Date(form.dateOfDispatch) : null;
+        const selectedDate = new Date(value);
+        const today = new Date(new Date().toDateString());
+        const dispatchDate = form.dateOfDispatch ? new Date(form.dateOfDispatch) : null;
 
-  // Check 1: Dispatch date cannot be in the past
-  if (field === 'dateOfDispatch' && selectedDate < today) {
-    return 'Dispatch date cannot be in the past';
-  }
+        // Check 1: Dispatch date cannot be in the past (only for new transits, allow editing existing ones)
+        if (field === 'dateOfDispatch' && selectedDate < today && !transit) {
+          return 'Dispatch date cannot be in the past';
+        }
 
-  // Check 2: Expected arrival must be after dispatch date
-  if (field === 'expectedArrivalDate' && dispatchDate && selectedDate < dispatchDate) {
-    return 'Expected arrival date must be after dispatch date';
-  }
+        // Check 2: Expected arrival must be after dispatch date
+        if (field === 'expectedArrivalDate' && dispatchDate && selectedDate < dispatchDate) {
+          return 'Expected arrival date must be after dispatch date';
+        }
 
-  break;
-}
-
-      
-      
+        break;
+      }
+      case 'vehicleNumber':
+        if (!value || !value.trim()) return 'Vehicle number is required';
+        break;
     }
     return undefined;
   };
@@ -193,7 +245,7 @@ case 'expectedArrivalDate': {
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
     
-    const productErrors = validateProductDetails(form.productDetails);
+    const productErrors = validateProductDetails(form.productDetails || []);
     if (productErrors.length > 0) {
       newErrors.productDetails = productErrors;
     }
@@ -259,7 +311,10 @@ case 'expectedArrivalDate': {
     });
   };
 
-  const getFileIcon = (file: File) => {
+  const getFileIcon = (file: File | null) => {
+    if (!file) {
+      return <DocumentIcon className="w-8 h-8 text-gray-500" />;
+    }
     if (file.type === 'application/pdf') {
       return <DocumentIcon className="w-8 h-8 text-red-500" />;
     } else if (file.type.startsWith('image/')) {
@@ -285,6 +340,10 @@ case 'expectedArrivalDate': {
     });
   };
 
+  const removeExistingAttachment = (attachmentId: string) => {
+    setRemovedAttachments(prev => [...prev, attachmentId]);
+  };
+
   const updateField = (field: string, value: any) => {
     setForm(prev => ({ ...prev, [field]: value }));
     setTouched(prev => ({ ...prev, [field]: true }));
@@ -299,9 +358,9 @@ case 'expectedArrivalDate': {
   const updateProductDetail = (index: number, field: keyof ProductDetail, value: any) => {
     setForm(prev => ({
       ...prev,
-      productDetails: prev.productDetails.map((product, i) => 
+      productDetails: prev.productDetails?.map((product, i) => 
         i === index ? { ...product, [field]: value } : product
-      )
+      ) || []
     }));
     
     // Clear product errors when updating
@@ -315,7 +374,7 @@ case 'expectedArrivalDate': {
     setForm(prev => ({
       ...prev,
       productDetails: [
-        ...prev.productDetails,
+        ...(prev.productDetails || []),
         {
           productName: '',
           quantity: 0,
@@ -327,10 +386,10 @@ case 'expectedArrivalDate': {
   };
 
   const removeProduct = (index: number) => {
-    if (form.productDetails.length > 1) {
+    if ((form.productDetails?.length || 0) > 1) {
       setForm(prev => ({
         ...prev,
-        productDetails: prev.productDetails.filter((_, i) => i !== index)
+        productDetails: prev.productDetails?.filter((_, i) => i !== index) || []
       }));
     }
   };
@@ -358,18 +417,24 @@ case 'expectedArrivalDate': {
       return;
     }
 
+    if (!id) {
+      toast.error('Transit ID is missing');
+      return;
+    }
+
     setSaving(true);
     try {
       const formWithFiles = {
         ...form,
-        attachments: selectedFiles
+        attachments: selectedFiles,
+        removedAttachments: removedAttachments
       };
-      const created = await transitService.createTransit(formWithFiles);
-      toast.success('Transit created successfully!');
-      navigate('/transits');
+      const updated = await transitService.updateTransit(id, formWithFiles);
+      toast.success('Transit updated successfully!');
+      navigate(`/transits/${id}`);
     } catch (error: any) {
-      console.error('Failed to create transit:', error);
-      toast.error(error?.message || 'Failed to create transit. Please try again.');
+      console.error('Failed to update transit:', error);
+      toast.error(error?.message || 'Failed to update transit. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -384,10 +449,42 @@ case 'expectedArrivalDate': {
     user.role.name.toLowerCase().includes('driver') ||
     user.position.toLowerCase().includes('driver')
   );
-const managers = users.filter(user => 
+
+  const managers = users.filter(user => 
     user.role.name.toLowerCase().includes('manager') ||
     user.position.toLowerCase().includes('manager')
   );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!transit) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <TruckIcon className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Transit not found</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            The transit you're looking for doesn't exist or has been removed.
+          </p>
+          <div className="mt-6">
+            <button
+              onClick={() => navigate('/transits')}
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Back to Transits
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -399,13 +496,13 @@ const managers = users.filter(user =>
                 <TruckIcon className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">Create New Transit</h1>
-                <p className="text-sm text-gray-600">Add product transit information</p>
+                <h1 className="text-xl font-semibold text-gray-900">Edit Transit {transit.transitId}</h1>
+                <p className="text-sm text-gray-600">Update transit information</p>
               </div>
             </div>
             <button
               type="button"
-              onClick={() => navigate('/transits')}
+              onClick={() => navigate(`/transits/${id}`)}
               className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
             >
               Cancel
@@ -435,11 +532,11 @@ const managers = users.filter(user =>
               </div>
             </div>
             <div className="p-6 space-y-6">
-              {form.productDetails.map((product, index) => (
+              {form.productDetails?.map((product, index) => (
                 <div key={index} className="border border-gray-200 rounded-lg p-4 relative">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-md font-medium text-gray-900">Product {index + 1}</h3>
-                    {form.productDetails.length > 1 && (
+                    {(form.productDetails?.length || 0) > 1 && (
                       <button
                         type="button"
                         onClick={() => removeProduct(index)}
@@ -560,7 +657,7 @@ const managers = users.filter(user =>
                   >
                     <option value="">Select from location</option>
                     {godowns.map(godown => (
-                      <option key={godown._id} value={godown?._id}>
+                      <option key={godown._id} value={godown._id}>
                         {godown.name} - {godown.location.city}, {godown.location.state}
                       </option>
                     ))}
@@ -588,7 +685,7 @@ const managers = users.filter(user =>
                   >
                     <option value="">Select to location</option>
                     {godowns.map(godown => (
-                      <option key={godown._id} value={godown?._id}>
+                      <option key={godown._id} value={godown._id}>
                         {godown.name} - {godown.location.city}, {godown.location.state}
                       </option>
                     ))}
@@ -616,7 +713,7 @@ const managers = users.filter(user =>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Dispatch Date <span className="text-red-500">*</span>
+                    Date of Dispatch <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
@@ -637,7 +734,7 @@ const managers = users.filter(user =>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Expected Arrival Date 
+                    Expected Arrival Date
                   </label>
                   <input
                     type="date"
@@ -659,12 +756,12 @@ const managers = users.filter(user =>
             </div>
           </div>
 
-          {/* Transport Information */}
+          {/* Vehicle Information */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
             <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
               <div className="flex items-center gap-2">
                 <TruckIcon className="w-5 h-5 text-gray-600" />
-                <h2 className="text-lg font-medium text-gray-900">Transport Information</h2>
+                <h2 className="text-lg font-medium text-gray-900">Vehicle Information</h2>
               </div>
             </div>
             <div className="p-6 space-y-4">
@@ -676,7 +773,7 @@ const managers = users.filter(user =>
                   <input
                     type="text"
                     value={form.vehicleNumber}
-                    onChange={(e) => updateField('vehicleNumber', e.target.value.toUpperCase())}
+                    onChange={(e) => updateField('vehicleNumber', e.target.value)}
                     onBlur={() => handleBlur('vehicleNumber')}
                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       getFieldError('vehicleNumber') ? 'border-red-300 bg-red-50' : 'border-gray-300'
@@ -700,7 +797,7 @@ const managers = users.filter(user =>
                     onChange={(e) => updateField('vehicleType', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                     <option value="">Select vehicle type</option>
+                    <option value="">Select vehicle type</option>
                     <option value="Truck">Truck</option>
                     <option value="Mini Truck">Mini Truck</option>
                     <option value="Van">Van</option>
@@ -714,7 +811,7 @@ const managers = users.filter(user =>
                   </label>
                   <input
                     type="text"
-                    value={form.transporterName || ''}
+                    value={form.transporterName}
                     onChange={(e) => updateField('transporterName', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Enter transporter name"
@@ -741,212 +838,221 @@ const managers = users.filter(user =>
                   <select
                     value={form.driverId}
                     onChange={(e) => updateField('driverId', e.target.value)}
-                    onBlur={() => handleBlur('driverId')}
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      getFieldError('driverId') ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                    }`}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     disabled={usersLoading}
                   >
                     <option value="">Select driver</option>
-                    {drivers.map(user => (
-                      <option key={user._id} value={user._id}>
-                        {user.firstName} {user.lastName} - {user.position}
+                    {drivers.map(driver => (
+                      <option key={driver._id} value={driver._id}>
+                        {driver.firstName} {driver.lastName} - {driver.phone}
                       </option>
                     ))}
                   </select>
-                  {getFieldError('driverId') && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                      <ExclamationTriangleIcon className="w-4 h-4" />
-                      {getFieldError('driverId')}
-                    </p>
-                  )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Assigned To 
+                    Assigned Manager
                   </label>
                   <select
                     value={form.assignedTo}
                     onChange={(e) => updateField('assignedTo', e.target.value)}
-                    onBlur={() => handleBlur('assignedTo')}
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      getFieldError('assignedTo') ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                    }`}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     disabled={usersLoading}
                   >
-                    <option value="">Select assignee</option>
-                    {managers.map(user => (
-                      <option key={user._id} value={user._id}>
-                        {user.firstName} {user.lastName} - {user.position}
+                    <option value="">Select manager</option>
+                    {managers.map(manager => (
+                      <option key={manager._id} value={manager._id}>
+                        {manager.firstName} {manager.lastName} - {manager.email}
                       </option>
                     ))}
                   </select>
-                  {getFieldError('assignedTo') && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                      <ExclamationTriangleIcon className="w-4 h-4" />
-                      {getFieldError('assignedTo')}
-                    </p>
-                  )}
                 </div>
               </div>
+            </div>
+          </div>
 
+          {/* Additional Information */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+              <h2 className="text-lg font-medium text-gray-900">Additional Information</h2>
+            </div>
+            <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Remarks
                 </label>
                 <textarea
-                  value={form.remarks || ''}
+                  value={form.remarks}
                   onChange={(e) => updateField('remarks', e.target.value)}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Additional remarks or notes"
+                  placeholder="Enter any additional remarks or notes"
                 />
               </div>
-            </div>
-          </div>
 
-          {/* File Upload Section */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <DocumentIcon className="w-5 h-5 text-gray-600" />
-              <h3 className="text-lg font-medium text-gray-900">Attachments</h3>
-            </div>
-            
-            <div className="space-y-4">
-              {/* File Upload Area */}
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                <input
-                  type="file"
-                  id="file-upload"
-                  multiple
-                  accept=".pdf,.jpg,.jpeg,.png,.gif"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-                <label
-                  htmlFor="file-upload"
-                  className="cursor-pointer flex flex-col items-center gap-2"
-                >
-                  <div className="flex items-center gap-2 text-gray-500">
-                    <DocumentIcon className="w-8 h-8" />
-                    <PhotoIcon className="w-8 h-8" />
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium text-blue-600 hover:text-blue-500">
-                      Click to upload files
-                    </span>
-                    {' '}or drag and drop
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    PDF, PNG, JPG, GIF up to 10MB each
-                  </div>
+              {/* File Attachments */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Attachments
                 </label>
-              </div>
-
-              {/* Selected Files Preview */}
-              {selectedFiles.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-gray-700">
-                    Selected Files ({selectedFiles.length})
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {selectedFiles.map((file, index) => (
-                      <div
-                        key={`${file.name}-${index}`}
-                        className="relative bg-gray-50 rounded-lg p-3 border border-gray-200"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0">
-                            {getFileIcon(file)}
+                
+                {/* Existing Attachments */}
+                {transit?.attachments && transit.attachments.filter(attachment => !removedAttachments.includes(attachment.fileName)).length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Current Attachments:</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {transit.attachments
+                        .filter(attachment => !removedAttachments.includes(attachment.fileName))
+                        .map((attachment, index) => (
+                        <div key={attachment.fileName || index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            {attachment.fileType === 'application/pdf' ? (
+                              <DocumentIcon className="w-8 h-8 text-red-500" />
+                            ) : attachment.fileType?.startsWith('image/') ? (
+                              <PhotoIcon className="w-8 h-8 text-blue-500" />
+                            ) : (
+                              <DocumentIcon className="w-8 h-8 text-gray-500" />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-900 truncate">{attachment.fileName}</p>
+                              <p className="text-xs text-gray-500">
+                                {attachment.fileSize ? `${(attachment.fileSize / 1024 / 1024).toFixed(2)} MB` : 'Unknown size'}
+                              </p>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {file.name}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
-                          <div className="flex gap-1">
+                          <div className="flex items-center gap-1">
+                            {attachment.fileType?.startsWith('image/') && attachment.base64Data && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPreviewModal({
+                                    isOpen: true,
+                                    file: null,
+                                    previewUrl: `data:${attachment.fileType};base64,${attachment.base64Data}`
+                                  });
+                                }}
+                                className="p-1 text-blue-600 hover:text-blue-800"
+                                title="Preview"
+                              >
+                                <EyeIcon className="w-4 h-4" />
+                              </button>
+                            )}
                             <button
                               type="button"
-                              onClick={() => openPreviewModal(file)}
-                              className="flex-shrink-0 p-1 text-gray-400 hover:text-blue-500 transition-colors"
-                              title="Preview file"
-                            >
-                              <EyeIcon className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => removeFile(file.name)}
-                              className="flex-shrink-0 p-1 text-gray-400 hover:text-red-500 transition-colors"
-                              title="Remove file"
+                              onClick={() => removeExistingAttachment(attachment.fileName)}
+                              className="p-1 text-red-600 hover:text-red-800"
+                              title="Remove attachment"
                             >
                               <XMarkIcon className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
-                        
-                        {/* Image Preview */}
-                        {file.type.startsWith('image/') && filePreviews[file.name] && (
-                          <div className="mt-3">
-                            <img
-                              src={filePreviews[file.name]}
-                              alt={file.name}
-                              className="w-full h-24 object-cover rounded border"
-                            />
-                          </div>
-                        )}
-                        
-                        {/* PDF Preview Placeholder */}
-                        {file.type === 'application/pdf' && (
-                          <div className="mt-3 bg-red-50 border border-red-200 rounded p-2 text-center">
-                            <DocumentIcon className="w-6 h-6 text-red-500 mx-auto mb-1" />
-                            <p className="text-xs text-red-600">PDF Document</p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
+                )}
+
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,.jpg,.jpeg,.png,.gif"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    id="file-upload"
+                  />
+                  <label htmlFor="file-upload" className="cursor-pointer">
+                    <DocumentIcon className="mx-auto h-12 w-12 text-gray-400" />
+                    <div className="mt-2">
+                      <span className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                        Click to upload files
+                      </span>
+                      <p className="text-xs text-gray-500 mt-1">
+                        PDF, PNG, JPG, GIF up to 10MB each
+                      </p>
+                    </div>
+                  </label>
                 </div>
-              )}
+
+                {/* File Preview */}
+                {selectedFiles.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <h4 className="text-sm font-medium text-gray-700">Selected Files:</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {selectedFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            {getFileIcon(file)}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
+                              <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {file.type.startsWith('image/') && (
+                              <button
+                                type="button"
+                                onClick={() => openPreviewModal(file)}
+                                className="p-1 text-blue-600 hover:text-blue-800"
+                                title="Preview"
+                              >
+                                <EyeIcon className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeFile(file.name)}
+                              className="p-1 text-red-600 hover:text-red-800"
+                              title="Remove"
+                            >
+                              <XMarkIcon className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Submit Button */}
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-            >
-              {saving ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Creating Transit...</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <CheckCircleIcon className="w-4 h-4" />
-                  <span>Create Transit</span>
-                </div>
-              )}
-            </button>
-          </div>
-
-          {/* Helper Text */}
-          <div className="text-center pb-2">
-            <p className="text-sm text-gray-500">
-              Fields marked with <span className="text-red-500">*</span> are required
-            </p>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => navigate(`/transits/${id}`)}
+                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircleIcon className="w-4 h-4" />
+                    Update Transit
+                  </>
+                )}
+              </button>
+            </div>
           </div>
           </fieldset>
         </form>
       </div>
 
-      {/* File Preview Modal */}
-      {previewModal.isOpen && previewModal.file && (
+      {/* Preview Modal */}
+      {previewModal.isOpen && (
         <div className="fixed inset-0 bg-black/10 flex items-center justify-center z-50 p-2 sm:p-4">
           <div className="bg-white rounded-lg w-full max-w-4xl h-full max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
             {/* Modal Header - Fixed */}
@@ -957,10 +1063,10 @@ const managers = users.filter(user =>
                 </div>
                 <div className="min-w-0 flex-1">
                   <h3 className="text-base sm:text-lg font-medium text-gray-900 truncate">
-                    {previewModal.file.name}
+                    {previewModal.file?.name}
                   </h3>
                   <p className="text-xs sm:text-sm text-gray-500 truncate">
-                    {(previewModal.file.size / 1024 / 1024).toFixed(2)} MB • {previewModal.file.type}
+                    {previewModal.file && (previewModal.file.size / 1024 / 1024).toFixed(2)} MB • {previewModal.file?.type}
                   </p>
                 </div>
               </div>
@@ -975,7 +1081,7 @@ const managers = users.filter(user =>
 
             {/* Modal Content - Scrollable */}
             <div className="flex-1 overflow-auto p-3 sm:p-4 bg-gray-50">
-              {previewModal.file.type.startsWith('image/') && previewModal.previewUrl ? (
+              {previewModal.file?.type.startsWith('image/') && previewModal.previewUrl ? (
                 <div className="flex justify-center items-center min-h-full">
                   <img
                     src={previewModal.previewUrl}
@@ -983,12 +1089,12 @@ const managers = users.filter(user =>
                     className="max-w-full max-h-full object-contain rounded border shadow-sm bg-white"
                   />
                 </div>
-              ) : previewModal.file.type === 'application/pdf' ? (
+              ) : previewModal.file?.type === 'application/pdf' ? (
                 <div className="text-center py-8 sm:py-12">
                   <DocumentIcon className="w-16 h-16 sm:w-24 sm:h-24 text-red-500 mx-auto mb-4" />
                   <h4 className="text-lg sm:text-xl font-medium text-gray-900 mb-2">PDF Document</h4>
                   <p className="text-gray-600 mb-4 text-sm sm:text-base px-4">
-                    This PDF file will be uploaded with your transit request.
+                    This PDF file is attached to your transit.
                   </p>
                   <div className="bg-white rounded-lg p-4 max-w-sm mx-auto shadow-sm border">
                     <div className="text-sm text-gray-700 space-y-2">
@@ -998,7 +1104,7 @@ const managers = users.filter(user =>
                       </div>
                       <div className="flex justify-between">
                         <span className="font-medium">File Size:</span>
-                        <span>{(previewModal.file.size / 1024 / 1024).toFixed(2)} MB</span>
+                        <span>{previewModal.file && (previewModal.file.size / 1024 / 1024).toFixed(2)} MB</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="font-medium">File Type:</span>
@@ -1021,7 +1127,7 @@ const managers = users.filter(user =>
             {/* Modal Footer - Fixed */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 sm:p-4 border-t border-gray-200 bg-white flex-shrink-0 gap-3 sm:gap-0">
               <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
-                File will be attached to your transit request
+                File attached to your transit
               </div>
               <div className="flex gap-2 justify-center sm:justify-end">
                 <button
@@ -1045,4 +1151,4 @@ const managers = users.filter(user =>
   );
 };
 
-export default CreateTransitPage;
+export default EditTransitPage;

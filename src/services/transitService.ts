@@ -41,17 +41,21 @@ class TransitService {
     const formData = new FormData();
     
     // Add basic fields matching the schema
-    formData.append('productId', transitData.productId);
-    formData.append('productName', transitData.productName);
-    formData.append('quantity', transitData.quantity.toString());
-    formData.append('unit', transitData.unit);
     formData.append('fromLocation', transitData.fromLocation);
     formData.append('toLocation', transitData.toLocation);
     formData.append('dateOfDispatch', transitData.dateOfDispatch);
-    formData.append('expectedArrivalDate', transitData.expectedArrivalDate);
+    formData.append('vehicleNumber', transitData.vehicleNumber);
     
-    if (transitData.vehicleNumber) {
-      formData.append('vehicleNumber', transitData.vehicleNumber);
+    // Add product details array
+    formData.append('productDetails', JSON.stringify(transitData.productDetails));
+    
+    // Add optional fields
+    if (transitData.expectedArrivalDate) {
+      formData.append('expectedArrivalDate', transitData.expectedArrivalDate);
+    }
+    
+    if (transitData.vehicleType) {
+      formData.append('vehicleType', transitData.vehicleType);
     }
     
     if (transitData.driverId) {
@@ -60,10 +64,6 @@ class TransitService {
     
     if (transitData.assignedTo) {
       formData.append('assignedTo', transitData.assignedTo);
-    }
-    
-    if (transitData.productDetails) {
-      formData.append('productDetails', JSON.stringify(transitData.productDetails));
     }
     
     if (transitData.transporterName) {
@@ -94,7 +94,7 @@ class TransitService {
     
     Object.entries(transitData).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
-        if (key === 'items' || key === 'vehicle') {
+        if (key === 'productDetails' && Array.isArray(value)) {
           formData.append(key, JSON.stringify(value));
         } else if (key === 'attachments' && Array.isArray(value)) {
           value.forEach((file) => {
@@ -163,13 +163,15 @@ class TransitService {
   // Utility methods
   getStatusColor(status: string): string {
     switch (status) {
-      case 'pending':
+      case 'New':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'in_transit':
+      case 'In Transit':
         return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'delivered':
+      case 'Received':
         return 'bg-green-100 text-green-800 border-green-200';
-      case 'cancelled':
+      case 'Partially Received':
+        return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'Cancelled':
         return 'bg-red-100 text-red-800 border-red-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -194,13 +196,15 @@ class TransitService {
 
   getStatusDisplayName(status: string): string {
     switch (status) {
-      case 'pending':
-        return 'Pending';
-      case 'in_transit':
+      case 'New':
+        return 'New';
+      case 'In Transit':
         return 'In Transit';
-      case 'delivered':
-        return 'Delivered';
-      case 'cancelled':
+      case 'Received':
+        return 'Received';
+      case 'Partially Received':
+        return 'Partially Received';
+      case 'Cancelled':
         return 'Cancelled';
       default:
         return status.charAt(0).toUpperCase() + status.slice(1);

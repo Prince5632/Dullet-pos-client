@@ -522,10 +522,10 @@ export interface NavItem {
 export interface Inventory {
   _id: string;
   stockId: string;
-  inventoryType: 'New Stock' | 'Stock Sold' | 'Damaged / Return';
+  inventoryType: "New Stock" | "Stock Sold" | "Damaged / Return";
   dateOfStock: string;
   quantity: number;
-  unit: 'Kg' | 'Quintal';
+  unit: "Kg" | "Quintal";
   godown?: Godown;
   pricePerKg?: number;
   additionalNotes?: string;
@@ -536,10 +536,10 @@ export interface Inventory {
 }
 
 export interface CreateInventoryForm {
-  inventoryType: 'New Stock' | 'Stock Sold' | 'Damaged / Return';
+  inventoryType: "New Stock" | "Stock Sold" | "Damaged / Return";
   dateOfStock: string;
   quantity: number;
-  unit: 'Kg' | 'Quintal';
+  unit: "Kg" | "Quintal";
   godown?: string;
   pricePerKg?: number;
   additionalNotes?: string;
@@ -556,7 +556,7 @@ export interface InventoryListParams {
   dateFrom?: string;
   dateTo?: string;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
   loggedBy?: string;
 }
 
@@ -604,29 +604,78 @@ export interface ChartData {
 export interface Transit {
   _id: string;
   transitId: string;
-  productId: string;
-  productName: string;
-  quantity: number;
-  unit: string;
-  fromLocation: string;
-  toLocation: string;
+  fromLocation:
+    | {
+        _id: string;
+        name: string;
+        location: {
+          city: string;
+          state: string;
+          area?: string;
+        };
+      }
+    | string;
+  toLocation:
+    | {
+        _id: string;
+        name: string;
+        location: {
+          city: string;
+          state: string;
+          area?: string;
+        };
+      }
+    | string;
   dateOfDispatch: string;
-  expectedArrivalDate: string;
+  expectedArrivalDate?: string;
   vehicleNumber: string;
-  driverId: string;
-  assignedTo: string;
-  productDetails?: string;
+  vehicleType?: "Truck" | "Mini Truck" | "Van" | "Other";
+  driverId?:
+    | {
+        _id: string;
+        firstName: string;
+        lastName?: string;
+        email: string;
+        phone?: string;
+      }
+    | string;
+  assignedTo?:
+    | {
+        _id: string;
+        firstName: string;
+        lastName?: string;
+        email: string;
+      }
+    | string;
+  productDetails: ProductDetail[];
   transporterName?: string;
   remarks?: string;
-  attachments?: string[];
-  status: 'pending' | 'in_transit' | 'delivered' | 'cancelled';
-  createdBy: string;
+  attachments?: {
+    fileName: string;
+    fileType: string;
+    fileSize: number;
+    base64Data: string;
+    uploadedAt: string;
+  }[];
+  status:
+    | "New"
+    | "In Transit"
+    | "Received"
+    | "Partially Received"
+    | "Cancelled";
+  createdBy:
+    | {
+        _id: string;
+        firstName: string;
+        lastName?: string;
+        email: string;
+      }
+    | string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface TransitItem {
-  productId: string;
   productName: string;
   quantity: number;
   unit: string;
@@ -651,44 +700,50 @@ export interface TransitLocation {
   toLocation: string;
 }
 
-export interface CreateTransitForm {
-  productId: string;
+export interface ProductDetail {
   productName: string;
   quantity: number;
   unit: string;
+  additionalNote?: string;
+}
+
+export interface CreateTransitForm {
+  productDetails: ProductDetail[];
   fromLocation: string;
   toLocation: string;
   dateOfDispatch: string;
-  expectedArrivalDate: string;
+  expectedArrivalDate?: string;
   vehicleNumber: string;
-  driverId: string;
-  assignedTo: string;
-  productDetails?: string;
+  vehicleType?: string;
+  driverId?: string;
+  assignedTo?: string;
   transporterName?: string;
   remarks?: string;
   attachments?: File[];
 }
 
 export interface UpdateTransitForm {
-  productId?: string;
-  productName?: string;
-  quantity?: number;
-  unit?: string;
+  productDetails?: ProductDetail[];
   fromLocation?: string;
   toLocation?: string;
   dateOfDispatch?: string;
   expectedArrivalDate?: string;
   vehicleNumber?: string;
+  vehicleType?: "Truck" | "Mini Truck" | "Van" | "Other";
   driverId?: string;
   assignedTo?: string;
-  productDetails?: string;
   transporterName?: string;
   remarks?: string;
-  attachments?: string[];
+  attachments?: File[];
 }
 
 export interface TransitStatusUpdate {
-  status: 'pending' | 'in_transit' | 'delivered' | 'cancelled';
+  status:
+    | "New"
+    | "In Transit"
+    | "Received"
+    | "Partially Received"
+    | "Cancelled";
   remarks?: string;
 }
 
@@ -704,14 +759,15 @@ export interface TransitListParams {
   startDate?: string;
   endDate?: string;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export interface TransitStats {
   total: number;
-  pending: number;
+  new: number;
   inTransit: number;
-  delivered: number;
+  received: number;
+  partiallyReceived: number;
   cancelled: number;
 }
 
