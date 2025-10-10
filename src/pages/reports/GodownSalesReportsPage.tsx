@@ -22,6 +22,87 @@ const GodownSalesReportsPage: React.FC = () => {
   const [endDate, setEndDate] = useState('');
   const [sortBy, setSortBy] = useState('totalRevenue');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(null);
+
+  // Quick date filter helper functions
+  const getQuickDateRange = (days: number) => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - days);
+    
+    return {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0]
+    };
+  };
+
+  const getQuickDateRangeMonth = (months: number) => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(endDate.getMonth() - months);
+    
+    return {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0]
+    };
+  };
+
+  const getQuickDateRangeYear = (years: number) => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setFullYear(endDate.getFullYear() - years);
+    
+    return {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0]
+    };
+  };
+
+  const handleQuickFilter = (type: 'days' | 'months' | 'years', value: number) => {
+    const filterKey = `${type}-${value}`;
+    
+    // If the same filter is clicked again, deactivate it
+    if (activeQuickFilter === filterKey) {
+      setActiveQuickFilter(null);
+      setStartDate('');
+      setEndDate('');
+      
+      // Trigger report fetch with cleared dates
+      setTimeout(() => {
+        fetchReports();
+      }, 100);
+      return;
+    }
+    
+    let dateRange;
+    
+    if (type === 'days') {
+      dateRange = getQuickDateRange(value);
+    } else if (type === 'months') {
+      dateRange = getQuickDateRangeMonth(value);
+    } else {
+      dateRange = getQuickDateRangeYear(value);
+    }
+    
+    setActiveQuickFilter(filterKey);
+    setStartDate(dateRange.startDate);
+    setEndDate(dateRange.endDate);
+    
+    // Trigger report fetch with new dates
+    setTimeout(() => {
+      fetchReports();
+    }, 100);
+  };
+
+  const handleStartDateChange = (value: string) => {
+    setStartDate(value);
+    setActiveQuickFilter(null); // Clear active quick filter when manually changing dates
+  };
+
+  const handleEndDateChange = (value: string) => {
+    setEndDate(value);
+    setActiveQuickFilter(null); // Clear active quick filter when manually changing dates
+  };
 
   useEffect(() => {
     fetchReports();
@@ -199,6 +280,64 @@ const GodownSalesReportsPage: React.FC = () => {
         </div>
       )}
 
+      {/* Quick Date Filters Section */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+            <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 className="text-sm font-semibold text-gray-900">Quick Date Filters</h3>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <button
+            type="button"
+            onClick={() => handleQuickFilter('days', 5)}
+            className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+              activeQuickFilter === 'days-5'
+                ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
+                : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+            }`}
+          >
+            Last 5 Days
+          </button>
+          <button
+            type="button"
+            onClick={() => handleQuickFilter('days', 10)}
+            className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+              activeQuickFilter === 'days-10'
+                ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
+                : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+            }`}
+          >
+            Last 10 Days
+          </button>
+          <button
+            type="button"
+            onClick={() => handleQuickFilter('months', 1)}
+            className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+              activeQuickFilter === 'months-1'
+                ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
+                : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+            }`}
+          >
+            Last Month
+          </button>
+          <button
+            type="button"
+            onClick={() => handleQuickFilter('years', 1)}
+            className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+              activeQuickFilter === 'years-1'
+                ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
+                : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+            }`}
+          >
+            Last Year
+          </button>
+        </div>
+      </div>
+
       {/* Filters */}
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
         <div className="flex items-center gap-4 flex-wrap">
@@ -209,13 +348,15 @@ const GodownSalesReportsPage: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <label className="text-sm text-gray-600">From:</label>
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
+            <input type="date" value={startDate} onChange={(e) => handleStartDateChange(e.target.value)} className="border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
           </div>
 
           <div className="flex items-center gap-2">
             <label className="text-sm text-gray-600">To:</label>
-            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
+            <input type="date" value={endDate} onChange={(e) => handleEndDateChange(e.target.value)} className="border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
           </div>
+
+
 
           <div className="flex items-center gap-2">
             <label className="text-sm text-gray-600">Sort By:</label>

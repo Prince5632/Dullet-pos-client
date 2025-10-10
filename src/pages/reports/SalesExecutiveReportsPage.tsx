@@ -44,6 +44,97 @@ const SalesExecutiveReportsPage: React.FC = () => {
     return (saved as ReportType) || "orders";
   });
   const [syncing, setSyncing] = useState(false);
+  const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(null);
+
+  // Quick date filter helper functions
+  const getQuickDateRange = (days: number) => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - days);
+    
+    return {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0]
+    };
+  };
+
+  const getQuickDateRangeMonth = (months: number) => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(endDate.getMonth() - months);
+    
+    return {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0]
+    };
+  };
+
+  const getQuickDateRangeYear = (years: number) => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setFullYear(endDate.getFullYear() - years);
+    
+    return {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0]
+    };
+  };
+
+  const handleQuickFilter = (type: 'days' | 'months' | 'years', value: number) => {
+    const filterKey = `${type}-${value}`;
+    
+    // Check if this filter is already active - if so, deactivate it
+    if (activeQuickFilter === filterKey) {
+      setActiveQuickFilter(null);
+      setStartDate('');
+      setEndDate('');
+      setDateRangeError('');
+      
+      // Apply filters without date range
+      const params = {
+        sortBy,
+        sortOrder,
+        ...(department && { department }),
+        ...(godownId && { godownId }),
+        type: reportType === "orders" ? "order" : "visit"
+      };
+      
+      fetchReports(params);
+      fetchGodowns({});
+      return;
+    }
+    
+    // Activate the new filter
+    setActiveQuickFilter(filterKey);
+    
+    let dateRange;
+    
+    if (type === 'days') {
+      dateRange = getQuickDateRange(value);
+    } else if (type === 'months') {
+      dateRange = getQuickDateRangeMonth(value);
+    } else {
+      dateRange = getQuickDateRangeYear(value);
+    }
+    
+    setStartDate(dateRange.startDate);
+    setEndDate(dateRange.endDate);
+    setDateRangeError('');
+    
+    // Apply filters immediately
+    const params = {
+      sortBy,
+      sortOrder,
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+      ...(department && { department }),
+      ...(godownId && { godownId }),
+      type: reportType === "orders" ? "order" : "visit"
+    };
+    
+    fetchReports(params);
+    fetchGodowns(dateRange);
+  };
 
   useEffect(() => {
     fetchReports();
@@ -136,11 +227,13 @@ const SalesExecutiveReportsPage: React.FC = () => {
 
   const handleStartDateChange = (value: string) => {
     setStartDate(value);
+    setActiveQuickFilter(null); // Clear active quick filter when manually changing dates
     validateDateRange(value, endDate);
   };
 
   const handleEndDateChange = (value: string) => {
     setEndDate(value);
+    setActiveQuickFilter(null); // Clear active quick filter when manually changing dates
     validateDateRange(startDate, value);
   };
 
@@ -167,6 +260,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
     setSortOrder("desc");
     setDepartment("");
     setGodownId("");
+    setActiveQuickFilter(null); // Clear active quick filter
     
     // Fetch reports with reset values immediately
     const resetParams = {
@@ -659,6 +753,64 @@ const SalesExecutiveReportsPage: React.FC = () => {
           </div>
         )}
 
+        {/* Quick Date Filters Section */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+              <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-sm font-semibold text-gray-900">Quick Date Filters</h3>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <button
+              type="button"
+              onClick={() => handleQuickFilter('days', 5)}
+              className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                activeQuickFilter === 'days-5'
+                  ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
+                  : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+              }`}
+            >
+              Last 5 Days
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickFilter('days', 10)}
+              className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                activeQuickFilter === 'days-10'
+                  ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
+                  : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+              }`}
+            >
+              Last 10 Days
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickFilter('months', 1)}
+              className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                activeQuickFilter === 'months-1'
+                  ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
+                  : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+              }`}
+            >
+              Last Month
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickFilter('years', 1)}
+              className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                activeQuickFilter === 'years-1'
+                  ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
+                  : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+              }`}
+            >
+              Last Year
+            </button>
+          </div>
+        </div>
+
         {/* Filter Toggle Button */}
         <div className="mb-4">
           <button
@@ -739,6 +891,8 @@ const SalesExecutiveReportsPage: React.FC = () => {
                   </div>
                 )}
               </div>
+
+
 
               {/* Department */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -5,7 +5,7 @@ import { godownService } from '../../services/godownService';
 import { userService } from '../../services/userService';
 import { orderService } from '../../services/orderService';
 import type { Transit, UpdateTransitForm, ProductDetail, Godown, User, QuickProduct } from '../../types';
-import { TruckIcon, ExclamationTriangleIcon, CheckCircleIcon, MapPinIcon, CalendarIcon, UserIcon, CubeIcon, DocumentIcon, PhotoIcon, XMarkIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { TruckIcon, ExclamationTriangleIcon, CheckCircleIcon, MapPinIcon, CalendarIcon, UserIcon, CubeIcon, DocumentIcon, PhotoIcon, XMarkIcon, EyeIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 
 interface ValidationErrors {
@@ -50,7 +50,7 @@ const EditTransitPage: React.FC = () => {
     transporterName: '',
     remarks: '',
     attachments: [],
-    status: 'New'
+    status: 'Pending'
   });
   
   const [godowns, setGodowns] = useState<Godown[]>([]);
@@ -112,7 +112,7 @@ const EditTransitPage: React.FC = () => {
           transporterName: transitData.transporterName || '',
           remarks: transitData.remarks || '',
           attachments: [],
-          status: transitData.status || 'New'
+          status: transitData.status || 'Pending'
         });
       } else {
         toast.error('Failed to load transit details');
@@ -221,6 +221,9 @@ const EditTransitPage: React.FC = () => {
       case 'toLocation':
         if (!value || !value.trim()) return 'To location is required';
         break;
+      case 'driverId':
+        if (!value || !value.trim()) return 'Driver is required';
+        break;
       case 'dateOfDispatch':
       case 'expectedArrivalDate': {
         if (!value || !value.trim()) {
@@ -251,7 +254,7 @@ const EditTransitPage: React.FC = () => {
         break;
       case 'status':
         if (!value || !value.trim()) return 'Status is required';
-        const validStatuses = ['New', 'In Transit', 'Received', 'Partially Received', 'Cancelled'];
+        const validStatuses = ['Pending', 'In Transit', 'Received', 'Partially Received', 'Cancelled'];
         if (!validStatuses.includes(value)) return 'Invalid status selected';
         break;
     }
@@ -292,7 +295,7 @@ const EditTransitPage: React.FC = () => {
     const files = Array.from(event.target.files || []);
     const validFiles = files.filter(file => {
       const isValidType = file.type === 'application/pdf' || file.type.startsWith('image/');
-      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB
+      const isValidSize = file.size <= 2 * 1024 * 1024; // 2MB
       
       if (!isValidType) {
         toast.error(`${file.name} is not a valid file type. Only PDF and images are allowed.`);
@@ -300,7 +303,7 @@ const EditTransitPage: React.FC = () => {
       }
       
       if (!isValidSize) {
-        toast.error(`${file.name} is too large. Maximum size is 10MB.`);
+        toast.error(`${file.name} is too large. Maximum size is 2MB.`);
         return false;
       }
       
@@ -541,7 +544,32 @@ const EditTransitPage: React.FC = () => {
       </div>
     );
   }
-
+  // Prevent editing if order is delivered
+  if (transit.status === "Received" || transit.status === "Cancelled") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto">
+          <div className="bg-green-100 rounded-full p-3 mx-auto w-16 h-16 flex items-center justify-center mb-4">
+            <CheckCircleIcon className="h-8 w-8 text-green-600" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Transit already marked {transit?.status}
+          </h2>
+          <p className="text-gray-600 mb-6">
+            This transit has been {transit?.status} and cannot be edited.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate(`/transits/${transit._id}`)}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+          >
+            <ArrowLeftIcon className="h-4 w-4 mr-2" />
+            View Transit Details
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -855,36 +883,9 @@ const EditTransitPage: React.FC = () => {
                     <option value="Other">Other</option>
                   </select>
                 </div>
-
-                <div>
+    <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Transporter Name
-                  </label>
-                  <input
-                    type="text"
-                    value={form.transporterName}
-                    onChange={(e) => updateField('transporterName', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter transporter name"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Assignment Information */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-              <div className="flex items-center gap-2">
-                <UserIcon className="w-5 h-5 text-gray-600" />
-                <h2 className="text-lg font-medium text-gray-900">Assignment Information</h2>
-              </div>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Driver
+                    Driver <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={form.driverId}
@@ -900,6 +901,33 @@ const EditTransitPage: React.FC = () => {
                     ))}
                   </select>
                 </div>
+                {/* <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Transporter Name
+                  </label>
+                  <input
+                    type="text"
+                    value={form.transporterName}
+                    onChange={(e) => updateField('transporterName', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter transporter name"
+                  />
+                </div> */}
+              </div>
+            </div>
+          </div>
+
+          {/* Assignment Information */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+              <div className="flex items-center gap-2">
+                <UserIcon className="w-5 h-5 text-gray-600" />
+                <h2 className="text-lg font-medium text-gray-900">Assignment Information</h2>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -949,7 +977,7 @@ const EditTransitPage: React.FC = () => {
                   }`}
                 >
                   <option value="">Select status</option>
-                  <option value="New">New</option>
+                  <option value="Pending">Pending</option>
                   <option value="In Transit">In Transit</option>
                   <option value="Received">Received</option>
                   <option value="Partially Received">Partially Received</option>
@@ -1069,8 +1097,8 @@ const EditTransitPage: React.FC = () => {
                         Click to upload files
                       </span>
                       <p className="text-xs text-gray-500 mt-1">
-                        PDF, PNG, JPG, GIF up to 10MB each
-                      </p>
+                      PDF, PNG, JPG, GIF up to 2MB each
+                    </p>
                     </div>
                   </label>
                 </div>

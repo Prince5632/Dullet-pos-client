@@ -23,6 +23,7 @@ import Table from "../../components/ui/Table";
 import Pagination from "../../components/ui/Pagination";
 import Avatar from "../../components/ui/Avatar";
 import Modal from "../../components/ui/Modal";
+import TransitStatusDropdown from "../../components/transits/TransitStatusDropdown";
 import { useAuth } from "../../contexts/AuthContext";
 import toast from "react-hot-toast";
 
@@ -36,6 +37,9 @@ const TransitsPage: React.FC = () => {
   const [toLocation, setToLocation] = useState("");
   const [driverId, setDriverId] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [dateError, setDateError] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
@@ -55,9 +59,49 @@ const TransitsPage: React.FC = () => {
   // Check if current user is super admin
   const isSuperAdmin = hasRole("Super Admin");
 
+  // Date validation function
+  const validateDateRange = (fromDate: string, toDate: string): string => {
+    if (!fromDate && !toDate) {
+      return ""; // No dates provided, no error
+    }
+    
+    if (fromDate && !toDate) {
+      return ""; // Only from date provided, no error
+    }
+    
+    if (!fromDate && toDate) {
+      return ""; // Only to date provided, no error
+    }
+    
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
+    
+    // Check if dates are valid
+    if (isNaN(from.getTime()) || isNaN(to.getTime())) {
+      return "Please enter valid dates";
+    }
+    
+    // Check if from date is later than to date
+    if (from > to) {
+      return "From date cannot be later than to date";
+    }
+    
+    return "";
+  };
+
   const loadTransits = async () => {
     try {
       setLoading(true);
+      
+      // Validate date range before making API call
+      const dateValidationError = validateDateRange(dateFrom, dateTo);
+      setDateError(dateValidationError);
+      
+      if (dateValidationError) {
+        setLoading(false);
+        return;
+      }
+      
       const res = await transitService.getTransits({
         page,
         limit,
@@ -67,6 +111,8 @@ const TransitsPage: React.FC = () => {
         toLocation,
         driverId,
         assignedTo,
+        dateFrom,
+        dateTo,
         sortBy: "createdAt",
         sortOrder: "desc",
       });
@@ -120,6 +166,10 @@ const TransitsPage: React.FC = () => {
     }
   };
 
+  const handleTransitUpdate = (updatedTransit: Transit) => {
+    handleSync()
+  };
+
   const loadDrivers = async () => {
     try {
       const res = await userService.getUsers({
@@ -161,6 +211,9 @@ const TransitsPage: React.FC = () => {
     setToLocation("");
     setDriverId("");
     setAssignedTo("");
+    setDateFrom("");
+    setDateTo("");
+    setDateError("");
     setPage(1);
   };
 
@@ -178,6 +231,8 @@ const TransitsPage: React.FC = () => {
     toLocation,
     driverId,
     assignedTo,
+    dateFrom,
+    dateTo,
   ]);
 
   useEffect(() => {
@@ -192,7 +247,7 @@ const TransitsPage: React.FC = () => {
     if (page !== 1) {
       setPage(1);
     }
-  }, [search, status, fromLocation, toLocation, driverId, assignedTo]);
+  }, [search, status, fromLocation, toLocation, driverId, assignedTo, dateFrom, dateTo]);
 
   const handleDeleteTransit = async () => {
     if (!transitToDelete) return;
@@ -328,7 +383,13 @@ const TransitsPage: React.FC = () => {
       {
         key: "status",
         label: "Status",
-        render: (_, transit) => getStatusBadge(transit.status),
+        render: (_, transit) => (
+          <TransitStatusDropdown
+            transit={transit}
+            onTransitUpdate={handleTransitUpdate}
+            compact={true}
+          />
+        ),
       },
       {
         key: "actions",
@@ -368,7 +429,7 @@ const TransitsPage: React.FC = () => {
 
   const statusOptions = [
     { value: "", label: "All Status" },
-    { value: "New", label: "New" },
+    { value: "Pending", label: "Pending" },
     { value: "In Transit", label: "In Transit" },
     { value: "Received", label: "Received" },
     { value: "Partially Received", label: "Partially Received" },
@@ -428,9 +489,9 @@ const TransitsPage: React.FC = () => {
               </div>
             </div>
             <div className="bg-white p-3 rounded-lg border border-gray-200 text-center">
-              <div className="text-xs text-gray-500">New</div>
+              <div className="text-xs text-gray-500">Pending</div>
               <div className="text-lg font-semibold text-yellow-600">
-                {stats.new}
+                {stats.pending}
               </div>
             </div>
             <div className="bg-white p-3 rounded-lg border border-gray-200 text-center">
@@ -499,7 +560,9 @@ const TransitsPage: React.FC = () => {
                   fromLocation ||
                   toLocation ||
                   driverId ||
-                  assignedTo) && (
+                  assignedTo ||
+                  dateFrom ||
+                  dateTo) && (
                   <button
                     onClick={clearFilters}
                     className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
@@ -513,64 +576,119 @@ const TransitsPage: React.FC = () => {
 
             {showFilters && (
               <div className="mt-3 pt-3 border-t border-gray-200">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    {statusOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    placeholder="Filter by from location"
-                    value={fromLocation}
-                    onChange={(e) => setFromLocation(e.target.value)}
-                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                  <select
-                    value={toLocation}
-                    onChange={(e) => setToLocation(e.target.value)}
-                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="">All To Locations</option>
-                    {godowns.map((godown) => (
-                      <option key={godown._id} value={godown._id}>
-                        {godown.name}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={assignedTo}
-                    onChange={(e) => setAssignedTo(e.target.value)}
-                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="">All Managers</option>
-                    {managers.map((manager) => (
-                      <option
-                        key={manager._id}
-                        value={`${manager.firstName} ${manager.lastName}`}
-                      >
-                        {manager.firstName} {manager.lastName}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={driverId}
-                    onChange={(e) => setDriverId(e.target.value)}
-                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="">All Drivers</option>
-                    {drivers.map((driver) => (
-                      <option key={driver._id} value={driver._id}>
-                        {driver.firstName} {driver.lastName}
-                      </option>
-                    ))}
-                  </select>
+                {dateError && (
+                  <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-md">
+                    <p className="text-xs text-red-600">{dateError}</p>
+                  </div>
+                )}
+                
+                {/* Main Filters Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-600 font-medium">Status</label>
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value)}
+                      className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      {statusOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-600 font-medium">From Location</label>
+                    <input
+                      type="text"
+                      placeholder="Search location..."
+                      value={fromLocation}
+                      onChange={(e) => setFromLocation(e.target.value)}
+                      className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-600 font-medium">To Location</label>
+                    <select
+                      value={toLocation}
+                      onChange={(e) => setToLocation(e.target.value)}
+                      className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">All To Locations</option>
+                      {godowns.map((godown) => (
+                        <option key={godown._id} value={godown._id}>
+                          {godown.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-600 font-medium">Manager</label>
+                    <select
+                      value={assignedTo}
+                      onChange={(e) => setAssignedTo(e.target.value)}
+                      className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">All Managers</option>
+                      {managers.map((manager) => (
+                        <option
+                          key={manager._id}
+                          value={`${manager.firstName} ${manager.lastName}`}
+                        >
+                          {manager.firstName} {manager.lastName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-600 font-medium">Driver</label>
+                    <select
+                      value={driverId}
+                      onChange={(e) => setDriverId(e.target.value)}
+                      className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">All Drivers</option>
+                      {drivers.map((driver) => (
+                        <option key={driver._id} value={driver._id}>
+                          {driver.firstName} {driver.lastName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                
+                {/* Date Range Filters Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-600 font-medium">From Date</label>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => {
+                        setDateFrom(e.target.value);
+                        setDateError("");
+                      }}
+                      className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-600 font-medium">To Date</label>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => {
+                        setDateTo(e.target.value);
+                        setDateError("");
+                      }}
+                      className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -632,7 +750,11 @@ const TransitsPage: React.FC = () => {
                             </p>
                           </div>
                         </div>
-                        {getStatusBadge(transit.status)}
+                        <TransitStatusDropdown
+                          transit={transit}
+                          onTransitUpdate={handleTransitUpdate}
+                          compact={true}
+                        />
                       </div>
 
                       <div className="space-y-1.5 mb-3">
