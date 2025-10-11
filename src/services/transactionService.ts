@@ -53,6 +53,26 @@ class TransactionService {
     throw new Error(response.message || 'Failed to create transaction');
   }
 
+  // Allocate customer payment across unpaid/partial orders
+  async allocateCustomerPayment(payload: {
+    customerId: string;
+    amountPaid: number;
+    paymentMode: string;
+    transactionDate?: string;
+  }): Promise<{ transaction?: Transaction; affectedOrders?: string[]; remainingAmount?: number }>
+  {
+    const response = await apiService.post<{
+      transaction?: Transaction;
+      affectedOrders?: string[];
+      remainingAmount?: number;
+    }>(API_CONFIG.ENDPOINTS.TRANSACTION_ALLOCATE_CUSTOMER, payload);
+
+    if (response.success) {
+      return response.data || {};
+    }
+    throw new Error(response.message || 'Failed to allocate payment');
+  }
+
   // Utility methods
   getTransactionModes(): Array<{ label: string; value: string }> {
     return [

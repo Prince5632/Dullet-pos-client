@@ -90,6 +90,7 @@ export const API_CONFIG = {
     // Transaction endpoints
     TRANSACTIONS: "/api/transactions",
     TRANSACTION_BY_ID: (id: string) => `/api/transactions/${id}`,
+    TRANSACTION_ALLOCATE_CUSTOMER: "/api/transactions/allocate/customer",
 
     // System endpoints
     HEALTH: "/api/health",
