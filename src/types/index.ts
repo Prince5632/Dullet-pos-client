@@ -797,7 +797,7 @@ export interface Transaction {
   transactionId: string;
   transactionMode: 'Cash' | 'Credit' | 'Cheque' | 'Online';
   transactionForModel: 'Order' | 'Customer';
-  transactionFor: string;
+  transactionFor: string | { _id: string; orderNumber?: string; customerId?: string; businessName?: string } | Array<string | { _id: string; orderNumber?: string; customerId?: string; businessName?: string }>;
   amountPaid: number;
   customer: {
     _id: string;

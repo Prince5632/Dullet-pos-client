@@ -321,7 +321,111 @@ const CustomerDetailsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Transactions Table */}
+         
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Financial Summary */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                  <CurrencyRupeeIcon className="h-5 w-5 mr-2" />
+                  Financial Summary
+                </h3>
+              </div>
+              <div className="px-6 py-4 space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-500">
+                    Outstanding Amount
+                  </span>
+                  <span className="text-lg font-semibold text-red-600">
+                    {formatCurrency(customer.outstandingAmount || 0)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-500">
+                    Total Orders
+                  </span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {customer.totalOrders}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-500">
+                    Total Order Value
+                  </span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {formatCurrency(customer.totalOrderValue)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Additional Information */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                  <BuildingOfficeIcon className="h-5 w-5 mr-2" />
+                  Additional Information
+                </h3>
+              </div>
+              <div className="px-6 py-4 space-y-4">
+                {customer.gstNumber && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">
+                      GST Number
+                    </label>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {customer.gstNumber}
+                    </p>
+                  </div>
+                )}
+                {customer.panNumber && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">
+                      PAN Number
+                    </label>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {customer.panNumber}
+                    </p>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-500">
+                    Created Date
+                  </label>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {formatDate(customer.createdAt)}
+                  </p>
+                </div>
+                {customer.lastOrderDate && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">
+                      Last Order Date
+                    </label>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {formatDate(customer.lastOrderDate)}
+                    </p>
+                  </div>
+                )}
+                {customer.notes && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">
+                      Notes
+                    </label>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {customer.notes}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+         {/* Transactions Table */}
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900 flex items-center">
@@ -396,16 +500,40 @@ const CustomerDetailsPage: React.FC = () => {
                                 {formatCurrency(transaction.amountPaid)}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {transaction?.transactionFor ? (
-                                  <Link
-                                    to={`/orders/${transaction?.transactionFor?._id}`}
-                                    className="text-blue-600 hover:text-blue-800 hover:underline"
-                                  >
-                                    {transaction?.transactionFor?.orderNumber}
-                                  </Link>
+                                {(() => {
+                                  const refs = Array.isArray(transaction.transactionFor)
+                                    ? transaction.transactionFor
+                                    : transaction.transactionFor
+                                      ? [transaction.transactionFor]
+                                      : [];
+                                  return refs.length > 0 ? (
+                                  <div className="flex flex-wrap gap-2">
+                                    {refs.map((ref, idx) => {
+                                      const isObj = typeof ref === 'object' && ref !== null;
+                                      const id = isObj ? (ref as any)._id : ref;
+                                      const label = isObj && (ref as any).orderNumber
+                                        ? (ref as any).orderNumber
+                                        : isObj && (ref as any).businessName
+                                          ? (ref as any).businessName
+                                          : String(id).slice(-6);
+                                      const link = transaction.transactionForModel === 'Order'
+                                        ? `/orders/${id}`
+                                        : `/customers/${id}`;
+                                      return (
+                                        <Link
+                                          key={`${transaction._id}-${idx}`}
+                                          to={link}
+                                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                                        >
+                                          {label}
+                                        </Link>
+                                      );
+                                    })}
+                                  </div>
                                 ) : (
                                   <span className="text-gray-400">-</span>
-                                )}
+                                );
+                                })()}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {transaction.createdBy.firstName}{" "}
@@ -529,109 +657,6 @@ const CustomerDetailsPage: React.FC = () => {
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Financial Summary */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                  <CurrencyRupeeIcon className="h-5 w-5 mr-2" />
-                  Financial Summary
-                </h3>
-              </div>
-              <div className="px-6 py-4 space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-500">
-                    Outstanding Amount
-                  </span>
-                  <span className="text-lg font-semibold text-red-600">
-                    {formatCurrency(customer.outstandingAmount || 0)}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-500">
-                    Total Orders
-                  </span>
-                  <span className="text-sm font-medium text-gray-900">
-                    {customer.totalOrders}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-500">
-                    Total Order Value
-                  </span>
-                  <span className="text-sm font-medium text-gray-900">
-                    {formatCurrency(customer.totalOrderValue)}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Additional Information */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                  <BuildingOfficeIcon className="h-5 w-5 mr-2" />
-                  Additional Information
-                </h3>
-              </div>
-              <div className="px-6 py-4 space-y-4">
-                {customer.gstNumber && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">
-                      GST Number
-                    </label>
-                    <p className="mt-1 text-sm text-gray-900">
-                      {customer.gstNumber}
-                    </p>
-                  </div>
-                )}
-                {customer.panNumber && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">
-                      PAN Number
-                    </label>
-                    <p className="mt-1 text-sm text-gray-900">
-                      {customer.panNumber}
-                    </p>
-                  </div>
-                )}
-                <div>
-                  <label className="block text-sm font-medium text-gray-500">
-                    Created Date
-                  </label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {formatDate(customer.createdAt)}
-                  </p>
-                </div>
-                {customer.lastOrderDate && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">
-                      Last Order Date
-                    </label>
-                    <p className="mt-1 text-sm text-gray-900">
-                      {formatDate(customer.lastOrderDate)}
-                    </p>
-                  </div>
-                )}
-                {customer.notes && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">
-                      Notes
-                    </label>
-                    <p className="mt-1 text-sm text-gray-900">
-                      {customer.notes}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

@@ -35,12 +35,18 @@ class TransactionService {
   async createTransaction(transactionData: {
     transactionMode: string;
     transactionForModel: string;
-    transactionFor: string;
+    transactionFor: string | string[];
     amountPaid: number;
     customer: string;
     notes?: string;
   }): Promise<Transaction> {
-    const response = await apiService.post<{ transaction: Transaction }>(API_CONFIG.ENDPOINTS.TRANSACTIONS, transactionData);
+    const payload = {
+      ...transactionData,
+      transactionFor: Array.isArray(transactionData.transactionFor)
+        ? transactionData.transactionFor
+        : [transactionData.transactionFor],
+    };
+    const response = await apiService.post<{ transaction: Transaction }>(API_CONFIG.ENDPOINTS.TRANSACTIONS, payload);
     if (response.success && response.data) {
       return response.data.transaction;
     }
