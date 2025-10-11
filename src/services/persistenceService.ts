@@ -98,6 +98,8 @@ export const PERSIST_NS = {
   CUSTOMER_REPORTS: "customer_reports",
   ATTENDANCE: "attendance",
   DASHBOARD: "dashboard",
+  ROLES: "roles",
+  PROFILE: "profile",
 };
 
 // Clear all namespaces except the provided one(s)

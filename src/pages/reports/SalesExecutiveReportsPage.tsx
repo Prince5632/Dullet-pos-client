@@ -205,6 +205,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
     try {
       // Build filter parameters for godown counts
       const params: any = {};
+      params.onlySalesExecutive = true;
       const effectiveStartDate = overrideDates?.startDate !== undefined ? overrideDates.startDate : startDate;
       const effectiveEndDate = overrideDates?.endDate !== undefined ? overrideDates.endDate : endDate;
       

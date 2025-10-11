@@ -33,6 +33,7 @@ import Avatar from "../../components/ui/Avatar";
 import Badge from "../../components/ui/Badge";
 import { userService } from "../../services/userService";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
+import { clearOtherNamespaces, PERSIST_NS } from "../../services/persistenceService";
 
 interface DashboardStats {
   orders: {
@@ -209,7 +210,10 @@ const DashboardPage: React.FC = () => {
     if (hour < 17) return "🌤️";
     return "🌙";
   };
-
+ // Cross-page reset: visiting Customers clears Orders persisted filters/pagination if present
+  useEffect(() => {
+    clearOtherNamespaces(PERSIST_NS.DASHBOARD);
+  }, []);
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-96">

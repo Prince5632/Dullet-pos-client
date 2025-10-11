@@ -879,18 +879,18 @@ const OrdersPage: React.FC = () => {
                     label: "Approved",
                     count: orders.filter((o) => o.status === "approved").length,
                   },
-                  {
-                    value: "processing",
-                    label: "Production",
-                    count: orders.filter((o) => o.status === "processing")
-                      .length,
-                  },
-                  {
-                    value: "completed",
-                    label: "Done",
-                    count: orders.filter((o) => o.status === "completed")
-                      .length,
-                  },
+                  // {
+                  //   value: "processing",
+                  //   label: "Production",
+                  //   count: orders.filter((o) => o.status === "processing")
+                  //     .length,
+                  // },
+                  // {
+                  //   value: "completed",
+                  //   label: "Done",
+                  //   count: orders.filter((o) => o.status === "completed")
+                  //     .length,
+                  // },
                 ].map((status) => (
                   <button
                     key={status.value}
@@ -1159,7 +1159,7 @@ const OrdersPage: React.FC = () => {
                   {
                     label: "Orders",
                     value: stats.orders.total.toString(),
-                    subtitle: `${stats.orders.totalVisits} visits`,
+                    // subtitle: `${stats.orders.totalVisits} visits`,
                     icon: ClipboardDocumentListIcon,
                     bgColor: "bg-blue-500",
                   },

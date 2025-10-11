@@ -16,6 +16,7 @@ class GodownService {
     maxAmount?: string;
     // Visit-specific filters
     scheduleStatus?: string;
+    onlySalesExecutive?: boolean;
     visitStatus?: string;
     hasImage?: string;
     address?: string;

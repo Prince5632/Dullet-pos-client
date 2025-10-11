@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -24,6 +24,7 @@ import Badge from "../../components/ui/Badge";
 import Modal from "../../components/ui/Modal";
 import toast from "react-hot-toast";
 import { resolveCapturedImageSrc } from "../../utils/image";
+import { clearOtherNamespaces, PERSIST_NS } from "../../services/persistenceService";
 
 // Validation schemas
 const profileSchema = yup.object({
@@ -188,7 +189,10 @@ const ProfilePage: React.FC = () => {
       setLoading(false);
     }
   };
-
+ // Cross-page reset: visiting Customers clears Orders persisted filters/pagination if present
+  useEffect(() => {
+    clearOtherNamespaces(PERSIST_NS.PROFILE);
+  }, []);
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-96">

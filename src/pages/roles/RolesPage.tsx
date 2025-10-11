@@ -20,6 +20,7 @@ import Pagination from '../../components/ui/Pagination';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
+import { clearOtherNamespaces, PERSIST_NS } from '../../services/persistenceService';
 
 interface RoleListFilters {
   search: string;
@@ -92,7 +93,10 @@ const RolesPage: React.FC = () => {
       setLoading(false);
     }
   };
-
+ // Cross-page reset: visiting Customers clears Orders persisted filters/pagination if present
+  useEffect(() => {
+    clearOtherNamespaces(PERSIST_NS.ROLES);
+  }, []);
   // Effects
   useEffect(() => {
     const timeoutId = setTimeout(() => {
