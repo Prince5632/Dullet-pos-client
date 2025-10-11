@@ -1,0 +1,724 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { productionService } from "../../services/productionService";
+import { userService } from "../../services/userService";
+import type {
+  Production,
+  TableColumn,
+  ProductionStats,
+  User,
+} from "../../types";
+import {
+  MagnifyingGlassIcon,
+  PlusIcon,
+  FunnelIcon,
+  XMarkIcon,
+  CogIcon,
+  TrashIcon,
+  ArrowPathIcon,
+} from "@heroicons/react/24/outline";
+import Table from "../../components/ui/Table";
+import Pagination from "../../components/ui/Pagination";
+import Avatar from "../../components/ui/Avatar";
+import Modal from "../../components/ui/Modal";
+import { useAuth } from "../../contexts/AuthContext";
+import toast from "react-hot-toast";
+import { persistenceService, PERSIST_NS, clearOtherNamespaces } from "../../services/persistenceService";
+
+const ProductionsPage: React.FC = () => {
+  const { user: currentUser, hasRole } = useAuth();
+  const [productions, setProductions] = useState<Production[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [shift, setShift] = useState("");
+  const [location, setLocation] = useState("");
+  const [machine, setMachine] = useState("");
+  const [operator, setOperator] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [dateError, setDateError] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProductions, setTotalProductions] = useState(0);
+  const [showFilters, setShowFilters] = useState(false);
+  const [stats, setStats] = useState<ProductionStats | null>(null);
+  const [operators, setOperators] = useState<User[]>([]);
+  const initRef = useRef(false);
+
+  // Delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [productionToDelete, setProductionToDelete] = useState<Production | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  // Check if current user is super admin
+  const isSuperAdmin = hasRole("Super Admin");
+
+  // Date validation function
+  const validateDateRange = (fromDate: string, toDate: string): string => {
+    if (!fromDate && !toDate) {
+      return ""; // No dates provided, no error
+    }
+    
+    if (fromDate && !toDate) {
+      return ""; // Only from date provided, no error
+    }
+    
+    if (!fromDate && toDate) {
+      return ""; // Only to date provided, no error
+    }
+    
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
+    
+    // Check if dates are valid
+    if (isNaN(from.getTime()) || isNaN(to.getTime())) {
+      return "Please enter valid dates";
+    }
+    
+    // Check if from date is later than to date
+    if (from > to) {
+      return "From date cannot be later than to date";
+    }
+    
+    return "";
+  };
+
+  const loadProductions = async () => {
+    try {
+      setLoading(true);
+      
+      // Validate date range before making API call
+      const dateValidationError = validateDateRange(dateFrom, dateTo);
+      setDateError(dateValidationError);
+      
+      if (dateValidationError) {
+        setLoading(false);
+        return;
+      }
+      
+      const res = await productionService.getProductions({
+        page,
+        limit,
+        search,
+        shift,
+        location,
+        machine,
+        operator,
+        dateFrom,
+        dateTo,
+        sortBy: "createdAt",
+        sortOrder: "desc",
+      });
+      if (res.success && res.data) {
+        setProductions(res.data || []);
+        setTotalPages(res.pagination?.totalPages || 1);
+        setTotalProductions(res.pagination?.totalItems || 0);
+      }
+    } catch (error) {
+      console.error("Failed to load productions:", error);
+      toast.error("Failed to load productions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const res = await productionService.getProductionStats();
+      if (res.success && res.data) {
+        setStats(res.data);
+      }
+    } catch (error) {
+      console.error("Failed to load production stats:", error);
+    }
+  };
+
+  const loadOperators = async () => {
+    try {
+      const res = await userService.getUsers({
+        role: "Operator",
+        isActive: "true",
+        limit: 100,
+      });
+      if (res.success && res.data) {
+        setOperators(res.data.users || []);
+      }
+    } catch (error) {
+      console.error("Failed to load operators:", error);
+    }
+  };
+
+  const handleProductionUpdate = (updatedProduction: Production) => {
+    handleSync()
+  };
+
+  // Load persisted state on mount and clear other namespaces
+  useEffect(() => {
+    clearOtherNamespaces(PERSIST_NS.PRODUCTIONS);
+    const persistedFilters = persistenceService.getNS<any>(PERSIST_NS.PRODUCTIONS, 'filters', {
+      search: '',
+      shift: '',
+      location: '',
+      machine: '',
+      operator: '',
+      dateFrom: '',
+      dateTo: '',
+      page: 1,
+      limit: 10,
+      showFilters: false
+    });
+
+    setSearch(persistedFilters.search);
+    setShift(persistedFilters.shift);
+    setLocation(persistedFilters.location);
+    setMachine(persistedFilters.machine);
+    setOperator(persistedFilters.operator);
+    setDateFrom(persistedFilters.dateFrom);
+    setDateTo(persistedFilters.dateTo);
+    setPage(persistedFilters.page);
+    setLimit(persistedFilters.limit);
+    setShowFilters(persistedFilters.showFilters);
+  }, []);
+
+  // Save filters to persistence whenever they change
+  useEffect(() => {
+    if (!initRef.current) {
+      initRef.current = true;
+      return;
+    }
+
+    const filters = {
+      search,
+      shift,
+      location,
+      machine,
+      operator,
+      dateFrom,
+      dateTo,
+      page,
+      limit,
+      showFilters
+    };
+
+    persistenceService.setNS(PERSIST_NS.PRODUCTIONS, 'filters', filters);
+  }, [search, shift, location, machine, operator, dateFrom, dateTo, page, limit, showFilters]);
+
+  // Load data on mount and when filters change
+  useEffect(() => {
+    if (!initRef.current) return;
+    loadProductions();
+  }, [page, limit, search, shift, location, machine, operator, dateFrom, dateTo]);
+
+  // Load initial data
+  useEffect(() => {
+    loadStats();
+    loadOperators();
+  }, []);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    if (!initRef.current) return;
+    if (page !== 1) {
+      setPage(1);
+    }
+  }, [search, shift, location, machine, operator, dateFrom, dateTo]);
+
+  const handleDeleteProduction = async () => {
+    if (!productionToDelete) return;
+
+    try {
+      setDeleteLoading(true);
+      await productionService.deleteProduction(productionToDelete._id);
+      toast.success("Production deleted successfully");
+      setDeleteModalOpen(false);
+      setProductionToDelete(null);
+      loadProductions(); // Reload the production list
+      loadStats(); // Reload stats
+    } catch (error: any) {
+      console.error("Failed to delete production:", error);
+      toast.error(error.message || "Failed to delete production");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await loadProductions();
+      await loadStats();
+      toast.success("Data synced successfully");
+    } catch (error) {
+      toast.error("Failed to sync data");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const clearFilters = () => {
+    setSearch("");
+    setShift("");
+    setLocation("");
+    setMachine("");
+    setOperator("");
+    setDateFrom("");
+    setDateTo("");
+    setDateError("");
+    setPage(1);
+  };
+
+  const columns: TableColumn<Production>[] = useMemo(
+    () => [
+      {
+        key: "batchId",
+        label: "Batch ID",
+        render: (_, production) => (
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+              <CogIcon className="w-4 h-4 text-green-600" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-medium text-gray-900 truncate">
+                {productionService.formatBatchId(production.batchId)}
+              </div>
+              <div className="text-xs text-gray-500 truncate">
+                {production.machine}
+              </div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: "outputDetails",
+        label: "Output Products",
+        render: (_, production) => (
+          <div className="flex flex-col gap-1 text-xs">
+            <span className="text-gray-500">Products:</span>
+            {production.outputDetails?.length > 0 ? (
+              production.outputDetails.map((item, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <span className="text-gray-900">
+                    {item.itemName} ({item.productQty} {item.productUnit})
+                  </span>
+                </div>
+              ))
+            ) : (
+              <span className="text-gray-400">No products added</span>
+            )}
+          </div>
+        ),
+      },
+      {
+        key: "input",
+        label: "Input",
+        render: (_, production) => (
+          <div className="text-xs text-gray-700">
+            <div className="truncate">
+              {production.inputType}: {production.inputQty} {production.inputUnit}
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: "productionDate",
+        label: "Production Date",
+        render: (value) => (
+          <span className="text-xs text-gray-700">{formatDate(value)}</span>
+        ),
+      },
+      {
+        key: "shift",
+        label: "Shift",
+        render: (value) => (
+          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${productionService.getShiftColor(value)}`}>
+            {productionService.getShiftDisplayName(value)}
+          </span>
+        ),
+      },
+      {
+        key: "location",
+        label: "Location",
+        render: (value) => (
+          <span className="text-xs text-gray-700">{value}</span>
+        ),
+      },
+      {
+        key: "operator",
+        label: "Operator",
+        render: (_, production) => (
+          <div className="flex items-center gap-2">
+            <Avatar
+              name={production.operator?.name || "Unknown"}
+              size="sm"
+              className="w-6 h-6"
+            />
+            <span className="text-xs text-gray-700 truncate">
+              {production.operator?.name || "Unknown"}
+            </span>
+          </div>
+        ),
+      },
+      {
+        key: "conversionEfficiency",
+        label: "Efficiency",
+        render: (value) => (
+          <span className="text-xs text-gray-700">
+            {productionService.formatEfficiency(value)}
+          </span>
+        ),
+      },
+      {
+        key: "actions",
+        label: "Actions",
+        render: (_, production) => (
+          <div className="flex items-center gap-1">
+            <Link
+              to={`/productions/${production._id}`}
+              className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              title="View Details"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            </Link>
+            <Link
+              to={`/productions/${production._id}/edit`}
+              className="inline-flex items-center justify-center w-8 h-8 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+              title="Edit Production"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </Link>
+            {isSuperAdmin && (
+              <button
+                onClick={() => {
+                  setProductionToDelete(production);
+                  setDeleteModalOpen(true);
+                }}
+                className="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Delete Production"
+              >
+                <TrashIcon className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        ),
+      },
+    ],
+    [isSuperAdmin]
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Productions</h1>
+          <p className="text-sm text-gray-600">
+            Manage production records and track manufacturing efficiency
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          >
+            <ArrowPathIcon className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+            Sync
+          </button>
+          <Link
+            to="/productions/create"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+          >
+            <PlusIcon className="w-4 h-4" />
+            Add Production
+          </Link>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Productions</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalProductions}</p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <CogIcon className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Input</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalInputQty.toLocaleString()}</p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Output</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalOutputQty.toLocaleString()}</p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Avg Efficiency</p>
+                <p className="text-2xl font-bold text-gray-900">{productionService.formatEfficiency(stats.averageEfficiency)}</p>
+              </div>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Search and Filters */}
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+          {/* Search */}
+          <div className="flex-1">
+            <div className="relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by batch ID, machine, location..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* Filter Toggle */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+          >
+            <FunnelIcon className="w-4 h-4" />
+            Filters
+            {(shift || location || machine || operator || dateFrom || dateTo) && (
+              <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-600 rounded-full">
+                {[shift, location, machine, operator, dateFrom, dateTo].filter(Boolean).length}
+              </span>
+            )}
+          </button>
+
+          {/* Clear Filters */}
+          {(search || shift || location || machine || operator || dateFrom || dateTo) && (
+            <button
+              onClick={clearFilters}
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-800"
+            >
+              <XMarkIcon className="w-4 h-4" />
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Expanded Filters */}
+        {showFilters && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+              {/* Shift Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Shift
+                </label>
+                <select
+                  value={shift}
+                  onChange={(e) => setShift(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Shifts</option>
+                  <option value="Day">Day Shift</option>
+                  <option value="Night">Night Shift</option>
+                </select>
+              </div>
+
+              {/* Location Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Location
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Machine Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Machine
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter machine"
+                  value={machine}
+                  onChange={(e) => setMachine(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Operator Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Operator
+                </label>
+                <select
+                  value={operator}
+                  onChange={(e) => setOperator(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Operators</option>
+                  {operators.map((op) => (
+                    <option key={op._id} value={op._id}>
+                      {op.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Date From */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date From
+                </label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Date To */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date To
+                </label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Date Error */}
+            {dateError && (
+              <div className="mt-2 text-sm text-red-600">{dateError}</div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Table */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <Table
+          columns={columns}
+          data={productions}
+          loading={loading}
+          emptyMessage="No productions found"
+        />
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200">
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              itemsPerPage={limit}
+              onItemsPerPageChange={setLimit}
+              totalItems={totalProductions}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Delete Modal */}
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        title="Delete Production"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 p-4 bg-red-50 rounded-lg">
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <TrashIcon className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-red-800">
+                Delete Production Record
+              </h3>
+              <p className="text-sm text-red-700 mt-1">
+                Are you sure you want to delete production{" "}
+                <span className="font-medium">
+                  {productionToDelete?.batchId}
+                </span>
+                ? This action cannot be undone.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => setDeleteModalOpen(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeleteProduction}
+              disabled={deleteLoading}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+            >
+              {deleteLoading ? "Deleting..." : "Delete"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+};
+
+export default ProductionsPage;

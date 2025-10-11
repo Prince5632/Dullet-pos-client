@@ -99,6 +99,7 @@ export const PERSIST_NS = {
   ATTENDANCE: "attendance",
   DASHBOARD: "dashboard",
   ROLES: "roles",
+  PRODUCTIONS: "productions",
   PROFILE: "profile",
 };
 

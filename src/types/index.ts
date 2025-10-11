@@ -834,4 +834,68 @@ export interface TransactionListParams {
   sortOrder?: 'asc' | 'desc';
 }
 
+// Production Types
+export interface OutputDetail {
+  itemName: 'Atta' | 'Chokar';
+  productQty: number;
+  productUnit: 'KG' | 'Quintal' | 'Ton' | 'Bags' | '5Kg Bags' | '40Kg Bags';
+  notes?: string;
+}
+
+export interface ProductionAttachment {
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  base64Data: string;
+  uploadedAt: string;
+}
+
+export interface Production {
+  _id: string;
+  batchId: string;
+  productionDate: string;
+  shift: 'Morning' | 'Afternoon' | 'Night';
+  location: string;
+  machine: string;
+  operator: string; // Changed from User reference to string
+  inputType: string;
+  inputQty: number;
+  inputUnit: 'KG' | 'Quintal' | 'Ton';
+  outputDetails: OutputDetail[];
+  attachments?: ProductionAttachment[];
+  remarks?: string;
+  createdBy: User;
+  createdAt: string;
+  updatedAt: string;
+  totalOutputQty?: number;
+  conversionEfficiency?: number;
+}
+
+export interface CreateProductionForm {
+  productionDate: string;
+  shift: 'Morning' | 'Afternoon' | 'Night';
+  location: string;
+  machine: string;
+  operator: string; // Changed from User reference to string
+  inputType: string;
+  inputQty: number;
+  inputUnit: 'KG' | 'Quintal' | 'Ton';
+  outputDetails: OutputDetail[];
+  attachments?: File[];
+  remarks?: string;
+}
+
+export interface ProductionListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  shift?: string;
+  location?: string;
+  operator?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
 // Table Types (moved to avoid duplication)

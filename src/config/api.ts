@@ -87,6 +87,15 @@ export const API_CONFIG = {
     TRANSIT_MY_TRANSITS: "/api/transits/my-transits",
     TRANSIT_AUDIT_TRAIL: (id: string) => `/api/transits/${id}/audit-trail`,
 
+    // Production endpoints
+    PRODUCTIONS: "/api/productions",
+    PRODUCTION_BY_ID: (id: string) => `/api/productions/${id}`,
+    PRODUCTION_BY_BATCH_ID: (batchId: string) => `/api/productions/batch/${batchId}`,
+    PRODUCTION_STATS: "/api/productions/stats",
+    PRODUCTION_BY_LOCATION: (location: string) => `/api/productions/location/${location}`,
+    PRODUCTION_SUMMARY: "/api/productions/summary",
+    PRODUCTION_AUDIT_TRAIL: (id: string) => `/api/productions/${id}/audit-trail`,
+
     // Transaction endpoints
     TRANSACTIONS: "/api/transactions",
     TRANSACTION_BY_ID: (id: string) => `/api/transactions/${id}`,

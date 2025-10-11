@@ -66,6 +66,10 @@ const CreateTransitPage = lazy(() => import('../pages/transits/CreateTransitPage
 const ViewTransitPage = lazy(() => import('../pages/transits/ViewTransitPage'));
 const EditTransitPage = lazy(() => import('../pages/transits/EditTransitPage'));
 
+// Production Management Pages
+const ProductionsPage = lazy(() => import('../pages/productions/ProductionsPage'));
+const CreateProductionPage = lazy(() => import('../pages/productions/CreateProductionPage'));
+
 // Settings Pages
 
 
@@ -460,6 +464,29 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute requiredPermission="transits.update">
                 <EditTransitPage />
+              </ProtectedRoute>
+            ),
+          },
+        ],
+      },
+
+      // Production Management
+      {
+        path: 'productions',
+        children: [
+          {
+            index: true,
+            element: (
+              <ProtectedRoute requiredPermission="production.read">
+                <ProductionsPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'create',
+            element: (
+              <ProtectedRoute requiredPermission="production.create">
+                <CreateProductionPage />
               </ProtectedRoute>
             ),
           },
