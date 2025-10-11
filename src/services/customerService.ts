@@ -10,6 +10,8 @@ export interface CustomerListParams {
   isActive?: boolean | string;
   state?: string;
   city?: string;
+  dateFrom?: string;
+  dateTo?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }

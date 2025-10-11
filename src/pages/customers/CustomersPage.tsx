@@ -22,6 +22,8 @@ const CustomersPage: React.FC = () => {
     stateFilter: string;
     city: string;
     status: string;
+    dateFrom?: string;
+    dateTo?: string;
     showFilters: boolean;
   };
 
@@ -39,6 +41,8 @@ const CustomersPage: React.FC = () => {
       stateFilter: '',
       city: '',
       status: '',
+      dateFrom: '',
+      dateTo: '',
       showFilters: false,
     },
     defaultPagination: { page: 1, limit: 10 },
@@ -55,6 +59,10 @@ const CustomersPage: React.FC = () => {
   const setCity = (v: string) => setFilters({ city: v });
   const status = filters.status;
   const setStatus = (v: string) => setFilters({ status: v });
+  const dateFrom = filters.dateFrom || '';
+  const setDateFrom = (v: string) => setFilters({ dateFrom: v });
+  const dateTo = filters.dateTo || '';
+  const setDateTo = (v: string) => setFilters({ dateTo: v });
   const page = pagination.page;
   const setPage = (p: number) => setPagination({ page: p });
   const limit = pagination.limit;
@@ -89,6 +97,8 @@ const CustomersPage: React.FC = () => {
         isActive: status,
         state: stateFilter,
         city: city,
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
         sortBy: 'businessName',
         sortOrder: 'asc',
       });
@@ -117,14 +127,14 @@ const CustomersPage: React.FC = () => {
   // Clear all filters function
   const clearFilters = () => {
     // Clear persisted filters and reset pagination to defaults
-    setFilters({ search: '', type: '', stateFilter: '', city: '', status: '', showFilters: false });
+    setFilters({ search: '', type: '', stateFilter: '', city: '', status: '', dateFrom: '', dateTo: '', showFilters: false });
     setPagination({ page: 1 });
   };
 
   useEffect(() => {
     const t = setTimeout(loadCustomers, 100);
     return () => clearTimeout(t);
-  }, [page, limit, search, type, status, stateFilter, city]);
+  }, [page, limit, search, type, status, stateFilter, city, dateFrom, dateTo]);
 
   // Reset to page 1 when filters change
   const didMountRef = useRef(false);
@@ -136,7 +146,62 @@ const CustomersPage: React.FC = () => {
     if (page !== 1) {
       setPage(1);
     }
-  }, [search, type, status, stateFilter, city]);
+  }, [search, type, status, stateFilter, city, dateFrom, dateTo]);
+
+  // Client-side date validation feedback
+  const [dateError, setDateError] = useState<string>('');
+
+  useEffect(() => {
+    // Reset error if no dates
+    if (!dateFrom && !dateTo) {
+      setDateError('');
+      return;
+    }
+
+    // Validate formats (YYYY-MM-DD) and reasonable range
+    const isValidFmt = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
+    if (dateFrom && !isValidFmt(dateFrom)) {
+      setDateError('Invalid From date format. Use YYYY-MM-DD');
+      return;
+    }
+    if (dateTo && !isValidFmt(dateTo)) {
+      setDateError('Invalid To date format. Use YYYY-MM-DD');
+      return;
+    }
+
+    const from = dateFrom ? new Date(dateFrom) : null;
+    const to = dateTo ? new Date(dateTo) : null;
+    if (from && isNaN(from.getTime())) {
+      setDateError('Invalid From date');
+      return;
+    }
+    if (to && isNaN(to.getTime())) {
+      setDateError('Invalid To date');
+      return;
+    }
+
+    if (from && to && from.getTime() > to.getTime()) {
+      setDateError('From date cannot be later than To date');
+      return;
+    }
+
+    // Limit range to 365 days
+    if (from && to) {
+      const diffDays = (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24);
+      if (diffDays > 365) {
+        setDateError('Date range too large. Max 365 days');
+        return;
+      }
+    }
+
+    // Prevent future date for To
+    if (to && to.getTime() > Date.now()) {
+      setDateError('To date cannot be in the future');
+      return;
+    }
+
+    setDateError('');
+  }, [dateFrom, dateTo]);
 
   const handleDeleteCustomer = async () => {
     if (!customerToDelete) return;
@@ -282,7 +347,7 @@ const CustomersPage: React.FC = () => {
                   <FunnelIcon className="h-3.5 w-3.5" />
                   Filters
                 </button>
-                {(search || type || stateFilter || city || status) && (
+                {(search || type || stateFilter || city || status || dateFrom || dateTo) && (
                   <button
                     onClick={clearFilters}
                     className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
@@ -295,7 +360,7 @@ const CustomersPage: React.FC = () => {
             </div>
 
             {showFilters && (
-              <div className="mt-3 pt-3 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              <div className="mt-3 pt-3 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
                 <select value={type} onChange={(e) => setType(e.target.value)} className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500">
                   {customerService.getCustomerTypes().map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -313,6 +378,23 @@ const CustomersPage: React.FC = () => {
                   <option value="true">Active</option>
                   <option value="false">Inactive</option>
                 </select>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  placeholder="From (YYYY-MM-DD)"
+                  className={`px-2 py-1.5 text-xs border rounded-md focus:outline-none focus:ring-1 ${dateError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                />
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  placeholder="To (YYYY-MM-DD)"
+                  className={`px-2 py-1.5 text-xs border rounded-md focus:outline-none focus:ring-1 ${dateError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                />
+                {dateError && (
+                  <div className="sm:col-span-2 lg:col-span-6 text-[11px] text-red-600 mt-1">{dateError}</div>
+                )}
               </div>
             )}
           </div>

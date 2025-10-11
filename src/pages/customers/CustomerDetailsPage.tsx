@@ -40,12 +40,13 @@ const CustomerDetailsPage: React.FC = () => {
     itemsPerPage: number;
   };
 
-  const [transactionsPagination, setTransactionsPagination] = useState<TransactionsPagination>({
-    currentPage: 1,
-    totalPages: 1,
-    totalItems: 0,
-    itemsPerPage: 10,
-  });
+  const [transactionsPagination, setTransactionsPagination] =
+    useState<TransactionsPagination>({
+      currentPage: 1,
+      totalPages: 1,
+      totalItems: 0,
+      itemsPerPage: 10,
+    });
 
   // Payment modal state
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -374,8 +375,6 @@ const CustomerDetailsPage: React.FC = () => {
                 </div>
               </div>
             </div>
-
-         
           </div>
 
           {/* Sidebar */}
@@ -391,7 +390,7 @@ const CustomerDetailsPage: React.FC = () => {
               <div className="px-6 py-4 space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium text-gray-500">
-                   Net Balance Remainin
+                    Net Balance Remaining
                   </span>
                   <span className="text-lg font-semibold text-red-600">
                     {formatCurrency(customer.outstandingAmount || 0)}
@@ -402,9 +401,9 @@ const CustomerDetailsPage: React.FC = () => {
                   <div className="pt-2">
                     <button
                       onClick={openPaymentModal}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+                      className="inline-flex cursor-pointer items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white btn-outline text-purple-700 hover:text-white border border-purple-700 hover:bg-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2 dark:border-purple-400 dark:text-purple-400 dark:hover:text-white dark:hover:bg-purple-500 dark:focus:ring-purple-900"
                     >
-                      Add Payment
+                     + Add Payment
                     </button>
                   </div>
                 )}
@@ -488,350 +487,367 @@ const CustomerDetailsPage: React.FC = () => {
               </div>
             </div>
           </div>
-            </div>
-          </div>
-          {/* Payment Modal */}
-          <Modal
-            isOpen={isPaymentModalOpen}
-            onClose={closePaymentModal}
-            title="Add Payment"
-            size="md"
-          >
-      <div className="space-y-6 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-  {/* Payment Mode */}
-  <div>
-    <label className="block text-sm font-semibold text-gray-800 mb-1">
-      Payment Mode
-    </label>
-    <select
-      value={paymentMode}
-      onChange={(e) => setPaymentMode(e.target.value)}
-      className="mt-1 block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 
+        </div>
+      </div>
+      {/* Payment Modal */}
+      <Modal
+        isOpen={isPaymentModalOpen}
+        onClose={closePaymentModal}
+        title="Add Payment"
+        size="md"
+      >
+        <div className="space-y-6 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          {/* Payment Mode */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1">
+              Payment Mode <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={paymentMode}
+              onChange={(e) => setPaymentMode(e.target.value)}
+              required
+              className="mt-1 block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 
                  focus:border-green-600 focus:ring-2 focus:ring-green-100 focus:outline-none transition"
-    >
-      <option value="">Select Payment Mode</option>
-      {transactionService.getTransactionModes()
-        .filter((m) => m.value)
-        .map((m) => (
-          <option key={m.value} value={m.value}>
-            {m.label}
-          </option>
-        ))}
-    </select>
-  </div>
+            >
+              <option value="">Select Payment Mode</option>
+              {transactionService
+                .getTransactionModes()
+                .filter((m) => m.value)
+                .map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+            </select>
+          </div>
 
-  {/* Payment Amount */}
-  <div>
-    <label className="block text-sm font-semibold text-gray-800 mb-1">
-      Amount
-    </label>
-    <div className="relative">
-      <input
-        type="number"
-        value={paymentAmount}
-        min={0}
-        max={Number(customer?.outstandingAmount || 0)}
-        step={0.01}
-        onChange={(e) => setPaymentAmount(Number(e.target.value))}
-        placeholder="Enter payment amount"
-        className="block w-full rounded-lg border border-gray-300 bg-gray-50 px-6 py-2.5 text-sm text-gray-700 
+          {/* Payment Amount */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1">
+              Amount <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                value={paymentAmount}
+                min={0}
+                max={Number(customer?.outstandingAmount || 0)}
+                step={0.01}
+                required
+                onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                placeholder="Enter payment amount"
+                className="block w-full rounded-lg border border-gray-300 bg-gray-50 px-6 py-2.5 text-sm text-gray-700 
                    focus:border-green-600 focus:ring-2 focus:ring-green-100 focus:outline-none transition"
-      />
-      <span className="absolute left-3 top-2.5 text-gray-400 text-sm">
-        ₹
-      </span>
-    </div>
-    <p className="mt-2 text-xs text-gray-500 italic">
-      Max: <span className="font-medium text-gray-700">{formatCurrency(customer?.outstandingAmount || 0)}</span>
-    </p>
-  </div>
-
-  {/* Buttons */}
-  <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
-    <button
-      onClick={closePaymentModal}
-      className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg 
-                 hover:bg-gray-200 transition disabled:opacity-50"
-      disabled={paymentSubmitting}
-    >
-      Cancel
-    </button>
-    <button
-      onClick={handleSubmitPayment}
-      className="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg 
-                 hover:bg-green-700 focus:ring-2 focus:ring-green-200 transition disabled:opacity-50"
-      disabled={paymentSubmitting}
-    >
-      {paymentSubmitting ? (
-        <span className="flex items-center gap-2">
-          <svg
-            className="animate-spin h-4 w-4 text-white"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            ></circle>
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-            ></path>
-          </svg>
-          Processing...
-        </span>
-      ) : (
-        "Submit Payment"
-      )}
-    </button>
-  </div>
-</div>
-
-          </Modal>
-         {/* Transactions Table */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                  <DocumentTextIcon className="h-5 w-5 mr-2" />
-                  Transaction History
-                </h3>
-                <button
-                  onClick={() => fetchTransactions(transactionsPagination.currentPage)}
-                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  Sync
-                </button>
-              </div>
-              <div className="overflow-hidden">
-                {transactionsLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <LoadingSpinner />
-                  </div>
-                ) : transactions.length === 0 ? (
-                  <div className="text-center py-12">
-                    <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-sm font-medium text-gray-900 mb-2">
-                      No transactions found
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      This customer hasn't made any transactions yet.
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Transaction ID
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Date
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Mode
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Amount
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Order
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Created By
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {transactions.map((transaction) => (
-                            <tr
-                              key={transaction._id}
-                              className="hover:bg-gray-50"
-                            >
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {transaction.transactionId}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {formatDate(transaction.createdAt)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <Badge
-                                  variant={getTransactionModeColor(
-                                    transaction.transactionMode
-                                  )}
-                                  size="sm"
-                                >
-                                  {transaction.transactionMode}
-                                </Badge>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {formatCurrency(transaction.amountPaid)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {(() => {
-                                  const refs = Array.isArray(transaction.transactionFor)
-                                    ? transaction.transactionFor
-                                    : transaction.transactionFor
-                                      ? [transaction.transactionFor]
-                                      : [];
-                                  return refs.length > 0 ? (
-                                  <div className="flex flex-wrap gap-2">
-                                    {refs.map((ref, idx) => {
-                                      const isObj = typeof ref === 'object' && ref !== null;
-                                      const id = isObj ? (ref as any)._id : ref;
-                                      const label = isObj && (ref as any).orderNumber
-                                        ? (ref as any).orderNumber
-                                        : isObj && (ref as any).businessName
-                                          ? (ref as any).businessName
-                                          : String(id).slice(-6);
-                                      const link = transaction.transactionForModel === 'Order'
-                                        ? `/orders/${id}`
-                                        : `/customers/${id}`;
-                                      return (
-                                        <Link
-                                          key={`${transaction._id}-${idx}`}
-                                          to={link}
-                                          className="text-blue-600 hover:text-blue-800 hover:underline"
-                                        >
-                                          {label}
-                                        </Link>
-                                      );
-                                    })}
-                                  </div>
-                                ) : (
-                                  <span className="text-gray-400">-</span>
-                                );
-                                })()}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {transaction.createdBy.firstName}{" "}
-                                {transaction.createdBy.lastName}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Pagination */}
-                    {transactionsPagination.totalPages > 1 && (
-                      <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                        <div className="flex-1 flex justify-between sm:hidden">
-                          <button
-                            onClick={() =>
-                              handlePageChange(
-                                transactionsPagination.currentPage - 1
-                              )
-                            }
-                            disabled={transactionsPagination.currentPage === 1}
-                            className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Previous
-                          </button>
-                          <button
-                            onClick={() =>
-                              handlePageChange(
-                                transactionsPagination.currentPage + 1
-                              )
-                            }
-                            disabled={
-                              transactionsPagination.currentPage ===
-                              transactionsPagination.totalPages
-                            }
-                            className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Next
-                          </button>
-                        </div>
-                        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                          <div>
-                            <p className="text-sm text-gray-700">
-                              Showing{" "}
-                              <span className="font-medium">
-                                {(transactionsPagination.currentPage - 1) *
-                                  transactionsPagination.itemsPerPage +
-                                  1}
-                              </span>{" "}
-                              to{" "}
-                              <span className="font-medium">
-                                {Math.min(
-                                  transactionsPagination.currentPage *
-                                    transactionsPagination.itemsPerPage,
-                                  transactionsPagination.totalItems
-                                )}
-                              </span>{" "}
-                              of{" "}
-                              <span className="font-medium">
-                                {transactionsPagination.totalItems}
-                              </span>{" "}
-                              results
-                            </p>
-                          </div>
-                          <div>
-                            <nav
-                              className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
-                              aria-label="Pagination"
-                            >
-                              <button
-                                onClick={() =>
-                                  handlePageChange(
-                                    transactionsPagination.currentPage - 1
-                                  )
-                                }
-                                disabled={
-                                  transactionsPagination.currentPage === 1
-                                }
-                                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <ChevronLeftIcon className="h-5 w-5" />
-                              </button>
-                              {Array.from(
-                                { length: transactionsPagination.totalPages },
-                                (_, i) => i + 1
-                              ).map((page) => (
-                                <button
-                                  key={page}
-                                  onClick={() => handlePageChange(page)}
-                                  className={cn(
-                                    "relative inline-flex items-center px-4 py-2 border text-sm font-medium",
-                                    page === transactionsPagination.currentPage
-                                      ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
-                                      : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                                  )}
-                                >
-                                  {page}
-                                </button>
-                              ))}
-                              <button
-                                onClick={() =>
-                                  handlePageChange(
-                                    transactionsPagination.currentPage + 1
-                                  )
-                                }
-                                disabled={
-                                  transactionsPagination.currentPage ===
-                                  transactionsPagination.totalPages
-                                }
-                                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <ChevronRightIcon className="h-5 w-5" />
-                              </button>
-                            </nav>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
+              />
+              <span className="absolute left-3 top-2.5 text-gray-400 text-sm">
+                ₹
+              </span>
             </div>
+            <p className="mt-2 text-xs text-gray-500 italic">
+              Max:{" "}
+              <span className="font-medium text-gray-700">
+                {formatCurrency(customer?.outstandingAmount || 0)}
+              </span>
+            </p>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
+            <button
+              onClick={closePaymentModal}
+              className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg 
+                 hover:bg-gray-200 transition disabled:opacity-50"
+              disabled={paymentSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmitPayment}
+              className="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg 
+                 hover:bg-green-700 focus:ring-2 focus:ring-green-200 transition disabled:opacity-50"
+              disabled={paymentSubmitting}
+            >
+              {paymentSubmitting ? (
+                <span className="flex items-center gap-2">
+                  <svg
+                    className="animate-spin h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    ></path>
+                  </svg>
+                  Processing...
+                </span>
+              ) : (
+                "Submit Payment"
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
+      {/* Transactions Table */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <h3 className="text-lg font-medium text-gray-900 flex items-center">
+            <DocumentTextIcon className="h-5 w-5 mr-2" />
+            Transaction History
+          </h3>
+          <button
+            onClick={() =>
+            {
+              fetchTransactions(transactionsPagination.currentPage)
+              fetchCustomer()
+            }
+            }
+            className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
+            Sync
+          </button>
+        </div>
+        <div className="overflow-hidden">
+          {transactionsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <LoadingSpinner />
+            </div>
+          ) : transactions.length === 0 ? (
+            <div className="text-center py-12">
+              <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-sm font-medium text-gray-900 mb-2">
+                No transactions found
+              </h3>
+              <p className="text-sm text-gray-500">
+                This customer hasn't made any transactions yet.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Transaction ID
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Order
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Mode
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Amount
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Net Balance
+                      </th>
+
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Created By
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {transactions.map((transaction) => (
+                      <tr key={transaction._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {transaction.transactionId}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {(() => {
+                            const refs = Array.isArray(
+                              transaction.transactionFor
+                            )
+                              ? transaction.transactionFor
+                              : transaction.transactionFor
+                              ? [transaction.transactionFor]
+                              : [];
+                            return refs.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {refs.map((ref, idx) => {
+                                  const isObj =
+                                    typeof ref === "object" && ref !== null;
+                                  const id = isObj ? (ref as any)._id : ref;
+                                  const label =
+                                    isObj && (ref as any).orderNumber
+                                      ? (ref as any).orderNumber
+                                      : isObj && (ref as any).businessName
+                                      ? (ref as any).businessName
+                                      : String(id).slice(-6);
+                                  const link =
+                                    transaction.transactionForModel === "Order"
+                                      ? `/orders/${id}`
+                                      : `/customers/${id}`;
+                                  return (
+                                    <Link
+                                      key={`${transaction._id}-${idx}`}
+                                      to={link}
+                                      target="_blank"
+                                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                                    >
+                                      {label}
+                                    </Link>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            );
+                          })()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(transaction.createdAt)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge
+                            variant={getTransactionModeColor(
+                              transaction.transactionMode
+                            )}
+                            size="sm"
+                          >
+                            {transaction.transactionMode}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {formatCurrency(transaction.amountPaid)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {formatCurrency(
+                            transaction?.extraInfo?.netBalanceRemaining || 0
+                          )}
+                        </td>
+
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {transaction.createdBy.firstName}{" "}
+                          {transaction.createdBy.lastName}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {transactionsPagination.totalPages > 1 && (
+                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                  <div className="flex-1 flex justify-between sm:hidden">
+                    <button
+                      onClick={() =>
+                        handlePageChange(transactionsPagination.currentPage - 1)
+                      }
+                      disabled={transactionsPagination.currentPage === 1}
+                      className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      onClick={() =>
+                        handlePageChange(transactionsPagination.currentPage + 1)
+                      }
+                      disabled={
+                        transactionsPagination.currentPage ===
+                        transactionsPagination.totalPages
+                      }
+                      className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                  <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm text-gray-700">
+                        Showing{" "}
+                        <span className="font-medium">
+                          {(transactionsPagination.currentPage - 1) *
+                            transactionsPagination.itemsPerPage +
+                            1}
+                        </span>{" "}
+                        to{" "}
+                        <span className="font-medium">
+                          {Math.min(
+                            transactionsPagination.currentPage *
+                              transactionsPagination.itemsPerPage,
+                            transactionsPagination.totalItems
+                          )}
+                        </span>{" "}
+                        of{" "}
+                        <span className="font-medium">
+                          {transactionsPagination.totalItems}
+                        </span>{" "}
+                        results
+                      </p>
+                    </div>
+                    <div>
+                      <nav
+                        className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                        aria-label="Pagination"
+                      >
+                        <button
+                          onClick={() =>
+                            handlePageChange(
+                              transactionsPagination.currentPage - 1
+                            )
+                          }
+                          disabled={transactionsPagination.currentPage === 1}
+                          className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <ChevronLeftIcon className="h-5 w-5" />
+                        </button>
+                        {Array.from(
+                          { length: transactionsPagination.totalPages },
+                          (_, i) => i + 1
+                        ).map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => handlePageChange(page)}
+                            className={cn(
+                              "relative inline-flex items-center px-4 py-2 border text-sm font-medium",
+                              page === transactionsPagination.currentPage
+                                ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
+                                : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                            )}
+                          >
+                            {page}
+                          </button>
+                        ))}
+                        <button
+                          onClick={() =>
+                            handlePageChange(
+                              transactionsPagination.currentPage + 1
+                            )
+                          }
+                          disabled={
+                            transactionsPagination.currentPage ===
+                            transactionsPagination.totalPages
+                          }
+                          className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <ChevronRightIcon className="h-5 w-5" />
+                        </button>
+                      </nav>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
