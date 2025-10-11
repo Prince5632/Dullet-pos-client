@@ -24,6 +24,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useDebounce } from "../../hooks/useDebounce";
 import { usePersistedFilters } from "../../hooks/usePersistedFilters";
 import type { Order, Customer, TableColumn, Godown } from "../../types";
+import { apiService } from "../../services/api";
+import { API_CONFIG } from "../../config/api";
 import Table from "../../components/ui/Table";
 import Pagination from "../../components/ui/Pagination";
 import Avatar from "../../components/ui/Avatar";
@@ -95,7 +97,7 @@ const OrdersPage: React.FC = () => {
     setSort,
     clearAll,
   } = usePersistedFilters<OrdersFilters>({
-    namespace:  PERSIST_NS.ORDERS,
+    namespace:PERSIST_NS.VISITS,
     defaultFilters: {
       search: "",
       customerId: "",
@@ -238,7 +240,7 @@ const OrdersPage: React.FC = () => {
       setDeleteLoading(true);
       await orderService.deleteOrder(orderToDelete._id);
       toast.success(
-        `Order deleted successfully`
+        `Visit deleted successfully`
       );
       setDeleteModalOpen(false);
       setOrderToDelete(null);
@@ -247,7 +249,7 @@ const OrdersPage: React.FC = () => {
       console.error("Failed to delete order:", error);
       toast.error(
         error.message ||
-          `Failed to delete order`
+          `Failed to delete visit`
       );
     } finally {
       setDeleteLoading(false);
@@ -275,18 +277,16 @@ const OrdersPage: React.FC = () => {
       const params =
        {
               ...commonParams,
-              status: statusFilter,
-              paymentStatus: paymentStatusFilter,
-              priority: priorityFilter,
-              minAmount: minAmountFilter,
-              maxAmount: maxAmountFilter,
+              scheduleStatus: scheduleStatusFilter,
+              visitStatus: visitStatusFilter,
+              hasImage: hasImageFilter,
+              address: addressFilter,
               godownId: godownFilter,
-            }
-         
+            };
 
       const response =
-       await orderService.getOrders(params)
-          
+       
+           await orderService.getVisits(params);
 
       if (response.success && response.data) {
         setOrders(response.data.orders || []);
@@ -352,19 +352,13 @@ const OrdersPage: React.FC = () => {
       if (hasPermission("orders.read")) {
         // Build params for stats based on view type and current filters
         const statsParams =
-         {
+          {
                 godownId: godownFilter,
                 search: debouncedSearchTerm,
-                status: statusFilter,
-                paymentStatus: paymentStatusFilter,
                 customerId: customerFilter,
                 dateFrom: dateFromFilter,
                 dateTo: dateToFilter,
-                priority: priorityFilter,
-                minAmount: minAmountFilter,
-                maxAmount: maxAmountFilter,
-              }
-           
+              };
 
         promises.push(orderService.getOrderStats(statsParams));
       }
@@ -470,25 +464,22 @@ const OrdersPage: React.FC = () => {
   }, [fetchStats]);
   // Cross-page reset: visiting Customers clears Orders persisted filters/pagination if present
   useEffect(() => {
-    clearOtherNamespaces(PERSIST_NS.ORDERS);
+    clearOtherNamespaces([PERSIST_NS.VISITS]);
   }, []);
   // Load godowns with filtered counts
   const loadGodowns = useCallback(async () => {
     try {
       const godownParams =
-
-     {
+        {
               search: debouncedSearchTerm,
-              status: statusFilter,
-              paymentStatus: paymentStatusFilter,
               customerId: customerFilter,
               dateFrom: dateFromFilter,
               dateTo: dateToFilter,
-              priority: priorityFilter,
-              minAmount: minAmountFilter,
-              maxAmount: maxAmountFilter,
-            }
-          
+              scheduleStatus: scheduleStatusFilter,
+              visitStatus: visitStatusFilter,
+              hasImage: hasImageFilter,
+              address: addressFilter,
+            };
 
       const res = await godownService.getGodowns(godownParams);
       if (res.success && res.data) setGodowns(res.data.godowns);
@@ -598,174 +589,159 @@ const OrdersPage: React.FC = () => {
 
   // Table columns
   const getColumns = (): TableColumn<any>[] => {
-
-
-    // Default order columns
-    return [
-      {
-        key: "orderNumber",
-        label: "Order",
-        sortable: true,
-        render: (_value, order) => (
-          <div className="min-w-0 py-1">
-            <div className="flex items-center  gap-2 mb-1">
-              <div className="font-semibold text-gray-900 text-sm">
-                {order.orderNumber}
+      return [
+        {
+          key: "orderNumber",
+          label: "Visit Details",
+          sortable: true,
+          render: (_value, visit) => (
+            <div className="min-w-0 py-1">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="font-semibold text-gray-900 text-sm">
+                  {visit.orderNumber}
+                </div>
+                {visit.capturedImage && (
+                  <button
+                    onClick={() =>
+                      handleViewImage(
+                        visit.capturedImage,
+                        `Visit Image - ${visit.orderNumber}`
+                      )
+                    }
+                    className="inline-flex items-center justify-center w-6 h-6 rounded-md overflow-hidden border border-gray-200 hover:border-green-300 transition-all duration-200 group"
+                    title="View Visit Image"
+                  >
+                    <img
+                      src={resolveCapturedImageSrc(visit.capturedImage) || ""}
+                      alt="Visit"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                    />
+                  </button>
+                )}
               </div>
-              {order.priority !== "normal" && (
-                <span
-                  className={`inline-flex items-center px-1 py-0.5 rounded text-xs font-medium ${
-                    order.priority === "urgent"
-                      ? "bg-red-100 text-red-700"
-                      : order.priority === "high"
-                      ? "bg-orange-100 text-orange-700"
-                      : "bg-gray-100 text-gray-700"
-                  }`}
-                >
-                  {order.priority === "urgent"
-                    ? "U"
-                    : order.priority === "high"
-                    ? "H"
-                    : "N"}
-                </span>
+              <div className="text-xs text-gray-500">
+                Created: {orderService.formatDate(visit.orderDate)}
+              </div>
+              <div className="text-xs text-gray-400">
+                {(() => {
+                  const daysAgo = Math.floor(
+                    (new Date().getTime() -
+                      new Date(visit.orderDate).getTime()) /
+                      (1000 * 60 * 60 * 24)
+                  );
+                  return daysAgo === 0
+                    ? "Today"
+                    : `${daysAgo} day${daysAgo === 1 ? "" : "s"} ago`;
+                })()}
+              </div>
+            </div>
+          ),
+        },
+        {
+          key: "customer",
+          label: "Customer",
+          render: (customer) => (
+            <div className="flex items-center space-x-3 min-w-0 py-1">
+              <Avatar name={customer?.businessName || "Customer"} size="sm" />
+              <div className="min-w-0 flex-1">
+                <div className="font-medium text-gray-900 truncate text-sm">
+                  {customer?.businessName || "—"}
+                </div>
+                <div className="text-xs text-gray-500 truncate">
+                  {customer?.contactPersonName || customer?.customerId}
+                </div>
+              </div>
+            </div>
+          ),
+        },
+        {
+          key: "scheduleDate",
+          label: "Visit Date",
+          sortable: true,
+          render: (_value, visit) => (
+            <div className="min-w-0 py-1">
+              <div className="font-semibold text-gray-900 text-sm">
+                {visit.scheduleDate
+                  ? orderService.formatDate(visit.scheduleDate)
+                  : "—"}
+              </div>
+            </div>
+          ),
+        },
+        {
+          key: "notes",
+          label: "Notes & Location",
+          render: (_value, visit) => (
+            <div className="min-w-[100px] py-1">
+              <div className="text-sm text-gray-900 mb-1 truncate">
+                {visit.notes || "No notes"}
+              </div>
+              {visit.captureLocation && (
+                <div className="text-xs text-gray-500 whitespace-normal break-words">
+                  📍{" "}
+                  {visit.captureLocation.address ||
+                    `${visit.captureLocation.latitude}, ${visit.captureLocation.longitude}`}
+                </div>
               )}
-              {order.capturedImage && (
+            </div>
+          ),
+        },
+        {
+          key: "createdBy",
+          label: "Logged by",
+          render: (_value, visit) => (
+            <div className="min-w-0 py-1">
+              <div className="text-sm text-gray-900">
+                {visit.createdBy?.firstName && visit.createdBy?.lastName
+                  ? `${visit.createdBy.firstName} ${visit.createdBy.lastName}`
+                  : "—"}
+              </div>
+              {/* <div className="text-xs text-gray-500">
+                {orderService.formatDate(visit.createdAt)}
+              </div> */}
+            </div>
+          ),
+        },
+
+        {
+          key: "actions",
+          label: "Actions",
+          render: (_value, visit) => (
+            <div className="flex items-center justify-end space-x-1 py-1">
+              <Link
+                to={`/visits/${visit._id}`}
+                className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                title="View Visit Details"
+              >
+                <EyeIcon className="h-4 w-4" />
+              </Link>
+              <Link
+                to={`/visits/${visit._id}/edit`}
+                className="inline-flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-all duration-200"
+                title="Edit Visit"
+              >
+                <PencilIcon className="h-4 w-4" />
+              </Link>
+
+              {user?.role?.name?.toLowerCase() === "super admin" && (
                 <button
-                  onClick={() =>
-                    handleViewImage(
-                      order.capturedImage,
-                      `Order Image - ${order.orderNumber}`
-                    )
-                  }
-                  className="inline-flex items-center justify-center w-6 h-6 rounded-md overflow-hidden border border-gray-200 hover:border-blue-300 transition-all duration-200 group"
-                  title="View Order Image"
+                  onClick={() => {
+                    setOrderToDelete(visit);
+                    setDeleteModalOpen(true);
+                  }}
+                  className="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all duration-200"
+                  title="Delete Visit"
                 >
-                  <img
-                    src={resolveCapturedImageSrc(order.capturedImage) || ""}
-                    alt="Order"
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                  />
+                  <TrashIcon className="h-4 w-4" />
                 </button>
               )}
             </div>
-            <div className="text-xs text-gray-500">
-              Created: {orderService.formatDate(order.orderDate)}
-            </div>
-            <div className="text-xs text-gray-400">
-              {(() => {
-                const daysAgo = Math.floor(
-                  (new Date().getTime() - new Date(order.orderDate).getTime()) /
-                    (1000 * 60 * 60 * 24)
-                );
-                return daysAgo === 0
-                  ? "Today"
-                  : `${daysAgo} day${daysAgo === 1 ? "" : "s"} ago`;
-              })()}
-            </div>
-          </div>
-        ),
-      },
-      {
-        key: "customer",
-        label: "Customer",
-        render: (customer) => (
-          <div className="flex items-center space-x-2 py-0.5">
-            <Avatar name={customer?.businessName || "Customer"} size="sm" />
-            <div className="min-w-0 flex-1">
-              <div className="font-medium text-gray-900 truncate text-xs">
-                {customer?.businessName || "—"}
-              </div>
-              <div className="text-xs text-gray-500 truncate">
-                {customer?.contactPersonName}
-              </div>
-            </div>
-          </div>
-        ),
-      },
-      {
-        key: "items",
-        label: "Summary",
-        render: (_value, order) => (
-          <div className="py-0.5">
-            <div className="font-medium text-gray-900 text-xs mb-0.5">
-              {orderService.formatCurrency(order.totalAmount)}
-            </div>
-            <div className="text-xs text-gray-500">
-              {order.items?.length || 0} item
-              {(order.items?.length || 0) !== 1 ? "s" : ""}
-            </div>
-            {order.godown?.name && (
-              <div className="text-xs text-gray-400 truncate">
-                {order.godown.name}
-              </div>
-            )}
-          </div>
-        ),
-      },
-      {
-        key: "status",
-        label: "Status",
-        render: (_value, order) => (
-          <div className="py-0.5">
-            <OrderStatusDropdown
-              order={order}
-              onOrderUpdate={handleOrderUpdate}
-              compact
-            />
-          </div>
-        ),
-      },
-      {
-        key: "createdBy",
-        label: "Logged by",
-        render: (_value, order) => (
-          <div className="py-0.5">
-            <div className="text-xs text-gray-900 font-medium">
-              {order.createdBy?.firstName && order.createdBy?.lastName
-                ? `${order.createdBy.firstName} ${order.createdBy.lastName}`
-                : "—"}
-            </div>
-            {/* <div className="text-xs text-gray-500">
-              {orderService.formatDate(order.createdAt)}
-            </div> */}
-          </div>
-        ),
-      },
-      {
-        key: "actions",
-        label: "",
-        render: (_value, order) => (
-          <div className="flex items-center justify-end space-x-1 py-0.5">
-            <Link
-              to={`/orders/${order._id}`}
-              className="inline-flex items-center justify-center w-7 h-7 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
-              title="View"
-            >
-              <EyeIcon className="h-3.5 w-3.5" />
-            </Link>
-            <Link
-              to={`/orders/${order._id}/edit`}
-              className="inline-flex items-center justify-center w-7 h-7 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-md transition-colors"
-              title="Edit"
-            >
-              <PencilIcon className="h-3.5 w-3.5" />
-            </Link>
-            {user?.role?.name?.toLowerCase() === "super admin" && (
-              <button
-                onClick={() => {
-                  setOrderToDelete(order);
-                  setDeleteModalOpen(true);
-                }}
-                className="inline-flex items-center justify-center w-7 h-7 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
-                title="Delete Order"
-              >
-                <TrashIcon className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-        ),
-      },
-    ];
+          ),
+        },
+      ];
+    
+
+ 
   };
 
   if (error) {
@@ -801,11 +777,10 @@ const OrdersPage: React.FC = () => {
               <div className="flex items-center gap-4">
                 <div>
                   <h1 className="text-lg font-semibold text-gray-900">
-                Orders
+                    {"Visits"}
                   </h1>
                   <p className="text-xs text-gray-500 hidden sm:block">
-                Manage customer orders
-                
+                    {"Log and manage customer visits"}
                   </p>
                 </div>
                 {/* View switch removed; visits has its own tab */}
@@ -825,12 +800,12 @@ const OrdersPage: React.FC = () => {
                 <span className="hidden sm:inline">Sync</span>
               </button>
               <Link
-                to={"/orders/new"}
+                to={"/visits/new"}
                 className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
               >
                 <PlusIcon className="h-4 w-4 mr-1" />
                 <span className="hidden sm:inline">
-                  {"New Order"}
+                  {"New Visit"}
                 </span>
                 <span className="sm:hidden">New</span>
               </Link>
@@ -849,8 +824,7 @@ const OrdersPage: React.FC = () => {
               <input
                 type="text"
                 placeholder={
-                 "Search orders..."
-                  
+                 "Search visits..."
                 }
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -866,54 +840,7 @@ const OrdersPage: React.FC = () => {
               )}
             </div>
 
-            {/* Status Pills - Mobile First */}
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                {[
-                  {
-                    value: "pending",
-                    label: "Pending",
-                    count: orders.filter((o) => o.status === "pending").length,
-                  },
-                  {
-                    value: "approved",
-                    label: "Approved",
-                    count: orders.filter((o) => o.status === "approved").length,
-                  },
-                  {
-                    value: "processing",
-                    label: "Production",
-                    count: orders.filter((o) => o.status === "processing")
-                      .length,
-                  },
-                  {
-                    value: "completed",
-                    label: "Done",
-                    count: orders.filter((o) => o.status === "completed")
-                      .length,
-                  },
-                ].map((status) => (
-                  <button
-                    key={status.value}
-                    onClick={() =>
-                      setStatusFilter(
-                        statusFilter === status.value ? "" : status.value
-                      )
-                    }
-                    className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
-                      statusFilter === status.value
-                        ? "bg-blue-100 text-blue-800"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    <span>{status.label}</span>
-                    {/* {status.count > 0 && (
-                      <span className="text-xs bg-white rounded px-1">
-                        {status.count}
-                      </span>
-                    )} */}
-                  </button>
-                ))}
-              </div>
+        
 
             {/* Filter Toggle */}
             <div className="flex items-center justify-between">
@@ -1000,50 +927,30 @@ const OrdersPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Order-specific Filters */}
+               
+
+                  {/* Visit-specific Filters */}
+                  {viewType === "visits" && (
                     <>
                       <select
-                        value={paymentStatusFilter}
-                        onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                        value={hasImageFilter}
+                        onChange={(e) => setHasImageFilter(e.target.value)}
                         className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
-                        <option value="">Payment Status</option>
-                        {orderService.getPaymentStatuses().map((status) => (
-                          <option key={status.value} value={status.value}>
-                            {status.label}
-                          </option>
-                        ))}
-                      </select>
-
-                      <select
-                        value={priorityFilter}
-                        onChange={(e) => setPriorityFilter(e.target.value)}
-                        className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      >
-                        <option value="">All Priorities</option>
-                        <option value="normal">Normal</option>
-                        <option value="high">High</option>
-                        <option value="urgent">Urgent</option>
+                        <option value="">Has Image</option>
+                        <option value="true">With Image</option>
+                        <option value="false">Without Image</option>
                       </select>
 
                       <input
-                        type="number"
-                        value={minAmountFilter}
-                        onChange={(e) => setMinAmountFilter(e.target.value)}
-                        placeholder="Min Amount"
-                        className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
-
-                      <input
-                        type="number"
-                        value={maxAmountFilter}
-                        onChange={(e) => setMaxAmountFilter(e.target.value)}
-                        placeholder="Max Amount"
+                        type="text"
+                        value={addressFilter}
+                        onChange={(e) => setAddressFilter(e.target.value)}
+                        placeholder="Search by location..."
                         className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     </>
-
-          
+                  )}
                 </div>
               </div>
             )}
@@ -1083,11 +990,12 @@ const OrdersPage: React.FC = () => {
                       <div>
                         <p className="text-sm flex items-center gap-2 font-medium text-gray-900">
                           All
-                          {"Orders"}
+                          {"Visits"}
+                        
                             <span className="text-[10px] text-emerald-700 bg-emerald-100 rounded px-1.5 py-0.5">
-                              Orders:{" "}
+                              Visits:{" "}
                               {godowns.reduce(
-                                (sum, x) => sum + (x.orderCount || 0),
+                                (sum, x) => sum + (x?.visitCount || 0),
                                 0
                               )}
                             </span>
@@ -1124,9 +1032,8 @@ const OrdersPage: React.FC = () => {
                           <p className="text-sm font-medium flex gap-2 text-gray-900">
                             {g.name}
                             <span className="text-[10px] flex justify-center items-center text-gray-700 bg-gray-100 rounded px-1.5 py-0.5">
-                           Orders: {" "}
-                              {g.orderCount
-                                 || 0}
+                              {"Visits"}:{" "}
+                              {( g.visitCount) || 0}
                             </span>
                           </p>
                           <div className="flex items-center gap-2">
@@ -1142,86 +1049,6 @@ const OrdersPage: React.FC = () => {
               </div>
             )}
 
-            {/* Stats Grid */}
-            {stats && !statsLoading && (
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
-                {[
-                  {
-                    label: "Revenue",
-                    value: `₹${((stats.revenue.today || 0) / 1000).toFixed(
-                      1
-                    )}k`,
-                    // subtitle: "Today",
-                    icon: BanknotesIcon,
-                    bgColor: "bg-emerald-500",
-                    // trend: stats.revenue.growth,
-                  },
-                  {
-                    label: "Orders",
-                    value: stats.orders.total.toString(),
-                    subtitle: `${stats.orders.totalVisits} visits`,
-                    icon: ClipboardDocumentListIcon,
-                    bgColor: "bg-blue-500",
-                  },
-                  {
-                    label: "Pending",
-                    value: stats.orders.pendingApproval.toString(),
-                    subtitle: "Approval",
-                    icon: ExclamationTriangleIcon,
-                    bgColor: "bg-amber-500",
-                    urgent: stats.orders.pendingApproval > 0,
-                  },
-                  {
-                    label: "Users",
-                    value: stats.users.total.toString(),
-                    subtitle: `${stats.users.active} active`,
-                    icon: UserGroupIcon,
-                    bgColor: "bg-purple-500",
-                  },
-                ].map((stat) => (
-                  <div
-                    key={stat.label}
-                    className={`relative flex items-start gap-3 bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-sm ${
-                      stat.urgent ? "ring-2 ring-amber-200" : ""
-                    }`}
-                  >
-                    <div
-                      className={`${stat.bgColor} rounded-lg p-2 mt-[4px] shrink-0`}
-                    >
-                      <stat.icon className="h-4 w-4 text-white" />
-                    </div>
-
-                    <div className="flex flex-col">
-                      <div className="flex items-baseline gap-2">
-                        <p className="text-xl sm:text-2xl font-bold text-gray-900">
-                          {stat.value}
-                        </p>
-                        {stat.trend !== undefined && (
-                          <span
-                            className={`text-xs ${
-                              stat.trend >= 0
-                                ? "text-emerald-600"
-                                : "text-red-600"
-                            }`}
-                          >
-                            {stat.trend >= 0 ? "↑" : "↓"}
-                            {Math.abs(stat.trend)}%
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-600">{stat.label}</p>
-                      <p className="text-[10px] text-gray-400">
-                        {stat.subtitle}
-                      </p>
-                    </div>
-
-                    {stat.urgent && (
-                      <div className="absolute top-2 right-2 h-2 w-2 bg-amber-400 rounded-full animate-pulse"></div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
 
             {statsLoading && (
               <div className="flex items-center justify-center py-4 mb-4">
@@ -1230,31 +1057,7 @@ const OrdersPage: React.FC = () => {
             )}
           </>
         )}
-        {/* Compact Stats for other roles */}
-        {!loading &&
-          orders.length > 0 &&
-       
-          user?.role?.name?.toLowerCase() !== "super admin" &&
-          user?.role?.name?.toLowerCase() !== "admin" && (
-            <div className="grid grid-cols-3 gap-2 mb-4">
-              <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
-                <div className="text-xs text-gray-500">Total</div>
-                <div className="font-semibold text-sm">{totalOrders}</div>
-              </div>
-              <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
-                <div className="text-xs text-gray-500">Pending</div>
-                <div className="font-semibold text-sm text-amber-600">
-                  {orders.filter((o) => o.status === "pending").length}
-                </div>
-              </div>
-              <div className="bg-white p-2 rounded-lg border border-gray-200 text-center">
-                <div className="text-xs text-gray-500">Value</div>
-                <div className="font-semibold text-xs">
-                  {orderService.formatCurrency(totalAmountSum)}
-                </div>
-              </div>
-            </div>
-          )}
+    
 
         {/* Orders Table */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -1269,24 +1072,24 @@ const OrdersPage: React.FC = () => {
             <div className="text-center py-8">
               <ClipboardDocumentListIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
               <h3 className="text-sm font-medium text-gray-900 mb-1">
-                No orders found
+                No {"visits"} found
               </h3>
               <p className="text-xs text-gray-500 mb-4">
                 {statusFilter || searchTerm
                   ? "Try adjusting filters"
-                 
-                  : "Create your first order"}
+                  
+                  : "Create your first visit"}
               </p>
               {!statusFilter && !searchTerm ? (
-     
+           
                   <Link
-                    to="/orders/new"
+                    to="/visits/new"
                     className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
                   >
                     <PlusIcon className="h-4 w-4 mr-1" />
-                    Create Order
+                    Create Visit
                   </Link>
-              
+                
               ) : (
                 <button
                   onClick={clearFilters}
@@ -1315,18 +1118,22 @@ const OrdersPage: React.FC = () => {
                             onClick={() =>
                               handleViewImage(
                                 order.capturedImage,
-                                `Order Image - ${order.orderNumber}`
+                                `${
+                                  "Visit"
+                                } Image - ${order.orderNumber}`
                               )
                             }
                             className="inline-flex items-center justify-center w-6 h-6 rounded-md overflow-hidden border border-gray-200 hover:border-blue-300 transition-all duration-200 group"
-                            title={`View Order Image`}
+                            title={`View ${
+                              "Visit"
+                            } Image`}
                           >
                             <img
                               src={
                                 resolveCapturedImageSrc(order.capturedImage) ||
                                 ""
                               }
-                              alt={"Order"}
+                              alt={"Visit"}
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                             />
                           </button>
@@ -1352,7 +1159,9 @@ const OrdersPage: React.FC = () => {
                       <div className="flex items-center space-x-1">
                         <Link
                           to={
-                           `/orders/${order._id}`
+                          
+                               `/visits/${order._id}`
+                            
                           }
                           className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                         >
@@ -1360,7 +1169,8 @@ const OrdersPage: React.FC = () => {
                         </Link>
                         <Link
                           to={
-                            `/orders/${order._id}/edit`
+                           `/visits/${order._id}/edit`
+          
                           }
                           className="p-1.5 text-gray-600 hover:bg-gray-50 rounded-md transition-colors"
                         >
@@ -1373,7 +1183,9 @@ const OrdersPage: React.FC = () => {
                               setDeleteModalOpen(true);
                             }}
                             className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                            title={`Delete Order`}
+                            title={`Delete ${
+                              "Visit"
+                            }`}
                           >
                             <TrashIcon className="h-4 w-4" />
                           </button>
@@ -1470,7 +1282,7 @@ const OrdersPage: React.FC = () => {
             setOrderToDelete(null);
           }
         }}
-        title={`Delete Order`}
+        title={`Delete ${"Visit"}`}
         size="sm"
       >
         <div className="p-4">
@@ -1480,7 +1292,7 @@ const OrdersPage: React.FC = () => {
             </div>
             <div>
               <h3 className="text-sm font-medium text-gray-900">
-                Delete Order
+                Delete {"Visit"}
               </h3>
               <p className="text-xs text-gray-500">
                 This action cannot be undone
@@ -1503,9 +1315,10 @@ const OrdersPage: React.FC = () => {
                       : orderToDelete.orderNumber}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {`Amount: ${orderService.formatCurrency(
-                          orderToDelete.totalAmount
-                        )}`}
+                    {`Visit on ${orderService.formatDate(
+                          orderToDelete.orderDate
+                        )}`
+                     }
                   </div>
                 </div>
               </div>
@@ -1514,8 +1327,8 @@ const OrdersPage: React.FC = () => {
 
           <p className="text-sm text-gray-600 mb-6">
             Are you sure you want to delete this{" "}
-            order? This action will
-            permanently remove the order
+            {"visit"}? This action will
+            permanently remove the {"visit"}{" "}
             from the database and cannot be undone.
           </p>
 
@@ -1541,7 +1354,7 @@ const OrdersPage: React.FC = () => {
                   Deleting...
                 </>
               ) : (
-                `Delete Order`
+                `Delete ${"Visit"}`
               )}
             </button>
           </div>

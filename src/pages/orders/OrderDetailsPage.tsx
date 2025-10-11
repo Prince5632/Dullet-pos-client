@@ -695,8 +695,8 @@ Dullet POS Team`;
             <div className="lg:col-span-2 space-y-3 sm:space-y-4">
               {/* Customer Information */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                <div className="px-3 flex justify-between items-center sm:px-4 py-2.5 border-b border-gray-200">
-                  <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                <div className="px-3 flex flex-wrap justify-between items-center sm:px-4 py-2.5 border-b border-gray-200">
+                  <h3 className="text-sm font-semibold mb-0 text-gray-900 flex items-center">
                     <UserIcon className="h-4 w-4 mr-1.5 text-blue-600" />
                     Customer
                   </h3>

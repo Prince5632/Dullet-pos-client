@@ -16,6 +16,7 @@ import {
   XMarkIcon,
   PhotoIcon,
   ExclamationTriangleIcon,
+  EyeIcon,
 } from "@heroicons/react/24/outline";
 import { getExecutivePerformanceDetail } from "../../services/reportService";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
@@ -402,8 +403,9 @@ const SalesExecutiveDetailPage: React.FC = () => {
                 className="flex items-center justify-between p-2 bg-gray-50 rounded"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-900 truncate">
-                    {c.customerInfo?.businessName}
+                  <div className="text-sm flex items-center font-medium text-gray-900 truncate">
+                     
+                    {c.customerInfo?.businessName}<EyeIcon className="h-4 w-4 cursor-pointer text-blue-400 inline-block ms-2" onClick={() => window.open(`/customers/${c.customerInfo?._id}`, "_blank")} />
                   </div>
                   <div className="text-xs text-gray-500">
                     {reportType === "visits"
@@ -480,8 +482,8 @@ const SalesExecutiveDetailPage: React.FC = () => {
                     <div className="text-xs text-gray-500 mt-0.5">
                       {formatDate(o.orderDate)}
                     </div>
-                    <div className="text-xs text-gray-600 mt-1 truncate">
-                      {o.customer?.businessName}
+                    <div className="text-xs text-gray-600  mt-1 truncate">
+                      {o.customer?.businessName} <EyeIcon className="h-4 w-4 cursor-pointer text-blue-400 inline-block ms-2" onClick={() => window.open(`/customers/${o.customer?._id}`, "_blank")} />
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0 ml-2">
@@ -497,12 +499,28 @@ const SalesExecutiveDetailPage: React.FC = () => {
                   </div>
                 </div>
                 {reportType === "orders" && (
+                  <>
                   <div className="flex items-center justify-between pt-2 border-t border-gray-200">
                     <div className="text-xs text-gray-500">Aata KG</div>
                     <div className="text-xs font-medium text-gray-900">
                       {(o.attaKg ?? 0).toFixed(2)} kg
                     </div>
                   </div>
+                   {o.capturedImage && (
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-200 mt-2">
+                        <div className="text-xs text-gray-500">Image</div>
+                        <button
+                          onClick={() => handleViewImage(o.capturedImage)}
+                          className="flex items-center space-x-1 text-xs text-blue-600 hover:text-blue-800"
+                        >
+                          <img
+                            src={resolveCapturedImageSrc(o.capturedImage) || ""}
+                            alt="Check In"
+                            className="w-10 h-10 object-cover group-hover:scale-110 transition-transform"
+                          />
+                        </button>
+                      </div>
+                    )}</>
                 )}
                 {reportType === "visits" && (
                   <>
@@ -562,6 +580,9 @@ const SalesExecutiveDetailPage: React.FC = () => {
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-700">
                         Amount
                       </th>
+                         <th className="px-3 py-2 text-center text-xs font-medium text-gray-700">
+                        Image
+                      </th>
                     </>
                   ) : (
                     <>
@@ -583,8 +604,8 @@ const SalesExecutiveDetailPage: React.FC = () => {
                     <td className="px-3 py-2 text-sm">
                       {formatDate(o.orderDate)}
                     </td>
-                    <td className="px-3 py-2 text-sm">
-                      {o.customer?.businessName}
+                    <td className="px-3 py-2 text-sm flex items-center">
+                      {o.customer?.businessName} <EyeIcon className="h-4 w-4 cursor-pointer text-blue-400 inline-block ms-2" onClick={() => window.open(`/customers/${o.customer?._id}`, "_blank")} />
                     </td>
                     {reportType === "orders" ? (
                       <>
@@ -593,6 +614,22 @@ const SalesExecutiveDetailPage: React.FC = () => {
                         </td>
                         <td className="px-3 py-2 text-right text-sm font-medium text-green-600">
                           {formatCurrency(o.totalAmount)}
+                        </td>
+                         <td className="px-3 py-2 text-center">
+                          {o.capturedImage ? (
+                            <button
+                              onClick={() => handleViewImage(o.capturedImage)}
+                              className="inline-flex items-center space-x-1 text-blue-600 hover:text-blue-800 text-sm"
+                            >
+                              <img
+                            src={resolveCapturedImageSrc(o.capturedImage) || ""}
+                            alt="Check In"
+                            className="w-10 h-10 object-cover group-hover:scale-110 transition-transform"
+                          />
+                            </button>
+                          ) : (
+                            <span className="text-gray-400 text-sm">-</span>
+                          )}
                         </td>
                       </>
                     ) : (
