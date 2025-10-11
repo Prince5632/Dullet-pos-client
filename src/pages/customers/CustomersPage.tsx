@@ -261,6 +261,20 @@ const CustomersPage: React.FC = () => {
       render: (value) => <span className="text-xs text-gray-700">{value}</span>,
     },
     {
+      key: 'netBalance',
+      label: 'Net Balance',
+      render: (_, customer) => {
+        const balance = customer.netBalance || 0;
+        const isPositive = balance >= 0;
+        return (
+          <span className={`text-xs font-medium ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+            ₹{Math.abs(balance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {!isPositive && ' (Due)'}
+          </span>
+        );
+      },
+    },
+    {
       key: 'actions',
       label: '',
       render: (_, c) => (
@@ -450,27 +464,30 @@ const CustomersPage: React.FC = () => {
                       
                       <div className="space-y-1.5 mb-3">
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="text-gray-500 w-16">Type:</span>
+                          <span className="text-gray-500 w-18">Type:</span>
                           <span className="text-gray-900">{customer.customerType}</span>
                         </div>
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="text-gray-500 w-16">Location:</span>
+                          <span className="text-gray-500 w-18">Location:</span>
                           <span className="text-gray-900">{customer.address?.city}, {customer.address?.state}</span>
                         </div>
                         {customer.phone && (
                           <div className="flex items-center gap-2 text-xs">
-                            <span className="text-gray-500 w-16">Phone:</span>
+                            <span className="text-gray-500 w-18">Phone:</span>
                             <span className="text-gray-900">{customer.phone}</span>
                           </div>
                         )}
                         {customer.location && (
                           <div className="flex items-center gap-2 text-xs">
-                            <span className="text-gray-500 w-16">Map:</span>
+                            <span className="text-gray-500 w-18">Map:</span>
                             <a href={customer.location} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                               View Location
                             </a>
                           </div>
                         )}
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-gray-500 w-18">Net Balance:</span>
+                          ₹{Math.abs(customer?.netBalance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}                </div>
                       </div>
                       
                       <div className="flex items-center gap-2">

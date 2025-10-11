@@ -294,6 +294,7 @@ export interface Customer {
   // Virtual fields
   fullAddress?: string;
   creditUtilization?: number;
+  netBalance?: number;
 }
 
 export interface CreateCustomerForm {
