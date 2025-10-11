@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { transitService } from "../../services/transitService";
 import { godownService } from "../../services/godownService";
@@ -26,6 +26,7 @@ import Modal from "../../components/ui/Modal";
 import TransitStatusDropdown from "../../components/transits/TransitStatusDropdown";
 import { useAuth } from "../../contexts/AuthContext";
 import toast from "react-hot-toast";
+import { persistenceService, PERSIST_NS, clearOtherNamespaces } from "../../services/persistenceService";
 
 const TransitsPage: React.FC = () => {
   const { user: currentUser, hasRole } = useAuth();
@@ -49,6 +50,7 @@ const TransitsPage: React.FC = () => {
   const [godowns, setGodowns] = useState<Godown[]>([]);
   const [managers, setManagers] = useState<User[]>([]);
   const [drivers, setDrivers] = useState<User[]>([]);
+  const initRef = useRef(false);
 
   // Delete modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -185,6 +187,61 @@ const TransitsPage: React.FC = () => {
     }
   };
 
+  // Load persisted state on mount and clear other namespaces
+  useEffect(() => {
+    clearOtherNamespaces(PERSIST_NS.TRANSITS);
+    const persistedFilters = persistenceService.getNS<any>(PERSIST_NS.TRANSITS, 'filters', {
+      search: '',
+      status: '',
+      fromLocation: '',
+      toLocation: '',
+      driverId: '',
+      assignedTo: '',
+      dateFrom: '',
+      dateTo: '',
+      showFilters: false,
+    });
+    const persistedPagination = persistenceService.getNS<any>(PERSIST_NS.TRANSITS, 'pagination', {
+      page: 1,
+      limit: 10,
+    });
+
+    setSearch(persistedFilters.search || '');
+    setStatus(persistedFilters.status || '');
+    setFromLocation(persistedFilters.fromLocation || '');
+    setToLocation(persistedFilters.toLocation || '');
+    setDriverId(persistedFilters.driverId || '');
+    setAssignedTo(persistedFilters.assignedTo || '');
+    setDateFrom(persistedFilters.dateFrom || '');
+    setDateTo(persistedFilters.dateTo || '');
+    setShowFilters(!!persistedFilters.showFilters);
+    setPage(persistedPagination.page || 1);
+    setLimit(persistedPagination.limit || 10);
+    initRef.current = true;
+  }, []);
+
+  // Persist filters
+  useEffect(() => {
+    if (!initRef.current) return;
+    persistenceService.setNS(PERSIST_NS.TRANSITS, 'filters', {
+      search,
+      status,
+      fromLocation,
+      toLocation,
+      driverId,
+      assignedTo,
+      dateFrom,
+      dateTo,
+      showFilters,
+    });
+  }, [search, status, fromLocation, toLocation, driverId, assignedTo, dateFrom, dateTo, showFilters]);
+
+  // Persist pagination
+  useEffect(() => {
+    if (!initRef.current) return;
+    persistenceService.setNS(PERSIST_NS.TRANSITS, 'pagination', { page, limit });
+  }, [page, limit]);
+
   // Sync function to refresh all data
   const handleSync = async () => {
     setSyncing(true);
@@ -244,6 +301,7 @@ const TransitsPage: React.FC = () => {
 
   // Reset to page 1 when filters change
   useEffect(() => {
+    if (!initRef.current) return;
     if (page !== 1) {
       setPage(1);
     }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   ChartBarIcon,
@@ -19,6 +19,7 @@ import {
 import { getSalesExecutiveReports } from "../../services/reportService";
 import { godownService } from "../../services/godownService";
 import type { SalesExecutiveReportResponse } from "../../services/reportService";
+import { persistenceService, PERSIST_NS, clearOtherNamespaces } from "../../services/persistenceService";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import Table from "../../components/ui/Table";
 import Badge from "../../components/ui/Badge";
@@ -40,11 +41,61 @@ const SalesExecutiveReportsPage: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [dateRangeError, setDateRangeError] = useState("");
   const [reportType, setReportType] = useState<ReportType>(() => {
-    const saved = localStorage.getItem('salesExecutiveReportType');
+    const saved = persistenceService.getNS<string>(PERSIST_NS.SALES_EXEC_REPORTS, 'reportType', "orders");
     return (saved as ReportType) || "orders";
   });
   const [syncing, setSyncing] = useState(false);
   const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(null);
+  const initRef = useRef(false);
+
+  // Load persisted state on mount and clear other namespaces
+  useEffect(() => {
+    clearOtherNamespaces(PERSIST_NS.SALES_EXEC_REPORTS);
+    const persistedFilters = persistenceService.getNS<any>(PERSIST_NS.SALES_EXEC_REPORTS, 'filters', {
+      startDate: "",
+      endDate: "",
+      department: "",
+      godownId: "",
+      showFilters: false,
+      reportType: "orders",
+      activeQuickFilter: null,
+    });
+    const persistedSort = persistenceService.getNS<any>(PERSIST_NS.SALES_EXEC_REPORTS, 'sort', {
+      sortBy: "totalRevenue",
+      sortOrder: "desc",
+    });
+
+    setStartDate(persistedFilters.startDate || "");
+    setEndDate(persistedFilters.endDate || "");
+    setDepartment(persistedFilters.department || "");
+    setGodownId(persistedFilters.godownId || "");
+    setShowFilters(!!persistedFilters.showFilters);
+    setReportType((persistedFilters.reportType as ReportType) || "orders");
+    setSortBy(persistedSort.sortBy || "totalRevenue");
+    setSortOrder(persistedSort.sortOrder || "desc");
+    setActiveQuickFilter(persistedFilters.activeQuickFilter || null);
+    initRef.current = true;
+  }, []);
+
+  // Persist filters
+  useEffect(() => {
+    if (!initRef.current) return;
+    persistenceService.setNS(PERSIST_NS.SALES_EXEC_REPORTS, 'filters', {
+      startDate,
+      endDate,
+      department,
+      godownId,
+      showFilters,
+      reportType,
+      activeQuickFilter,
+    });
+  }, [startDate, endDate, department, godownId, showFilters, reportType, activeQuickFilter]);
+
+  // Persist sort
+  useEffect(() => {
+    if (!initRef.current) return;
+    persistenceService.setNS(PERSIST_NS.SALES_EXEC_REPORTS, 'sort', { sortBy, sortOrder });
+  }, [sortBy, sortOrder]);
 
   // Quick date filter helper functions
   const getQuickDateRange = (days: number) => {
@@ -140,9 +191,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
     fetchReports();
   }, [reportType]);
 
-  useEffect(() => {
-    localStorage.setItem('salesExecutiveReportType', reportType);
-  }, [reportType]);
+  // Persisted above; no separate localStorage write needed
 
   useEffect(() => {
     fetchReports();
@@ -551,7 +600,11 @@ const SalesExecutiveReportsPage: React.FC = () => {
           {/* Sub-tabs for Orders vs Visits */}
           <div className="flex space-x-2 bg-gray-100 p-1 rounded-lg w-fit">
             <button
-              onClick={() => setReportType("orders")}
+              onClick={() =>{ 
+                if(reportType !== "orders"){
+                  handleResetFilters()
+                }
+                setReportType("orders")}}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 reportType === "orders"
                   ? "bg-white text-blue-600 shadow-sm"
@@ -562,7 +615,11 @@ const SalesExecutiveReportsPage: React.FC = () => {
               <span>Orders</span>
             </button>
             <button
-              onClick={() => setReportType("visits")}
+              onClick={() => {
+                if(reportType !== "visits"){
+                  handleResetFilters()
+                }
+                setReportType("visits")}}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 reportType === "visits"
                   ? "bg-white text-purple-600 shadow-sm"

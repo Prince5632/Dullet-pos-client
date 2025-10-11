@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   PlusIcon,
@@ -22,6 +22,7 @@ import { userService } from "../../services/userService";
 import { godownService } from "../../services/godownService";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDebounce } from "../../hooks/useDebounce";
+import { usePersistedFilters } from "../../hooks/usePersistedFilters";
 import type { Order, Customer, TableColumn, Godown } from "../../types";
 import { apiService } from "../../services/api";
 import { API_CONFIG } from "../../config/api";
@@ -32,6 +33,10 @@ import Modal from "../../components/ui/Modal";
 import OrderStatusDropdown from "../../components/orders/OrderStatusDropdown";
 import { resolveCapturedImageSrc } from "../../utils/image";
 import toast from "react-hot-toast";
+import {
+  clearOtherNamespaces,
+  PERSIST_NS,
+} from "../../services/persistenceService";
 
 interface DashboardStats {
   orders: {
@@ -58,10 +63,61 @@ interface DashboardStats {
   };
 }
 
+type OrdersFilters = {
+  search: string;
+  customerId: string;
+  dateFrom: string;
+  dateTo: string;
+  showFilters: boolean;
+  godownId: string;
+  status: string;
+  paymentStatus: string;
+  priority: string;
+  minAmount: string;
+  maxAmount: string;
+  scheduleStatus: string;
+  visitStatus: string;
+  hasImage: string;
+  address: string;
+  
+};
+
 const OrdersPage: React.FC = () => {
   const location = useLocation();
   const isVisitsRoute = location.pathname.startsWith("/visits");
   const { hasPermission, user } = useAuth();
+
+  // Persisted Filters, Pagination, and Sorting
+  const {
+    filters,
+    setFilters,
+    pagination,
+    setPagination,
+    sort,
+    setSort,
+    clearAll,
+  } = usePersistedFilters<OrdersFilters>({
+    namespace: isVisitsRoute ? PERSIST_NS.VISITS : PERSIST_NS.ORDERS,
+    defaultFilters: {
+      search: "",
+      customerId: "",
+      dateFrom: "",
+      dateTo: "",
+      showFilters: false,
+      godownId: "",
+      status: "",
+      paymentStatus: "",
+      priority: "",
+      minAmount: "",
+      maxAmount: "",
+      scheduleStatus: "",
+      visitStatus: "",
+      hasImage: "",
+      address: "",
+    },
+    defaultPagination: { page: 1, limit: 10 },
+    defaultSort: { sortBy: "orderDate", sortOrder: "desc" },
+  });
 
   // State
   const [orders, setOrders] = useState<Order[]>([]);
@@ -69,7 +125,8 @@ const OrdersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [godowns, setGodowns] = useState<Godown[]>([]);
-  const [godownFilter, setGodownFilter] = useState("");
+  const godownFilter = filters.godownId;
+  const setGodownFilter = (v: string) => setFilters({ godownId: v });
   const [viewType, setViewType] = useState<"orders" | "visits">(() =>
     isVisitsRoute ? "visits" : "orders"
   );
@@ -78,36 +135,54 @@ const OrdersPage: React.FC = () => {
   const [syncing, setSyncing] = useState(false);
 
   // Common Filters
-  const [searchTerm, setSearchTerm] = useState("");
-  const [customerFilter, setCustomerFilter] = useState("");
-  const [dateFromFilter, setDateFromFilter] = useState("");
-  const [dateToFilter, setDateToFilter] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
+  const searchTerm = filters.search;
+  const setSearchTerm = (v: string) => setFilters({ search: v });
+  const customerFilter = filters.customerId;
+  const setCustomerFilter = (v: string) => setFilters({ customerId: v });
+  const dateFromFilter = filters.dateFrom;
+  const setDateFromFilter = (v: string) => setFilters({ dateFrom: v });
+  const dateToFilter = filters.dateTo;
+  const setDateToFilter = (v: string) => setFilters({ dateTo: v });
+  const showFilters = filters.showFilters;
+  const setShowFilters = (v: boolean) => setFilters({ showFilters: v });
   const [dateRangeError, setDateRangeError] = useState("");
 
   // Order-specific Filters
-  const [statusFilter, setStatusFilter] = useState("");
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState("");
-  const [minAmountFilter, setMinAmountFilter] = useState("");
-  const [maxAmountFilter, setMaxAmountFilter] = useState("");
+  const statusFilter = filters.status;
+  const setStatusFilter = (v: string) => setFilters({ status: v });
+  const paymentStatusFilter = filters.paymentStatus;
+  const setPaymentStatusFilter = (v: string) =>
+    setFilters({ paymentStatus: v });
+  const priorityFilter = filters.priority;
+  const setPriorityFilter = (v: string) => setFilters({ priority: v });
+  const minAmountFilter = filters.minAmount;
+  const setMinAmountFilter = (v: string) => setFilters({ minAmount: v });
+  const maxAmountFilter = filters.maxAmount;
+  const setMaxAmountFilter = (v: string) => setFilters({ maxAmount: v });
 
   // Visit-specific Filters
-  const [scheduleStatusFilter, setScheduleStatusFilter] = useState("");
-  const [visitStatusFilter, setVisitStatusFilter] = useState("");
-  const [hasImageFilter, setHasImageFilter] = useState("");
-  const [addressFilter, setAddressFilter] = useState("");
+  const scheduleStatusFilter = filters.scheduleStatus;
+  const setScheduleStatusFilter = (v: string) =>
+    setFilters({ scheduleStatus: v });
+  const visitStatusFilter = filters.visitStatus;
+  const setVisitStatusFilter = (v: string) => setFilters({ visitStatus: v });
+  const hasImageFilter = filters.hasImage;
+  const setHasImageFilter = (v: string) => setFilters({ hasImage: v });
+  const addressFilter = filters.address;
+  const setAddressFilter = (v: string) => setFilters({ address: v });
 
   // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
+  const currentPage = pagination.page;
+  const setCurrentPage = (p: number) => setPagination({ page: p });
   const [totalPages, setTotalPages] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
   const [totalAmountSum, setTotalAmountSum] = useState(0);
-  const [limit, setLimit] = useState(10);
+  const limit = pagination.limit;
+  const setLimit = (l: number) => setPagination({ limit: l });
 
   // Sorting
-  const [sortBy, setSortBy] = useState("orderDate");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const sortBy = sort.sortBy;
+  const sortOrder = sort.sortOrder;
 
   // Debounced search
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -411,7 +486,10 @@ const OrdersPage: React.FC = () => {
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
-
+  // Cross-page reset: visiting Customers clears Orders persisted filters/pagination if present
+  useEffect(() => {
+    clearOtherNamespaces([PERSIST_NS.ORDERS, PERSIST_NS.VISITS]);
+  }, []);
   // Load godowns with filtered counts
   const loadGodowns = useCallback(async () => {
     try {
@@ -489,8 +567,13 @@ const OrdersPage: React.FC = () => {
   }, [isVisitsRoute]);
 
   // Reset page when filters change
+  const didMountRef = useRef(false);
   useEffect(() => {
-    setCurrentPage(1);
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+    setPagination({ page: 1 });
   }, [
     debouncedSearchTerm,
     customerFilter,
@@ -510,66 +593,20 @@ const OrdersPage: React.FC = () => {
     addressFilter,
   ]);
 
-  // Reset filters when view type changes
-  useEffect(() => {
-    // Clear common filters
-    setSearchTerm("");
-    setCustomerFilter("");
-    setDateFromFilter("");
-    setDateToFilter("");
-    setDateRangeError("");
-
-    // Clear order-specific filters
-    setStatusFilter("");
-    setPaymentStatusFilter("");
-    setPriorityFilter("");
-    setMinAmountFilter("");
-    setMaxAmountFilter("");
-    setGodownFilter("");
-
-    // Clear visit-specific filters
-    setScheduleStatusFilter("");
-    setVisitStatusFilter("");
-    setHasImageFilter("");
-    setAddressFilter("");
-
-    // Reset pagination
-    setCurrentPage(1);
-  }, [viewType]);
+  // Persisted filters: do not auto-clear on view type change
 
   // Handlers
   const handleSort = (field: string) => {
     if (sortBy === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      setSort({ sortOrder: sortOrder === "asc" ? "desc" : "asc" });
     } else {
-      setSortBy(field);
-      setSortOrder("desc");
+      setSort({ sortBy: field, sortOrder: "desc" });
     }
   };
 
   const clearFilters = () => {
-    // Clear common filters
-    setSearchTerm("");
-    setCustomerFilter("");
-    setDateFromFilter("");
-    setDateToFilter("");
+    clearAll();
     setDateRangeError("");
-
-    // Clear order-specific filters
-    setStatusFilter("");
-    setPaymentStatusFilter("");
-    setPriorityFilter("");
-    setMinAmountFilter("");
-    setMaxAmountFilter("");
-    setGodownFilter("");
-
-    // Clear visit-specific filters
-    setScheduleStatusFilter("");
-    setVisitStatusFilter("");
-    setHasImageFilter("");
-    setAddressFilter("");
-
-    setCurrentPage(1);
   };
 
   const handleOrderUpdate = (updatedOrder: Order) => {
@@ -583,8 +620,7 @@ const OrdersPage: React.FC = () => {
   };
 
   const handleItemsPerPageChange = (newLimit: number) => {
-    setLimit(newLimit);
-    setCurrentPage(1); // Reset to first page when changing page size
+    setPagination({ limit: newLimit, page: 1 });
   };
 
   // Table columns
@@ -790,21 +826,20 @@ const OrdersPage: React.FC = () => {
                 </button>
               )}
             </div>
-              <div className="text-xs text-gray-500">
-                Created: {orderService.formatDate(order.orderDate)}
-              </div>
-              <div className="text-xs text-gray-400">
-                {(() => {
-                  const daysAgo = Math.floor(
-                    (new Date().getTime() -
-                      new Date(order.orderDate).getTime()) /
-                      (1000 * 60 * 60 * 24)
-                  );
-                  return daysAgo === 0
-                    ? "Today"
-                    : `${daysAgo} day${daysAgo === 1 ? "" : "s"} ago`;
-                })()}
-              </div>
+            <div className="text-xs text-gray-500">
+              Created: {orderService.formatDate(order.orderDate)}
+            </div>
+            <div className="text-xs text-gray-400">
+              {(() => {
+                const daysAgo = Math.floor(
+                  (new Date().getTime() - new Date(order.orderDate).getTime()) /
+                    (1000 * 60 * 60 * 24)
+                );
+                return daysAgo === 0
+                  ? "Today"
+                  : `${daysAgo} day${daysAgo === 1 ? "" : "s"} ago`;
+              })()}
+            </div>
           </div>
         ),
       },
@@ -1518,14 +1553,21 @@ const OrdersPage: React.FC = () => {
                             onClick={() =>
                               handleViewImage(
                                 order.capturedImage,
-                                `${viewType === "visits" ? "Visit" : "Order"} Image - ${order.orderNumber}`
+                                `${
+                                  viewType === "visits" ? "Visit" : "Order"
+                                } Image - ${order.orderNumber}`
                               )
                             }
                             className="inline-flex items-center justify-center w-6 h-6 rounded-md overflow-hidden border border-gray-200 hover:border-blue-300 transition-all duration-200 group"
-                            title={`View ${viewType === "visits" ? "Visit" : "Order"} Image`}
+                            title={`View ${
+                              viewType === "visits" ? "Visit" : "Order"
+                            } Image`}
                           >
                             <img
-                              src={resolveCapturedImageSrc(order.capturedImage) || ""}
+                              src={
+                                resolveCapturedImageSrc(order.capturedImage) ||
+                                ""
+                              }
                               alt={viewType === "visits" ? "Visit" : "Order"}
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                             />

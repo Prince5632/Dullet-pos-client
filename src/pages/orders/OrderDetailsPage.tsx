@@ -695,11 +695,29 @@ Dullet POS Team`;
             <div className="lg:col-span-2 space-y-3 sm:space-y-4">
               {/* Customer Information */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                <div className="px-3 sm:px-4 py-2.5 border-b border-gray-200">
+                <div className="px-3 flex justify-between items-center sm:px-4 py-2.5 border-b border-gray-200">
                   <h3 className="text-sm font-semibold text-gray-900 flex items-center">
                     <UserIcon className="h-4 w-4 mr-1.5 text-blue-600" />
                     Customer
                   </h3>
+
+                  {/* ✅ View Details Button */}
+                  <div className="mt-3">
+                    <button
+                      onClick={() => {
+                        if (order.customer?._id) {
+                          window.open(
+                            `/customers/${order.customer._id}`,
+                            "_blank"
+                          );
+                        }
+                      }}
+                      className="inline-flex cursor-pointer items-center px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                    >
+                      <UserIcon className="h-4 w-4 mr-1 text-gray-500" />
+                      View Customer Details
+                    </button>
+                  </div>
                 </div>
                 <div className="p-3 sm:p-4">
                   <div className="flex items-start gap-3">

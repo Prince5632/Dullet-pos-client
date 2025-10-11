@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ChartBarIcon,
@@ -20,6 +20,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Table from '../../components/ui/Table';
 import Badge from '../../components/ui/Badge';
 import { formatCurrency, formatDate } from '../../utils';
+import { persistenceService, PERSIST_NS, clearOtherNamespaces } from '../../services/persistenceService';
 
 const CustomerReportsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -35,6 +36,46 @@ const CustomerReportsPage: React.FC = () => {
   const [syncing, setSyncing] = useState(false);
   const [dateRangeError, setDateRangeError] = useState('');
   const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(null);
+  const initRef = useRef(false);
+
+  // Load persisted state on mount and clear other namespaces
+  useEffect(() => {
+    clearOtherNamespaces(PERSIST_NS.CUSTOMER_REPORTS);
+    const persistedFilters = persistenceService.getNS<any>(PERSIST_NS.CUSTOMER_REPORTS, 'filters', {
+      startDate: '',
+      endDate: '',
+      inactiveDays: 7,
+      sortBy: 'totalSpent',
+      sortOrder: 'desc',
+      showFilters: false,
+      activeTab: 'all',
+      activeQuickFilter: null,
+    });
+    setStartDate(persistedFilters.startDate || '');
+    setEndDate(persistedFilters.endDate || '');
+    setInactiveDays(persistedFilters.inactiveDays || 7);
+    setSortBy(persistedFilters.sortBy || 'totalSpent');
+    setSortOrder(persistedFilters.sortOrder || 'desc');
+    setShowFilters(!!persistedFilters.showFilters);
+    setActiveTab((persistedFilters.activeTab as 'all' | 'inactive') || 'all');
+    setActiveQuickFilter(persistedFilters.activeQuickFilter || null);
+    initRef.current = true;
+  }, []);
+
+  // Persist filters
+  useEffect(() => {
+    if (!initRef.current) return;
+    persistenceService.setNS(PERSIST_NS.CUSTOMER_REPORTS, 'filters', {
+      startDate,
+      endDate,
+      inactiveDays,
+      sortBy,
+      sortOrder,
+      showFilters,
+      activeTab,
+      activeQuickFilter,
+    });
+  }, [startDate, endDate, inactiveDays, sortBy, sortOrder, showFilters, activeTab, activeQuickFilter]);
 
   // Quick date filter helper functions
   const getQuickDateRange = (days: number) => {

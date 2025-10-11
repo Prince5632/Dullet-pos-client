@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { 
@@ -22,6 +22,7 @@ import CameraCapture from '../../components/common/CameraCapture';
 import Modal from '../../components/ui/Modal';
 import type { Attendance, User, Godown, AttendanceListParams } from '../../types';
 import { resolveCapturedImageSrc } from '../../utils/image';
+import { PERSIST_NS, persistenceService, clearOtherNamespaces } from '../../services/persistenceService';
 
 const AttendancePage: React.FC = () => {
   const navigate = useNavigate();
@@ -44,13 +45,24 @@ const AttendancePage: React.FC = () => {
   const [syncing, setSyncing] = useState(false);
   const [dateRangeError, setDateRangeError] = useState("");
 
-  // Filters
-  const [filters, setFilters] = useState<AttendanceListParams>({
-    page: 1,
-    limit: 10,
-    sortBy: 'date',
-    sortOrder: 'desc'
-  });
+  // Persisted Filters
+  const persistedFilters = persistenceService.getNS<AttendanceListParams>(
+    PERSIST_NS.ATTENDANCE,
+    'filters',
+    { page: 1, limit: 10, sortBy: 'date', sortOrder: 'desc' }
+  );
+  const [filters, setFilters] = useState<AttendanceListParams>(persistedFilters);
+  const isFirstRender = useRef(true);
+
+  // Persist filters on change
+  useEffect(() => {
+    persistenceService.setNS(PERSIST_NS.ATTENDANCE, 'filters', filters);
+  }, [filters]);
+
+  // After mount, allow filter changes to reset page
+  useEffect(() => {
+    isFirstRender.current = false;
+  }, []);
 
   // Pagination
   const [pagination, setPagination] = useState({
@@ -63,6 +75,11 @@ const AttendancePage: React.FC = () => {
 
 
 
+  // Clear other namespaces and load initial data
+  useEffect(() => {
+    // Clear states from other pages on visiting Attendance
+    clearOtherNamespaces(PERSIST_NS.ATTENDANCE);
+  }, []);
   // Load initial data
   useEffect(() => {
     const loadInitialData = async () => {
@@ -143,12 +160,12 @@ const AttendancePage: React.FC = () => {
     loadTodaysAttendance();
   }, [loadAttendance, loadTodaysAttendance]);
 
-  // Handle filter changes
+  // Handle filter changes with persisted state and first-render guard
   const handleFilterChange = (key: keyof AttendanceListParams, value: any) => {
     setFilters(prev => ({
       ...prev,
       [key]: value,
-      page: key !== 'page' ? 1 : value
+      page: key !== 'page' ? (isFirstRender.current ? (prev.page ?? 1) : 1) : value
     }));
   };
 

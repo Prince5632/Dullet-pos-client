@@ -391,7 +391,7 @@ const CustomerDetailsPage: React.FC = () => {
               <div className="px-6 py-4 space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium text-gray-500">
-                   Net Balance Remaining
+                   Net Balance Remainin
                   </span>
                   <span className="text-lg font-semibold text-red-600">
                     {formatCurrency(customer.outstandingAmount || 0)}

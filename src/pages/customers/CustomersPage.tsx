@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { customerService } from '../../services/customerService';
 import type { Customer, TableColumn } from '../../types';
@@ -9,22 +9,66 @@ import Avatar from '../../components/ui/Avatar';
 import Modal from '../../components/ui/Modal';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { usePersistedFilters } from '../../hooks/usePersistedFilters';
+import { persistenceService, PERSIST_NS, clearOtherNamespaces } from '../../services/persistenceService';
 
 const CustomersPage: React.FC = () => {
   const { user: currentUser, hasRole } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [type, setType] = useState('');
-  const [stateFilter, setStateFilter] = useState('');
-  const [city, setCity] = useState('');
-  const [status, setStatus] = useState('');
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  type CustomersFilters = {
+    search: string;
+    type: string;
+    stateFilter: string;
+    city: string;
+    status: string;
+    showFilters: boolean;
+  };
+
+  const {
+    filters,
+    setFilters,
+    pagination,
+    setPagination,
+    // sort not used dynamically here but kept for consistency
+  } = usePersistedFilters<CustomersFilters>({
+    namespace: 'customers',
+    defaultFilters: {
+      search: '',
+      type: '',
+      stateFilter: '',
+      city: '',
+      status: '',
+      showFilters: false,
+    },
+    defaultPagination: { page: 1, limit: 10 },
+    defaultSort: { sortBy: 'businessName', sortOrder: 'asc' },
+  });
+
+  const search = filters.search;
+  const setSearch = (v: string) => setFilters({ search: v });
+  const type = filters.type;
+  const setType = (v: string) => setFilters({ type: v });
+  const stateFilter = filters.stateFilter;
+  const setStateFilter = (v: string) => setFilters({ stateFilter: v });
+  const city = filters.city;
+  const setCity = (v: string) => setFilters({ city: v });
+  const status = filters.status;
+  const setStatus = (v: string) => setFilters({ status: v });
+  const page = pagination.page;
+  const setPage = (p: number) => setPagination({ page: p });
+  const limit = pagination.limit;
+  const setLimit = (l: number) => setPagination({ limit: l });
   const [totalPages, setTotalPages] = useState(1);
   const [totalCustomers, setTotalCustomers] = useState(0);
-  const [showFilters, setShowFilters] = useState(false);
+  const showFilters = filters.showFilters;
+  const setShowFilters = (v: boolean) => setFilters({ showFilters: v });
   
+  // Cross-page reset: visiting Customers clears Orders persisted filters/pagination if present
+  useEffect(() => {
+    clearOtherNamespaces(PERSIST_NS.CUSTOMERS);
+  }, []);
+
   // Delete modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
@@ -72,12 +116,9 @@ const CustomersPage: React.FC = () => {
 
   // Clear all filters function
   const clearFilters = () => {
-    setSearch('');
-    setType('');
-    setStateFilter('');
-    setCity('');
-    setStatus('');
-    setPage(1);
+    // Clear persisted filters and reset pagination to defaults
+    setFilters({ search: '', type: '', stateFilter: '', city: '', status: '', showFilters: false });
+    setPagination({ page: 1 });
   };
 
   useEffect(() => {
@@ -86,7 +127,12 @@ const CustomersPage: React.FC = () => {
   }, [page, limit, search, type, status, stateFilter, city]);
 
   // Reset to page 1 when filters change
+  const didMountRef = useRef(false);
   useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
     if (page !== 1) {
       setPage(1);
     }
@@ -390,8 +436,8 @@ const CustomersPage: React.FC = () => {
                 totalPages={totalPages}
                 totalItems={totalCustomers}
                 itemsPerPage={limit}
-                onPageChange={setPage}
-                onItemsPerPageChange={setLimit}
+                onPageChange={(p) => setPage(p)}
+                onItemsPerPageChange={(l) => setLimit(l)}
               />
             </div>
           )}

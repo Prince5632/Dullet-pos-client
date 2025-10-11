@@ -30,6 +30,7 @@ import Avatar from "../../components/ui/Avatar";
 import Modal from "../../components/ui/Modal";
 import RoleAssignment from "../../components/permissions/RoleAssignment";
 import toast from "react-hot-toast";
+import { persistenceService, PERSIST_NS, clearOtherNamespaces } from "../../services/persistenceService";
 
 interface UserListFilters {
   search: string;
@@ -75,6 +76,51 @@ const UsersPage: React.FC = () => {
     role: "",
     status: "true", // Default to showing only active users
   });
+  const initRef = useRef(false);
+
+  // Load persisted state on mount and clear other namespaces
+  useEffect(() => {
+    clearOtherNamespaces(PERSIST_NS.USERS);
+    const persistedFilters = persistenceService.getNS<UserListFilters>(PERSIST_NS.USERS, 'filters', {
+      search: "",
+      department: "",
+      role: "",
+      status: "true",
+    });
+    const persistedPagination = persistenceService.getNS<any>(PERSIST_NS.USERS, 'pagination', {
+      currentPage: 1,
+      itemsPerPage: 10,
+    });
+    const persistedSort = persistenceService.getNS<any>(PERSIST_NS.USERS, 'sort', {
+      sortBy: '',
+      sortDirection: 'asc',
+    });
+
+    setFilters(persistedFilters);
+    setCurrentPage(persistedPagination.currentPage || 1);
+    setItemsPerPage(persistedPagination.itemsPerPage || 10);
+    setSortBy(persistedSort.sortBy || '');
+    setSortDirection((persistedSort.sortDirection as 'asc' | 'desc') || 'asc');
+    initRef.current = true;
+  }, []);
+
+  // Persist filters
+  useEffect(() => {
+    if (!initRef.current) return;
+    persistenceService.setNS(PERSIST_NS.USERS, 'filters', filters);
+  }, [filters]);
+
+  // Persist pagination
+  useEffect(() => {
+    if (!initRef.current) return;
+    persistenceService.setNS(PERSIST_NS.USERS, 'pagination', { currentPage, itemsPerPage });
+  }, [currentPage, itemsPerPage]);
+
+  // Persist sort
+  useEffect(() => {
+    if (!initRef.current) return;
+    persistenceService.setNS(PERSIST_NS.USERS, 'sort', { sortBy, sortDirection });
+  }, [sortBy, sortDirection]);
 
   // Departments list
   const departments = userService.getDepartments();
@@ -224,6 +270,7 @@ const UsersPage: React.FC = () => {
       status: "",
     });
     setCurrentPage(1);
+    persistenceService.clearNamespace(PERSIST_NS.USERS);
   };
 
   // Selection handlers

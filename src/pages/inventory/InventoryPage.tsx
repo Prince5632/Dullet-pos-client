@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { inventoryService } from '../../services/inventoryService';
 import { apiService } from '../../services/api';
@@ -12,6 +12,7 @@ import Modal from '../../components/ui/Modal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useDebounce } from '../../hooks/useDebounce';
 import toast from 'react-hot-toast';
+import { persistenceService, PERSIST_NS, clearOtherNamespaces } from '../../services/persistenceService';
 
 const InventoryPage: React.FC = () => {
   const { user: currentUser, hasPermission } = useAuth();
@@ -35,6 +36,7 @@ const InventoryPage: React.FC = () => {
   const [inventoryToDelete, setInventoryToDelete] = useState<Inventory | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const initRef = useRef(false);
 
   // Debounced search
   const debouncedSearch = useDebounce(search, 300);
@@ -49,6 +51,55 @@ const InventoryPage: React.FC = () => {
       console.error("Failed to load godowns:", err);
     }
   };
+
+  // Load persisted state on mount and clear other namespaces
+  useEffect(() => {
+    clearOtherNamespaces(PERSIST_NS.INVENTORY);
+    const persistedFilters = persistenceService.getNS<any>(PERSIST_NS.INVENTORY, 'filters', {
+      search: '',
+      inventoryType: '',
+      godownFilter: '',
+      dateFrom: '',
+      dateTo: '',
+      loggedBy: '',
+      showFilters: false,
+    });
+    const persistedPagination = persistenceService.getNS<any>(PERSIST_NS.INVENTORY, 'pagination', {
+      page: 1,
+      limit: 10,
+    });
+
+    setSearch(persistedFilters.search || '');
+    setInventoryType(persistedFilters.inventoryType || '');
+    setGodownFilter(persistedFilters.godownFilter || '');
+    setDateFrom(persistedFilters.dateFrom || '');
+    setDateTo(persistedFilters.dateTo || '');
+    setLoggedBy(persistedFilters.loggedBy || '');
+    setShowFilters(!!persistedFilters.showFilters);
+    setPage(persistedPagination.page || 1);
+    setLimit(persistedPagination.limit || 10);
+    initRef.current = true;
+  }, []);
+
+  // Persist filters
+  useEffect(() => {
+    if (!initRef.current) return;
+    persistenceService.setNS(PERSIST_NS.INVENTORY, 'filters', {
+      search,
+      inventoryType,
+      godownFilter,
+      dateFrom,
+      dateTo,
+      loggedBy,
+      showFilters,
+    });
+  }, [search, inventoryType, godownFilter, dateFrom, dateTo, loggedBy, showFilters]);
+
+  // Persist pagination
+  useEffect(() => {
+    if (!initRef.current) return;
+    persistenceService.setNS(PERSIST_NS.INVENTORY, 'pagination', { page, limit });
+  }, [page, limit]);
 
   const loadInventory = async () => {
     if (!hasPermission("stock.read")) {
@@ -110,6 +161,7 @@ const InventoryPage: React.FC = () => {
 
   // Reset to page 1 when filters change
   useEffect(() => {
+    if (!initRef.current) return;
     if (page !== 1) {
       setPage(1);
     }
