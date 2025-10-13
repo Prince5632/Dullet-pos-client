@@ -4,6 +4,7 @@ export interface ApiResponse<T = any> {
   message: string;
   data?: T;
   errors?: string[];
+  
 }
 
 export interface PaginationResponse<T> extends ApiResponse<T> {
@@ -871,6 +872,32 @@ export interface Production {
   conversionEfficiency?: number;
 }
 
+export interface ProductionStats {
+  totalProductions: number;
+  totalInputQty: number;
+  totalOutputQty: number;
+  averageEfficiency: number;
+  productionsByShift: {
+    Day: number;
+    Night: number;
+  };
+  productionsByLocation: {
+    [key: string]: number;
+  };
+  recentProductions: Production[];
+  // Enhanced stats for atta/chokar breakdown
+  totalAttaProduction?: number;
+  totalChokarProduction?: number;
+  averageAttaProduction?: number;
+  productionByUnit?: {
+    [unit: string]: {
+      totalQty: number;
+      attaQty: number;
+      chokarQty: number;
+    };
+  };
+}
+
 export interface CreateProductionForm {
   productionDate: string;
   shift: 'Morning' | 'Afternoon' | 'Night';
@@ -883,6 +910,10 @@ export interface CreateProductionForm {
   outputDetails: OutputDetail[];
   attachments?: File[];
   remarks?: string;
+}
+
+export interface UpdateProductionForm extends CreateProductionForm {
+  removedAttachments?: string[];
 }
 
 export interface ProductionListParams {

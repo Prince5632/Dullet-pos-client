@@ -26,13 +26,13 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({ data }) => {
       year: "numeric",
     });
   };
-function formatPriceWithCommas(price: number | string) {
-  if (price == null || isNaN(Number(price))) return "0";
-  return Number(price).toLocaleString("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}  // Calculate total amount
+  function formatPriceWithCommas(price: number | string) {
+    if (price == null || isNaN(Number(price))) return "0";
+    return Number(price).toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  } // Calculate total amount
   const calculateTotal = () => {
     return items.reduce((total: number, item: any) => {
       return total + (item.totalAmount || item.taxableValue || 0);
@@ -64,6 +64,29 @@ function formatPriceWithCommas(price: number | string) {
     }
     return `${item.quantity} ${item.unit || ""}`;
   };
+  const outstanding = Number(orderData?.customer?.outstandingAmount) || 0;
+  const paid = Number(orderData?.paidAmount) || 0;
+  let customerPreviousBalance;
+  let customerTotalBalance;
+
+  if (outstanding > 0 && paid > 0 && outstanding > paid) {
+    const newBalance = Math.max(0, outstanding - paid);
+    customerPreviousBalance = formatPriceWithCommas(newBalance);
+    customerTotalBalance = customerPreviousBalance
+  } 
+  else if (outstanding > 0 && paid > 0 && outstanding < paid) {
+    const newBalance = Math.max(0, outstanding);
+    customerPreviousBalance = formatPriceWithCommas(newBalance);
+    customerTotalBalance = formatPriceWithCommas(newBalance + orderData?.totalAmount)
+  } 
+  else if (outstanding > 0 && paid <= 0) {
+   
+    customerPreviousBalance = formatPriceWithCommas(outstanding);
+        customerTotalBalance = customerPreviousBalance
+  } else {
+    customerPreviousBalance = formatPriceWithCommas(orderData?.totalAmount);
+        customerTotalBalance = customerPreviousBalance
+  }
 
   // Simple number to words conversion (basic implementation)
 
@@ -239,17 +262,18 @@ function formatPriceWithCommas(price: number | string) {
                           ? "40kg Bags"
                           : item.packaging === "10kg Bags"
                           ? "40kg Bags"
-                           : item.packaging === "50kg Bags"
+                          : item.packaging === "50kg Bags"
                           ? "40kg Bags"
                           : item.packaging || "N/A"
                         : "Loose"}
                     </td>
                     <td>
-                      ₹{formatPriceWithCommas(item.ratePerUnit || item.rate || 0)}
+                      ₹
+                      {formatPriceWithCommas(
+                        item.ratePerUnit || item.rate || 0
+                      )}
                     </td>
-                    <td>
-                      ₹{formatPriceWithCommas(item.totalAmount || 0)}
-                    </td>
+                    <td>₹{formatPriceWithCommas(item.totalAmount || 0)}</td>
                     {hasAnyTaxableItem ? (
                       <td>
                         ₹{formatPriceWithCommas(calculateItemTax(item) || 0)}
@@ -268,7 +292,10 @@ function formatPriceWithCommas(price: number | string) {
                 <div className="summary-row-simple">
                   <span>Sub Total:</span>
                   <span>
-                    ₹{formatPriceWithCommas(orderData.subtotal || calculateTotal())}
+                    ₹
+                    {formatPriceWithCommas(
+                      orderData.subtotal || calculateTotal()
+                    )}
                   </span>
                 </div>
                 {/* {orderData.taxAmount && orderData.taxAmount > 0 ? ( */}
@@ -284,16 +311,16 @@ function formatPriceWithCommas(price: number | string) {
                     ₹{formatPriceWithCommas(orderData?.taxAmount || 0)}
                   </span>
                 </div>
+                <div className="summary-row-simple">
+                  <span>Previous Balance :</span>
+                  <span>₹{customerPreviousBalance}</span>
+                </div>
                 {/* ) : null} */}
                 <div className="summary-row-simple total-row-simple">
                   <span>Total Amount:</span>
                   <span>
                     ₹
-                    {formatPriceWithCommas(
-                      orderData.finalAmount ||
-                      orderData.totalAmount ||
-                      calculateTotal()
-                    )}
+                    {customerTotalBalance}
                   </span>
                 </div>
                 {orderData.paidAmount !== undefined && (
@@ -307,7 +334,8 @@ function formatPriceWithCommas(price: number | string) {
                 <div className="summary-row-simple">
                   <span>Net Balance Remaining:</span>
                   <span>
-                    ₹{formatPriceWithCommas(
+                    ₹
+                    {formatPriceWithCommas(
                       orderData?.customer?.outstandingAmount || 0
                     )}
                   </span>
@@ -675,7 +703,7 @@ function formatPriceWithCommas(price: number | string) {
           display: flex;
           justify-content: space-between;
           padding: 3px 0;
-          font-size: 12px;
+          font-size: 14px;
           min-height: 18px;
           align-items: center;
         }
@@ -693,7 +721,7 @@ function formatPriceWithCommas(price: number | string) {
         }
 
         .total-row-simple {
-          font-size: 12px;
+          font-size: 17px;
           font-weight: bold;
         }
 

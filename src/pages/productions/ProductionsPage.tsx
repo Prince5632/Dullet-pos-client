@@ -46,6 +46,10 @@ const ProductionsPage: React.FC = () => {
   const [operators, setOperators] = useState<User[]>([]);
   const initRef = useRef(false);
 
+  // New state for unit filtering
+  const [unitFilter, setUnitFilter] = useState<string>("");
+  const [enhancedStats, setEnhancedStats] = useState<any>(null);
+
   // Delete modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [productionToDelete, setProductionToDelete] = useState<Production | null>(null);
@@ -54,6 +58,51 @@ const ProductionsPage: React.FC = () => {
 
   // Check if current user is super admin
   const isSuperAdmin = hasRole("Super Admin");
+
+  // Unit options for filtering
+  const unitOptions = [
+    { value: "", label: "All Units" },
+    { value: "KG", label: "KG" },
+    { value: "Quintal", label: "Quintal" },
+    { value: "Ton", label: "Ton" },
+  
+  ];
+
+  // Unit conversion functions
+  const convertToKG = (quantity: number, unit: string): number => {
+    switch (unit) {
+      case 'Ton':
+        return quantity * 1000;
+      case 'Quintal':
+        return quantity * 100;
+      case 'KG':
+        return quantity;
+      default:
+        return quantity; // For bag units, return as is
+    }
+  };
+
+  const convertFromKG = (quantityInKG: number, targetUnit: string): number => {
+    switch (targetUnit) {
+      case 'Ton':
+        return quantityInKG / 1000;
+      case 'Quintal':
+        return quantityInKG / 100;
+      case 'KG':
+        return quantityInKG;
+      default:
+        return quantityInKG; // For bag units, return as is
+    }
+  };
+
+  const isWeightUnit = (unit: string): boolean => {
+    return ['KG', 'Quintal', 'Ton'].includes(unit);
+  };
+
+  const isBagUnit = (unit: string): boolean => {
+    return false;
+    // return ['Bags', '5Kg Bags', '40Kg Bags'].includes(unit);
+  };
 
   // Date validation function
   const validateDateRange = (fromDate: string, toDate: string): string => {
@@ -83,6 +132,80 @@ const ProductionsPage: React.FC = () => {
     }
     
     return "";
+  };
+
+  // Calculate enhanced statistics from productions data
+  const calculateEnhancedStats = (productionsData: Production[]) => {
+    // Convert all weight-based quantities to KG for calculation
+    let totalAttaProductionKG = 0;
+    let totalChokarProductionKG = 0;
+    let totalInputConsumptionKG = 0;
+    let attaProductionCount = 0;
+    
+    // Separate tracking for bags
+    let totalAttaBags = 0;
+    let totalChokarBags = 0;
+    
+    const unitBreakdown: { [unit: string]: { totalQty: number; attaQty: number; chokarQty: number; bagCount?: number } } = {};
+
+    productionsData.forEach(production => {
+      // Convert input to KG for total calculation
+      totalInputConsumptionKG += convertToKG(production.inputQty, production.inputUnit);
+      
+      production.outputDetails.forEach(output => {
+        const unit = output.productUnit;
+        
+        if (!unitBreakdown[unit]) {
+          unitBreakdown[unit] = { totalQty: 0, attaQty: 0, chokarQty: 0 };
+        }
+        
+        unitBreakdown[unit].totalQty += output.productQty;
+        
+        if (output.itemName === 'Atta') {
+          if (isWeightUnit(unit)) {
+            totalAttaProductionKG += convertToKG(output.productQty, unit);
+          } else if (isBagUnit(unit)) {
+            totalAttaBags += output.productQty;
+          }
+          unitBreakdown[unit].attaQty += output.productQty;
+          attaProductionCount++;
+        } else if (output.itemName === 'Chokar') {
+          if (isWeightUnit(unit)) {
+            totalChokarProductionKG += convertToKG(output.productQty, unit);
+          } else if (isBagUnit(unit)) {
+            totalChokarBags += output.productQty;
+          }
+          unitBreakdown[unit].chokarQty += output.productQty;
+        }
+
+        // For bag units, track bag count
+        if (isBagUnit(unit)) {
+          if (!unitBreakdown[unit].bagCount) {
+            unitBreakdown[unit].bagCount = 0;
+          }
+          unitBreakdown[unit].bagCount += output.productQty;
+        }
+      });
+    });
+
+    // Convert totals to selected unit or default to KG
+    const displayUnit = unitFilter && isWeightUnit(unitFilter) ? unitFilter : 'KG';
+    const totalAttaProduction = convertFromKG(totalAttaProductionKG, displayUnit);
+    const totalChokarProduction = convertFromKG(totalChokarProductionKG, displayUnit);
+    const totalInputConsumption = convertFromKG(totalInputConsumptionKG, displayUnit);
+    const averageAttaProduction = attaProductionCount > 0 ? totalAttaProduction / attaProductionCount : 0;
+
+    return {
+      totalAttaProduction,
+      totalChokarProduction,
+      totalInputConsumption,
+      averageAttaProduction,
+      totalAttaBags,
+      totalChokarBags,
+      displayUnit,
+      unitBreakdown,
+      filteredProductionsCount: productionsData.length
+    };
   };
 
   const loadProductions = async () => {
@@ -115,6 +238,10 @@ const ProductionsPage: React.FC = () => {
         setProductions(res.data || []);
         setTotalPages(res.pagination?.totalPages || 1);
         setTotalProductions(res.pagination?.totalItems || 0);
+        
+        // Calculate enhanced stats from current data
+        const enhanced = calculateEnhancedStats(res.data || []);
+        setEnhancedStats(enhanced);
       }
     } catch (error) {
       console.error("Failed to load productions:", error);
@@ -150,10 +277,6 @@ const ProductionsPage: React.FC = () => {
     }
   };
 
-  const handleProductionUpdate = (updatedProduction: Production) => {
-    handleSync()
-  };
-
   // Load persisted state on mount and clear other namespaces
   useEffect(() => {
     clearOtherNamespaces(PERSIST_NS.PRODUCTIONS);
@@ -167,7 +290,8 @@ const ProductionsPage: React.FC = () => {
       dateTo: '',
       page: 1,
       limit: 10,
-      showFilters: false
+      showFilters: false,
+      unitFilter: ''
     });
 
     setSearch(persistedFilters.search);
@@ -180,6 +304,7 @@ const ProductionsPage: React.FC = () => {
     setPage(persistedFilters.page);
     setLimit(persistedFilters.limit);
     setShowFilters(persistedFilters.showFilters);
+    setUnitFilter(persistedFilters.unitFilter);
   }, []);
 
   // Save filters to persistence whenever they change
@@ -199,17 +324,26 @@ const ProductionsPage: React.FC = () => {
       dateTo,
       page,
       limit,
-      showFilters
+      showFilters,
+      unitFilter
     };
 
     persistenceService.setNS(PERSIST_NS.PRODUCTIONS, 'filters', filters);
-  }, [search, shift, location, machine, operator, dateFrom, dateTo, page, limit, showFilters]);
+  }, [search, shift, location, machine, operator, dateFrom, dateTo, page, limit, showFilters, unitFilter]);
 
   // Load data on mount and when filters change
   useEffect(() => {
     if (!initRef.current) return;
     loadProductions();
   }, [page, limit, search, shift, location, machine, operator, dateFrom, dateTo]);
+
+  // Recalculate enhanced stats when unit filter changes
+  useEffect(() => {
+    if (productions.length > 0) {
+      const enhanced = calculateEnhancedStats(productions);
+      setEnhancedStats(enhanced);
+    }
+  }, [unitFilter, productions]);
 
   // Load initial data
   useEffect(() => {
@@ -274,6 +408,7 @@ const ProductionsPage: React.FC = () => {
     setDateFrom("");
     setDateTo("");
     setDateError("");
+    setUnitFilter("");
     setPage(1);
   };
 
@@ -358,25 +493,17 @@ const ProductionsPage: React.FC = () => {
         render: (_, production) => (
           <div className="flex items-center gap-2">
             <Avatar
-              name={production.operator?.name || "Unknown"}
+              name={production.operator || "Unknown"}
               size="sm"
               className="w-6 h-6"
             />
             <span className="text-xs text-gray-700 truncate">
-              {production.operator?.name || "Unknown"}
+              {production.operator || "Unknown"}
             </span>
           </div>
         ),
       },
-      {
-        key: "conversionEfficiency",
-        label: "Efficiency",
-        render: (value) => (
-          <span className="text-xs text-gray-700">
-            {productionService.formatEfficiency(value)}
-          </span>
-        ),
-      },
+     
       {
         key: "actions",
         label: "Actions",
@@ -449,61 +576,147 @@ const ProductionsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Productions</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalProductions}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <CogIcon className="w-6 h-6 text-blue-600" />
-              </div>
+      {/* Enhanced Stats Cards */}
+      <div className="space-y-6">
+        {/* Stats Header with Unit Filter */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex flex-col  sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Production Statistics</h2>
+              <p className="text-sm text-gray-600">Overview of production performance and metrics</p>
+            </div>
+            <div className="min-w-0 sm:w-64">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Display Unit
+              </label>
+              <select
+                value={unitFilter}
+                onChange={(e) => setUnitFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {unitOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Input</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalInputQty.toLocaleString()}</p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                </svg>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Total Atta Production */}
+            <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-green-700">Total Atta Production</p>
+                  {unitFilter && isBagUnit(unitFilter) ? (
+                    <p className="text-2xl font-bold text-green-900">
+                      {enhancedStats?.totalAttaBags?.toLocaleString() || 0} Bags
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold text-green-900">
+                        {enhancedStats?.totalAttaProduction?.toLocaleString() || 0}
+                      </p>
+                      <p className="text-xs text-green-600 font-medium">
+                        {enhancedStats?.displayUnit || 'KG'}
+                      </p>
+                      {enhancedStats?.totalAttaBags > 0 && (
+                        <p className="text-sm text-green-600 mt-1">
+                          {enhancedStats.totalAttaBags.toLocaleString()} Bags
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+                <div className="w-12 h-12 bg-green-200 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Output</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalOutputQty.toLocaleString()}</p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
+
+            {/* Total Chokar Production */}
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-6 rounded-lg border border-amber-200">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-700">Total Chokar Production</p>
+                  {unitFilter && isBagUnit(unitFilter) ? (
+                    <p className="text-2xl font-bold text-amber-900">
+                      {enhancedStats?.totalChokarBags?.toLocaleString() || 0} Bags
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold text-amber-900">
+                        {enhancedStats?.totalChokarProduction?.toLocaleString() || 0}
+                      </p>
+                      <p className="text-xs text-amber-600 font-medium">
+                        {enhancedStats?.displayUnit || 'KG'}
+                      </p>
+                      {enhancedStats?.totalChokarBags > 0 && (
+                        <p className="text-sm text-amber-600 mt-1">
+                          {enhancedStats.totalChokarBags.toLocaleString()} Bags
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+                <div className="w-12 h-12 bg-amber-200 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Avg Efficiency</p>
-                <p className="text-2xl font-bold text-gray-900">{productionService.formatEfficiency(stats.averageEfficiency)}</p>
+
+            {/* Total Input Consumption */}
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-blue-700">Total Input Consumption</p>
+                  <p className="text-2xl font-bold text-blue-900">
+                    {enhancedStats?.totalInputConsumption?.toLocaleString() || 0}
+                  </p>
+                  <p className="text-xs text-blue-600 font-medium">
+                    {enhancedStats?.displayUnit || 'KG'}
+                  </p>
+                  <p className="text-sm text-blue-600 mt-1">
+                    {enhancedStats?.filteredProductionsCount || 0} productions
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-blue-200 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                  </svg>
+                </div>
               </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
+            </div>
+
+            {/* Average Atta Production */}
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg border border-purple-200">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-purple-700">Average Atta Production</p>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {enhancedStats?.averageAttaProduction?.toFixed(2) || 0}
+                  </p>
+                  <p className="text-xs text-purple-600 font-medium">
+                    {enhancedStats?.displayUnit || 'KG'} per batch
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-purple-200 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 text-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      )}
+
+      </div>
 
       {/* Search and Filters */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -537,7 +750,7 @@ const ProductionsPage: React.FC = () => {
           </button>
 
           {/* Clear Filters */}
-          {(search || shift || location || machine || operator || dateFrom || dateTo) && (
+          {(search || shift || location || machine || operator || dateFrom || dateTo || unitFilter) && (
             <button
               onClick={clearFilters}
               className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-800"
@@ -601,18 +814,13 @@ const ProductionsPage: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Operator
                 </label>
-                <select
+                 <input
+                  type="text"
+                  placeholder="Enter operator"
                   value={operator}
                   onChange={(e) => setOperator(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">All Operators</option>
-                  {operators.map((op) => (
-                    <option key={op._id} value={op._id}>
-                      {op.name}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
 
               {/* Date From */}
@@ -644,7 +852,9 @@ const ProductionsPage: React.FC = () => {
 
             {/* Date Error */}
             {dateError && (
-              <div className="mt-2 text-sm text-red-600">{dateError}</div>
+              <div className="mt-2 text-sm text-red-600">
+                {dateError}
+              </div>
             )}
           </div>
         )}

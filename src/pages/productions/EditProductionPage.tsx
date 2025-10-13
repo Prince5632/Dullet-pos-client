@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { productionService } from "../../services/productionService";
 import { userService } from "../../services/userService";
 import type {
-  CreateProductionForm,
+  UpdateProductionForm,
   User,
+  Production,
 } from "../../types";
 import {
   CogIcon,
@@ -20,6 +21,7 @@ import {
   CameraIcon,
   PlusIcon,
   TrashIcon,
+  ArrowLeftIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "react-hot-toast";
 import PhotoCaptureModal from "../../components/common/PhotoCaptureModal";
@@ -43,10 +45,13 @@ interface OutputDetail {
   notes?: string;
 }
 
-const CreateProductionPage: React.FC = () => {
+const EditProductionPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState<CreateProductionForm>({
+  const [production, setProduction] = useState<Production | null>(null);
+  const [form, setForm] = useState<UpdateProductionForm>({
     productionDate: new Date().toISOString().split('T')[0],
     shift: "Morning",
     location: "",
@@ -65,50 +70,78 @@ const CreateProductionPage: React.FC = () => {
     ],
     remarks: "",
     attachments: [],
+    removedAttachments: [],
   });
 
-  const [operators, setOperators] = useState<User[]>([]);
-  const [operatorsLoading, setOperatorsLoading] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<any[]>([]);
   const [filePreviews, setFilePreviews] = useState<{ [key: string]: string }>(
     {}
   );
   const [previewModal, setPreviewModal] = useState<{
     isOpen: boolean;
-    file: File | null;
+    file: File | any | null;
     previewUrl: string | null;
+    isExisting: boolean;
   }>({
     isOpen: false,
     file: null,
     previewUrl: null,
+    isExisting: false,
   });
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
 
   useEffect(() => {
-    loadOperators();
-    // Automatically fetch location when component mounts
-    fetchCurrentLocation();
-  }, []);
+    if (id) {
+      loadProduction();
+    }
+  }, [id]);
 
-  const loadOperators = async () => {
+  const loadProduction = async () => {
     try {
-      setOperatorsLoading(true);
-      const res = await userService.getUsers({
-        role: "Operator",
-        isActive: "true",
-        limit: 100,
-      });
+      setLoading(true);
+      const res = await productionService.getProductionById(id!);
       if (res.success && res.data) {
-        setOperators(res.data.users || []);
+        const productionData = res.data as Production;
+        setProduction(productionData); 
+        
+        // Populate form with existing data
+        setForm({
+          productionDate: productionData.productionDate.split('T')[0],
+          shift: productionData.shift,
+          location: productionData.location,
+          machine: productionData.machine,
+          operator: productionData.operator,
+          inputType: productionData.inputType,
+          inputQty: productionData.inputQty,
+          inputUnit: productionData.inputUnit,
+          outputDetails: productionData.outputDetails.map(output => ({
+            itemName: output.itemName,
+            productQty: output.productQty,
+            productUnit: output.productUnit,
+            notes: output.notes || "",
+          })),
+          remarks: productionData.remarks || "",
+          attachments: [],
+          removedAttachments: [],
+        });
+        
+        // Set existing attachments
+        if (productionData.attachments) {
+          setExistingAttachments(productionData.attachments);
+        }
+      } else {
+        throw new Error(res.message || "Failed to load production");
       }
-    } catch (error) {
-      console.error("Failed to load operators:", error);
-      toast.error("Failed to load operators");
+    } catch (error: any) {
+      console.error("Failed to load production:", error);
+      toast.error(error.message || "Failed to load production");
+      navigate("/productions");
     } finally {
-      setOperatorsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -135,12 +168,12 @@ const CreateProductionPage: React.FC = () => {
           const address = await reverseGeocode(latitude, longitude);
           
           if (address) {
-            setForm((prev) => ({ ...prev, location: address }));
+            setForm((prev: UpdateProductionForm) => ({ ...prev, location: address }));
             toast.success("Location fetched successfully");
           } else {
             // Fallback to coordinates if reverse geocoding fails
             const coordsAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-            setForm((prev) => ({ ...prev, location: coordsAddress }));
+            setForm((prev: UpdateProductionForm) => ({ ...prev, location: coordsAddress }));
             toast.success("Location coordinates fetched");
           }
         } catch (error) {
@@ -250,7 +283,9 @@ const CreateProductionPage: React.FC = () => {
       newErrors.location = "Location is required";
     }
 
-    
+    if (!form.machine.trim()) {
+      newErrors.machine = "Machine is required";
+    }
 
     if (!form.operator) {
       newErrors.operator = "Operator is required";
@@ -270,7 +305,7 @@ const CreateProductionPage: React.FC = () => {
 
     // Output details validation
     const outputErrors: string[] = [];
-    form.outputDetails.forEach((output, index) => {
+    form.outputDetails.forEach((output: OutputDetail, index: number) => {
       if (!output.itemName.trim()) {
         outputErrors[index] = `Output ${index + 1}: Item name is required`;
       } else if (!output.productQty || output.productQty <= 0) {
@@ -299,28 +334,28 @@ const CreateProductionPage: React.FC = () => {
     try {
       setSaving(true);
 
-      const formData: CreateProductionForm = {
+      const formData: UpdateProductionForm = {
         ...form,
         attachments: selectedFiles,
       };
 
-      const res = await productionService.createProduction(formData);
+      const res = await productionService.updateProduction(id!, formData);
 
       if (res.success) {
-        toast.success("Production created successfully");
-        navigate("/productions");
+        toast.success("Production updated successfully");
+        navigate(`/productions/${id}`);
       } else {
-        throw new Error(res.message || "Failed to create production");
+        throw new Error(res.message || "Failed to update production");
       }
     } catch (error: any) {
-      console.error("Failed to create production:", error);
-      toast.error(error.message || "Failed to create production");
+      console.error("Failed to update production:", error);
+      toast.error(error.message || "Failed to update production");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleInputChange = (field: keyof CreateProductionForm, value: any) => {
+  const handleInputChange = (field: keyof UpdateProductionForm, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     setTouched((prev) => ({ ...prev, [field]: true }));
 
@@ -443,16 +478,45 @@ const CreateProductionPage: React.FC = () => {
     });
   };
 
-  const openPreview = (file: File) => {
-    if (!file || !file.type) return;
+  const removeExistingAttachment = (attachmentId: string) => {
+    setExistingAttachments((prev) => prev.filter(file => file._id !== attachmentId));
+    setForm((prev) => ({
+      ...prev,
+      removedAttachments: [...(prev.removedAttachments || []), attachmentId]
+    }));
+    toast.success("Attachment marked for removal");
+  };
+
+  const openPreview = (file: File | any, isExisting: boolean = false) => {
+    if (!file) return;
     
-    if (file.type.startsWith("image/")) {
-      setPreviewModal({
-        isOpen: true,
-        file,
-        previewUrl: filePreviews[file.name] || null,
-      });
+    let previewUrl = null;
+    
+    if (isExisting) {
+      if (file.fileType?.startsWith("image/") && file.base64Data) {
+        previewUrl = `data:${file.fileType};base64,${file.base64Data}`;
+      }
+    } else {
+      if (file.type?.startsWith("image/")) {
+        previewUrl = filePreviews[file.name] || null;
+      }
     }
+    
+    setPreviewModal({
+      isOpen: true,
+      file,
+      previewUrl,
+      isExisting,
+    });
+  };
+
+  const closePreviewModal = () => {
+    setPreviewModal({
+      isOpen: false,
+      file: null,
+      previewUrl: null,
+      isExisting: false,
+    });
   };
 
   const handleCameraCapture = (imageData: string, imageFile: File) => {
@@ -485,26 +549,68 @@ const CreateProductionPage: React.FC = () => {
     toast.success("Image captured successfully");
   };
 
+  const getFileIcon = (file: any) => {
+    const fileType = file?.fileType || file?.type || "";
+    
+    if (fileType.startsWith("image/")) {
+      return <PhotoIcon className="w-5 h-5 text-green-500" />;
+    } else {
+      return <DocumentIcon className="w-5 h-5 text-blue-500" />;
+    }
+  };
+
   const inputUnits = ["KG", "Quintal", "Ton"];
   const outputUnits = ["KG", "Quintal", "Ton"];
   const itemNames = ["Atta", "Chokar"];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading production details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!production) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <CubeIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Production Not Found
+          </h2>
+          <p className="text-gray-600 mb-6">
+            The production you're trying to edit doesn't exist or has been removed.
+          </p>
+          <button
+            onClick={() => navigate("/productions")}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            <ArrowLeftIcon className="w-4 h-4 mr-2" />
+            Back to Productions
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <button
-          onClick={() => navigate("/productions")}
+          onClick={() => navigate(`/productions/${id}`)}
           className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
+          <ArrowLeftIcon className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Create Production</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Edit Production</h1>
           <p className="text-sm text-gray-600">
-            Add a new production record to track manufacturing output
+            Update production record {productionService.formatBatchId(production.batchId)}
           </p>
         </div>
       </div>
@@ -550,8 +656,7 @@ const CreateProductionPage: React.FC = () => {
                   errors.shift ? "border-red-300" : "border-gray-300"
                 }`}
               >
-                <option value="Morning">Morning</option>
-                <option value="Afternoon">Afternoon</option>
+                <option value="Day">Day</option>
                 <option value="Night">Night</option>
               </select>
               {errors.shift && (
@@ -604,11 +709,11 @@ const CreateProductionPage: React.FC = () => {
             {/* Machine */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Machine 
+                Machine *
               </label>
               <input
                 type="text"
-                placeholder="Enter machine name/number"
+                placeholder="Enter machine name or ID"
                 value={form.machine}
                 onChange={(e) => handleInputChange("machine", e.target.value)}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
@@ -627,9 +732,9 @@ const CreateProductionPage: React.FC = () => {
               </label>
               <input
                 type="text"
-                placeholder="Enter operator name"
+                placeholder="Enter machine name or ID"
                 value={form.operator}
-                onChange={(e) => handleInputChange("operator", e.target.value)}
+                onChange={(e) => handleInputChange("machine", e.target.value)}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                   errors.operator ? "border-red-300" : "border-gray-300"
                 }`}
@@ -644,12 +749,8 @@ const CreateProductionPage: React.FC = () => {
         {/* Input Details */}
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center gap-2 mb-4">
-            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-            </svg>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Input Details
-            </h2>
+            <CubeIcon className="w-5 h-5 text-green-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Input Details</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -660,7 +761,7 @@ const CreateProductionPage: React.FC = () => {
               </label>
               <input
                 type="text"
-                placeholder="Enter input material type"
+                placeholder="e.g., Wheat, Rice, etc."
                 value={form.inputType}
                 onChange={(e) => handleInputChange("inputType", e.target.value)}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
@@ -681,8 +782,8 @@ const CreateProductionPage: React.FC = () => {
                 type="number"
                 min="0"
                 step="0.01"
-                placeholder="Enter quantity"
-                value={form.inputQty || ""}
+                placeholder="0.00"
+                value={form.inputQty}
                 onChange={(e) => handleInputChange("inputQty", parseFloat(e.target.value) || 0)}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                   errors.inputQty ? "border-red-300" : "border-gray-300"
@@ -722,19 +823,15 @@ const CreateProductionPage: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-              <h2 className="text-lg font-semibold text-gray-900">
-                Output Details
-              </h2>
+              <CubeIcon className="w-5 h-5 text-orange-600" />
+              <h2 className="text-lg font-semibold text-gray-900">Output Details</h2>
             </div>
             <button
               type="button"
               onClick={addOutputDetail}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
+              className="inline-flex items-center px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              <PlusIcon className="w-4 h-4" />
+              <PlusIcon className="w-4 h-4 mr-1" />
               Add Output
             </button>
           </div>
@@ -743,24 +840,24 @@ const CreateProductionPage: React.FC = () => {
             {form.outputDetails.map((output, index) => (
               <div key={index} className="p-4 border border-gray-200 rounded-lg">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium text-gray-700">
+                  <h3 className="text-sm font-medium text-gray-900">
                     Output {index + 1}
                   </h3>
                   {form.outputDetails.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeOutputDetail(index)}
-                      className="text-red-600 hover:text-red-800"
+                      className="p-1 text-red-600 hover:bg-red-50 rounded"
                     >
                       <TrashIcon className="w-4 h-4" />
                     </button>
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   {/* Item Name */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Item Name *
                     </label>
                     <select
@@ -768,7 +865,7 @@ const CreateProductionPage: React.FC = () => {
                       onChange={(e) =>
                         handleOutputDetailChange(index, "itemName", e.target.value)
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">Select item</option>
                       {itemNames.map((item) => (
@@ -781,15 +878,15 @@ const CreateProductionPage: React.FC = () => {
 
                   {/* Product Quantity */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Quantity *
                     </label>
                     <input
                       type="number"
                       min="0"
                       step="0.01"
-                      placeholder="Enter quantity"
-                      value={output.productQty || ""}
+                      placeholder="0.00"
+                      value={output.productQty}
                       onChange={(e) =>
                         handleOutputDetailChange(
                           index,
@@ -797,13 +894,13 @@ const CreateProductionPage: React.FC = () => {
                           parseFloat(e.target.value) || 0
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
 
                   {/* Product Unit */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Unit *
                     </label>
                     <select
@@ -811,7 +908,7 @@ const CreateProductionPage: React.FC = () => {
                       onChange={(e) =>
                         handleOutputDetailChange(index, "productUnit", e.target.value)
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       {outputUnits.map((unit) => (
                         <option key={unit} value={unit}>
@@ -820,22 +917,22 @@ const CreateProductionPage: React.FC = () => {
                       ))}
                     </select>
                   </div>
-                </div>
 
-                {/* Notes */}
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes
-                  </label>
-                  <textarea
-                    placeholder="Enter additional notes for this output"
-                    value={output.notes || ""}
-                    onChange={(e) =>
-                      handleOutputDetailChange(index, "notes", e.target.value)
-                    }
-                    rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                  {/* Notes */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Notes
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Optional notes"
+                      value={output.notes || ""}
+                      onChange={(e) =>
+                        handleOutputDetailChange(index, "notes", e.target.value)
+                      }
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
                 </div>
 
                 {errors.outputDetails && errors.outputDetails[index] && (
@@ -851,12 +948,108 @@ const CreateProductionPage: React.FC = () => {
         {/* Attachments */}
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center gap-2 mb-4">
-            <DocumentIcon className="w-5 h-5 text-gray-600" />
+            <DocumentIcon className="w-5 h-5 text-purple-600" />
             <h2 className="text-lg font-semibold text-gray-900">Attachments</h2>
           </div>
 
-          <div className="space-y-4">
-            {/* File Upload */}
+          {/* Existing Attachments */}
+          {existingAttachments.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">Existing Attachments</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {existingAttachments.map((file, index) => (
+                  <div
+                    key={index}
+                    className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      {getFileIcon(file)}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {file.fileName}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {(file.fileSize / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openPreview(file, true)}
+                        className="flex-1 inline-flex items-center justify-center px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                      >
+                        <EyeIcon className="w-4 h-4 mr-1" />
+                        Preview
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeExistingAttachment(file._id)}
+                        className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* New Attachments */}
+          {selectedFiles.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">New Attachments</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {selectedFiles.map((file, index) => (
+                  <div
+                    key={index}
+                    className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      {getFileIcon(file)}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {file.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
+                    {filePreviews[file.name] && (
+                      <div className="mb-3">
+                        <img
+                          src={filePreviews[file.name]}
+                          alt={file.name}
+                          className="w-full h-24 object-cover rounded border"
+                        />
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openPreview(file, false)}
+                        className="flex-1 inline-flex items-center justify-center px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                      >
+                        <EyeIcon className="w-4 h-4 mr-1" />
+                        Preview
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeFile(index)}
+                        className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* File Upload */}
             <div className="flex items-center gap-4">
               <label className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
                 <PhotoIcon className="w-4 h-4" />
@@ -881,63 +1074,6 @@ const CreateProductionPage: React.FC = () => {
                 Only image files under 2MB are allowed
               </p>
             </div>
-
-            {/* File List */}
-            {selectedFiles.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {selectedFiles.map((file, index) => (
-                  <div
-                    key={index}
-                    className="relative p-3 border border-gray-200 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      {file.type.startsWith("image/") ? (
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                          {filePreviews[file.name] && (
-                            <img
-                              src={filePreviews[file.name]}
-                              alt={file.name}
-                              className="w-full h-full object-cover"
-                            />
-                          )}
-                        </div>
-                      ) : (
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <DocumentIcon className="w-6 h-6 text-gray-600" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {file.name}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {(file.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-end gap-2 mt-2">
-                      {file.type.startsWith("image/") && (
-                        <button
-                          type="button"
-                          onClick={() => openPreview(file)}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          <EyeIcon className="w-4 h-4" />
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => removeFile(index)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <XMarkIcon className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Remarks */}
@@ -948,34 +1084,46 @@ const CreateProductionPage: React.FC = () => {
           </div>
 
           <textarea
-            placeholder="Enter any additional remarks or notes about this production"
+            placeholder="Add any additional notes or remarks about this production..."
             value={form.remarks}
             onChange={(e) => handleInputChange("remarks", e.target.value)}
             rows={4}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
           />
         </div>
 
-        {/* Submit Buttons */}
-        <div className="flex items-center justify-end gap-4">
+        {/* Submit Button */}
+        <div className="flex items-center justify-end gap-4 pt-6">
           <button
             type="button"
-            onClick={() => navigate("/productions")}
-            className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            onClick={() => navigate(`/productions/${id}`)}
+            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
           >
-            {saving ? "Creating..." : "Create Production"}
+            {saving ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Updating...
+              </>
+            ) : (
+              <>
+                <CheckCircleIcon className="w-4 h-4" />
+                Update Production
+              </>
+            )}
           </button>
         </div>
       </form>
 
-      {/* Photo Capture Modal */}
+      {/* Camera Modal */}
       <PhotoCaptureModal
         isOpen={cameraModalOpen}
         onClose={() => setCameraModalOpen(false)}
@@ -983,25 +1131,74 @@ const CreateProductionPage: React.FC = () => {
       />
 
       {/* Preview Modal */}
-      {previewModal.isOpen && previewModal.previewUrl && (
-        <div className="fixed inset-0 bg-black/10 p-4 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-4 max-w-2xl max-h-[90vh] overflow-auto">
-            <div className="flex sticky top-0 items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">
-                {previewModal.file?.name}
-              </h3>
+      {previewModal.isOpen && (
+        <div className="fixed inset-0 bg-black/10 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg w-full max-w-4xl h-full max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+            {/* Modal Header - Fixed */}
+            <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200 bg-white flex-shrink-0">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                <div className="flex-shrink-0">
+                  {getFileIcon(previewModal.file)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base sm:text-lg font-medium text-gray-900 truncate">
+                    {previewModal.file?.fileName || previewModal.file?.name}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-500 truncate">
+                    {previewModal.file &&
+                      ((previewModal.file?.fileSize || previewModal.file?.size) / 1024 / 1024).toFixed(
+                        2
+                      )}{" "}
+                    MB • {previewModal.file?.fileType || previewModal.file?.type}
+                  </p>
+                </div>
+              </div>
               <button
-                onClick={() => setPreviewModal({ isOpen: false, file: null, previewUrl: null })}
-                className="text-gray-500 hover:text-gray-700"
+                onClick={closePreviewModal}
+                className="p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 ml-2"
+                title="Close preview"
               >
-                <XMarkIcon className="w-6 h-6" />
+                <XMarkIcon className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
-            <img
-              src={previewModal.previewUrl}
-              alt={previewModal.file?.name}
-              className="max-w-full h-auto"
-            />
+
+            {/* Modal Content - Scrollable */}
+            <div className="flex-1 overflow-auto p-3 sm:p-4 bg-gray-50">
+              {previewModal.previewUrl ? (
+                <div className="flex justify-center items-center min-h-full">
+                  <img
+                    src={previewModal.previewUrl}
+                    alt={previewModal.file?.fileName || previewModal.file?.name}
+                    className="max-w-full max-h-full object-contain rounded border shadow-sm bg-white"
+                  />
+                </div>
+              ) : (
+                <div className="text-center py-8 sm:py-12">
+                  <DocumentIcon className="w-16 h-16 sm:w-24 sm:h-24 text-gray-500 mx-auto mb-4" />
+                  <h4 className="text-lg sm:text-xl font-medium text-gray-900 mb-2">
+                    File Preview
+                  </h4>
+                  <p className="text-gray-600 text-sm sm:text-base px-4">
+                    Preview not available for this file type.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer - Fixed */}
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 sm:p-4 border-t border-gray-200 bg-white flex-shrink-0 gap-3 sm:gap-0">
+              <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
+                {previewModal.isExisting ? "Existing attachment" : "New attachment"}
+              </div>
+              <div className="flex gap-2 justify-center sm:justify-end">
+                <button
+                  onClick={closePreviewModal}
+                  className="px-3 sm:px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -1009,4 +1206,4 @@ const CreateProductionPage: React.FC = () => {
   );
 };
 
-export default CreateProductionPage;
+export default EditProductionPage;
