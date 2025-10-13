@@ -72,20 +72,19 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({ data }) => {
   if (outstanding > 0 && paid > 0 && outstanding > paid) {
     const newBalance = Math.max(0, outstanding - paid);
     customerPreviousBalance = formatPriceWithCommas(newBalance);
-    customerTotalBalance = customerPreviousBalance
-  } 
-  else if (outstanding > 0 && paid > 0 && outstanding < paid) {
+    customerTotalBalance = customerPreviousBalance;
+  } else if (outstanding > 0 && paid > 0 && outstanding < paid) {
     const newBalance = Math.max(0, outstanding);
     customerPreviousBalance = formatPriceWithCommas(newBalance);
-    customerTotalBalance = formatPriceWithCommas(newBalance + orderData?.totalAmount)
-  } 
-  else if (outstanding > 0 && paid <= 0) {
-   
+    customerTotalBalance = formatPriceWithCommas(
+      newBalance + orderData?.totalAmount
+    );
+  } else if (outstanding > 0 && paid <= 0) {
     customerPreviousBalance = formatPriceWithCommas(outstanding);
-        customerTotalBalance = customerPreviousBalance
+    customerTotalBalance = customerPreviousBalance;
   } else {
     customerPreviousBalance = formatPriceWithCommas(orderData?.totalAmount);
-        customerTotalBalance = customerPreviousBalance
+    customerTotalBalance = customerPreviousBalance;
   }
 
   // Simple number to words conversion (basic implementation)
@@ -287,59 +286,60 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({ data }) => {
             </table>
 
             <div className="flex justify-end">
-              {/* Order Summary - Simple Design Below Table */}
-              <div className="table-summary">
-                <div className="summary-row-simple">
-                  <span>Sub Total:</span>
-                  <span>
-                    ₹
-                    {formatPriceWithCommas(
-                      orderData.subtotal || calculateTotal()
+              {/* Order Summary - Tabular Design Below Table */}
+              <div className="summary-table-container">
+                <table className="summary-table">
+                  <tbody>
+                    <tr className="summary-row">
+                      <td className="summary-label">Sub Total:</td>
+                      <td className="summary-value">
+                        ₹
+                        {formatPriceWithCommas(
+                          orderData.subtotal || calculateTotal()
+                        )}
+                      </td>
+                    </tr>
+                    <tr className="summary-row">
+                      <td className="summary-label">
+                        Tax Amount{" "}
+                        {hasAnyTaxableItem
+                          ? "(" + orderData?.taxPercentage + "%)"
+                          : ""}
+                        :
+                      </td>
+                      <td className="summary-value">
+                        ₹{formatPriceWithCommas(orderData?.taxAmount || 0)}
+                      </td>
+                    </tr>
+                    <tr className="summary-row  total-row prev-balance">
+                      <td className="summary-label">Previous Balance:</td>
+                      <td className="summary-value">
+                        ₹{customerPreviousBalance}
+                      </td>
+                    </tr>
+                    <tr className="summary-row total-row">
+                      <td className="summary-label">Total Amount:</td>
+                      <td className="summary-value">₹{customerTotalBalance}</td>
+                    </tr>
+                    {orderData.paidAmount !== undefined && (
+                      <tr className="summary-row">
+                        <td className="summary-label">Paid Amount:</td>
+                        <td className="summary-value">
+                          ₹{formatPriceWithCommas(orderData.paidAmount || 0)}
+                        </td>
+                      </tr>
                     )}
-                  </span>
-                </div>
-                {/* {orderData.taxAmount && orderData.taxAmount > 0 ? ( */}
-                <div className="summary-row-simple">
-                  <span>
-                    Tax Amount{" "}
-                    {hasAnyTaxableItem
-                      ? "(" + orderData?.taxPercentage + "%)"
-                      : ""}
-                    :
-                  </span>
-                  <span>
-                    ₹{formatPriceWithCommas(orderData?.taxAmount || 0)}
-                  </span>
-                </div>
-                <div className="summary-row-simple">
-                  <span>Previous Balance :</span>
-                  <span>₹{customerPreviousBalance}</span>
-                </div>
-                {/* ) : null} */}
-                <div className="summary-row-simple total-row-simple">
-                  <span>Total Amount:</span>
-                  <span>
-                    ₹
-                    {customerTotalBalance}
-                  </span>
-                </div>
-                {orderData.paidAmount !== undefined && (
-                  <div className="summary-row-simple">
-                    <span>Paid Amount:</span>
-                    <span>
-                      ₹{formatPriceWithCommas(orderData.paidAmount || 0)}
-                    </span>
-                  </div>
-                )}
-                <div className="summary-row-simple">
-                  <span>Net Balance Remaining:</span>
-                  <span>
-                    ₹
-                    {formatPriceWithCommas(
-                      orderData?.customer?.outstandingAmount || 0
-                    )}
-                  </span>
-                </div>
+                    <tr className="summary-row  total-row prev-balance">
+                      <td className="summary-label">Net Balance Remaining:</td>
+                      <td className="summary-value">
+                        ₹
+                        {formatPriceWithCommas(
+                          orderData?.customer?.outstandingAmount || 0
+                        )}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -692,39 +692,65 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({ data }) => {
           width: 12%;
         }
 
-        /* Table Summary Section - Simple Design */
-        .table-summary {
+        /* Table Summary Section - Tabular Design */
+        .summary-table-container {
           margin-top: 10px;
           padding: 10px 0;
-          max-width: 280px;
+          min-width: 340px;
         }
 
-        .summary-row-simple {
-          display: flex;
-          justify-content: space-between;
-          padding: 3px 0;
+        .summary-table {
+          width: 100%;
+          border-collapse: collapse;
           font-size: 14px;
-          min-height: 18px;
-          align-items: center;
+          border: 1px solid #000;
         }
 
-        .summary-row-simple span:first-child {
+        .summary-row td {
+          border: 1px solid #000;
+          padding: 6px 8px;
+          vertical-align: middle;
+          min-height: 20px;
+        }
+
+        .summary-label {
           font-weight: bold;
-          min-width: 120px;
           text-align: left;
+          background-color: #f8f9fa;
+          width: 60%;
+          word-wrap: break-word;
         }
 
-        .summary-row-simple span:last-child {
+        .summary-value {
           text-align: right;
-          min-width: 100px;
-          flex-shrink: 0;
+          width: 40%;
+          font-weight: 500;
+          word-wrap: break-word;
         }
 
-        .total-row-simple {
-          font-size: 17px;
+        .total-row {
+          font-size: 15px;
           font-weight: bold;
         }
 
+        .total-row .summary-label {
+          background-color: #e9ecef;
+          font-weight: bold;
+        }
+
+        .total-row .summary-value {
+          font-weight: bold;
+          background-color: #e9ecef;
+        }
+          .prev-balance .summary-label {
+          background-color: rgba(245, 63, 57,0.4);
+          font-weight: bold;
+          
+        }
+        .prev-balance .summary-value {
+          font-weight: bold;
+           background-color: rgba(245, 63, 57,0.4);
+        }
 
 
         /* Signatures Section */

@@ -41,11 +41,42 @@ const InventoryPage: React.FC = () => {
   // Debounced search
   const debouncedSearch = useDebounce(search, 300);
 
-  const loadGodowns = async () => {
+  const loadGodowns = async (filterParams?: {
+    search?: string;
+    inventoryType?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    loggedBy?: string;
+  }) => {
     try {
-      const response = await apiService.get<{ godowns: Godown[] }>(API_CONFIG.ENDPOINTS.GODOWNS);
+      // Build query parameters for filtered godown data
+      const queryParams = new URLSearchParams();
+      
+      if (filterParams?.search) {
+        queryParams.append('search', filterParams.search);
+      }
+      if (filterParams?.inventoryType) {
+        queryParams.append('inventoryType', filterParams.inventoryType);
+      }
+      if (filterParams?.dateFrom) {
+        queryParams.append('dateFrom', filterParams.dateFrom);
+      }
+      if (filterParams?.dateTo) {
+        queryParams.append('dateTo', filterParams.dateTo);
+      }
+      if (filterParams?.loggedBy) {
+        queryParams.append('loggedBy', filterParams.loggedBy);
+      }
+
+      const endpoint = queryParams.toString() 
+        ? `${API_CONFIG.ENDPOINTS.GODOWNS}?${queryParams.toString()}`
+        : API_CONFIG.ENDPOINTS.GODOWNS;
+
+      const response = await apiService.get<{ godowns: Godown[] }>(endpoint);
       if (response.success && response.data) {
         setGodowns(response.data.godowns);
+        const totalInventory = response?.data?.godowns?.reduce((acc, godown) => acc + (godown.inventoryCount || 0), 0);
+        setTotalInventory(totalInventory || 0);
       }
     } catch (err) {
       console.error("Failed to load godowns:", err);
@@ -126,7 +157,7 @@ const InventoryPage: React.FC = () => {
       if (res.success && res.data) {
         setInventory(res.data?.inventory || []);
         setTotalPages(res.data?.pagination?.totalPages || 1);
-        setTotalInventory(res.data?.pagination?.totalRecords || 0);
+        
       }
     } catch (error) {
       console.error('Failed to load inventory:', error);
@@ -139,9 +170,17 @@ const InventoryPage: React.FC = () => {
   const handleSync = async () => {
     setSyncing(true);
     try {
+      const currentFilters = {
+        search: debouncedSearch,
+        inventoryType,
+        dateFrom,
+        dateTo,
+        loggedBy,
+      };
+      
       await Promise.all([
         loadInventory(),
-        loadGodowns()
+        loadGodowns(currentFilters)
       ]);
     } catch (error) {
       console.error("Failed to sync inventory data:", error);
@@ -150,9 +189,38 @@ const InventoryPage: React.FC = () => {
     }
   };
 
+  // Clear all filters function
+  const clearAllFilters = () => {
+    setSearch('');
+    setInventoryType('');
+    setGodownFilter('');
+    setDateFrom('');
+    setDateTo('');
+    setLoggedBy('');
+    setPage(1);
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = search || inventoryType || godownFilter || dateFrom || dateTo || loggedBy;
+
   useEffect(() => {
     loadGodowns();
   }, []);
+
+  // Load godowns with current filters when filters change
+  useEffect(() => {
+    if (!initRef.current) return;
+    
+    const currentFilters = {
+      search: debouncedSearch,
+      inventoryType,
+      dateFrom,
+      dateTo,
+      loggedBy,
+    };
+    
+    loadGodowns(currentFilters);
+  }, [debouncedSearch, inventoryType, dateFrom, dateTo, loggedBy]);
 
   useEffect(() => {
     const t = setTimeout(loadInventory, 100);
@@ -326,15 +394,27 @@ const InventoryPage: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-between">
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
-                  showFilters ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-700'
-                }`}
-              >
-                <FunnelIcon className="h-3.5 w-3.5" />
-                Filters
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
+                    showFilters ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  <FunnelIcon className="h-3.5 w-3.5" />
+                  Filters
+                </button>
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearAllFilters}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors bg-red-50 text-red-700 hover:bg-red-100"
+                    title="Clear all filters"
+                  >
+                    <XMarkIcon className="h-3.5 w-3.5" />
+                    Clear Filters
+                  </button>
+                )}
+              </div>
             </div>
 
             {showFilters && (
@@ -345,12 +425,7 @@ const InventoryPage: React.FC = () => {
                   <option value="Stock Sold">Stock Sold</option>
                   <option value="Damaged / Return">Damaged / Return</option>
                 </select>
-                <select value={godownFilter} onChange={(e) => setGodownFilter(e.target.value)} className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500">
-                  <option value="">All Godowns</option>
-                  {godowns.map(g => (
-                    <option key={g._id} value={g._id}>{g.name}</option>
-                  ))}
-                </select>
+
                 <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} placeholder="Date From" className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500" />
                 <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} placeholder="Date To" className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500" />
                 <input value={loggedBy} onChange={(e) => setLoggedBy(e.target.value)} placeholder="Logged By" className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500" />
