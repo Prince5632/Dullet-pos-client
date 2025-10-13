@@ -283,14 +283,15 @@ const InventoryPage: React.FC = () => {
       render: (value, item) => <span className="text-xs text-gray-700">{inventoryService.formatQuantityWithUnit(value, item.unit)}</span>,
     },
     {
-      key: 'godown',
+      key: 'godownData',
       label: 'Godown',
       render: (value) => <span className="text-xs text-gray-700">{value?.name || 'N/A'}</span>,
     },
     {
-      key: 'loggedBy',
+      key: 'loggedByUser',
       label: 'Logged By',
       render: (value) => {
+        console.log(value)
         return(
         <div className="flex items-center gap-2">
           <Avatar name={value?.firstName + " " + value?.lastName || 'User'} size="sm" />
@@ -577,11 +578,11 @@ const InventoryPage: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-2 text-xs">
                           <span className="text-gray-500 w-16">Godown:</span>
-                          <span className="text-gray-900">{item.godown?.name || 'N/A'}</span>
+                          <span className="text-gray-900">{item.godownData?.name || 'N/A'}</span>
                         </div>
                         <div className="flex items-center gap-2 text-xs">
                           <span className="text-gray-500 w-16">Logged By:</span>
-                          <span className="text-gray-900">{item.loggedBy?.firstName + " " + item?.loggedBy?.lastName || 'Unknown'}</span>
+                          <span className="text-gray-900">{item.loggedByUser?.firstName + " " + item?.loggedByUser?.lastName || 'Unknown'}</span>
                         </div>
                       </div>
                       
