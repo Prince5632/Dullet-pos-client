@@ -910,7 +910,7 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
                            </button>
                            <button
                              type="button"
-                             onClick={() => removeExistingAttachment(attachment._id)}
+                             onClick={() => removeExistingAttachment(attachment?._id)}
                              className="p-2 bg-white rounded-full text-gray-700 hover:text-red-600 transition-colors"
                            >
                              <XMarkIcon className="w-4 h-4" />
@@ -988,7 +988,7 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
              )}
 
              {/* Show message when no attachments */}
-             {(!production.attachments || production.attachments.filter(attachment => !removedAttachments.includes(attachment.fileName)).length === 0) && selectedFiles.length === 0 && (
+             {(!production.attachments || production.attachments.filter(attachment => !removedAttachments.includes(attachment?._id)).length === 0) && selectedFiles.length === 0 && (
                <div className="text-center py-8 text-gray-500">
                  <PhotoIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                  <p>No attachments yet. Use the camera or upload button to add images.</p>
