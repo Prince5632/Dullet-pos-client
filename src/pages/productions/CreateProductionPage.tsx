@@ -52,17 +52,18 @@ const CreateProductionPage: React.FC = () => {
     location: "",
     machine: "",
     operator: "",
+    status:"In Production",
     inputType: "",
     inputQty: 0,
     inputUnit: "KG",
-    outputDetails: [
-      {
-        itemName: "Atta",
-        productQty: 0,
-        productUnit: "KG",
-        notes: "",
-      },
-    ],
+    // outputDetails: [
+    //   {
+    //     itemName: "Atta",
+    //     productQty: 0,
+    //     productUnit: "KG",
+    //     notes: "",
+    //   },
+    // ],
     remarks: "",
     attachments: [],
   });
@@ -250,11 +251,7 @@ const CreateProductionPage: React.FC = () => {
       newErrors.location = "Location is required";
     }
 
-    
 
-    if (!form.operator) {
-      newErrors.operator = "Operator is required";
-    }
 
     if (!form.inputType.trim()) {
       newErrors.inputType = "Input type is required";
@@ -268,21 +265,21 @@ const CreateProductionPage: React.FC = () => {
       newErrors.inputUnit = "Input unit is required";
     }
 
-    // Output details validation
-    const outputErrors: string[] = [];
-    form.outputDetails.forEach((output, index) => {
-      if (!output.itemName.trim()) {
-        outputErrors[index] = `Output ${index + 1}: Item name is required`;
-      } else if (!output.productQty || output.productQty <= 0) {
-        outputErrors[index] = `Output ${index + 1}: Quantity must be greater than 0`;
-      } else if (!output.productUnit.trim()) {
-        outputErrors[index] = `Output ${index + 1}: Unit is required`;
-      }
-    });
+    // // Output details validation
+    // const outputErrors: string[] = [];
+    // form.outputDetails.forEach((output, index) => {
+    //   if (!output.itemName.trim()) {
+    //     outputErrors[index] = `Output ${index + 1}: Item name is required`;
+    //   } else if (!output.productQty || output.productQty <= 0) {
+    //     outputErrors[index] = `Output ${index + 1}: Quantity must be greater than 0`;
+    //   } else if (!output.productUnit.trim()) {
+    //     outputErrors[index] = `Output ${index + 1}: Unit is required`;
+    //   }
+    // });
 
-    if (outputErrors.length > 0) {
-      newErrors.outputDetails = outputErrors;
-    }
+    // if (outputErrors.length > 0) {
+    //   newErrors.outputDetails = outputErrors;
+    // }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -623,7 +620,7 @@ const CreateProductionPage: React.FC = () => {
             {/* Operator */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Operator *
+                Operator 
               </label>
               <input
                 type="text"
@@ -719,7 +716,7 @@ const CreateProductionPage: React.FC = () => {
         </div>
 
         {/* Output Details */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        {/* <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -758,7 +755,6 @@ const CreateProductionPage: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Item Name */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Item Name *
@@ -779,7 +775,6 @@ const CreateProductionPage: React.FC = () => {
                     </select>
                   </div>
 
-                  {/* Product Quantity */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Quantity *
@@ -801,7 +796,6 @@ const CreateProductionPage: React.FC = () => {
                     />
                   </div>
 
-                  {/* Product Unit */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Unit *
@@ -822,7 +816,6 @@ const CreateProductionPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Notes */}
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Notes
@@ -846,7 +839,7 @@ const CreateProductionPage: React.FC = () => {
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
 
         {/* Attachments */}
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -915,7 +908,7 @@ const CreateProductionPage: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center justify-end gap-2 mt-2">
+                    <div className="flex items-center  justify-end gap-2 mt-2">
                       {file.type.startsWith("image/") && (
                         <button
                           type="button"

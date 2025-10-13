@@ -2,11 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { productionService } from "../../services/productionService";
 import { userService } from "../../services/userService";
-import type {
-  UpdateProductionForm,
-  User,
-  Production,
-} from "../../types";
+import type { UpdateProductionForm, User, Production } from "../../types";
 import {
   CogIcon,
   ExclamationTriangleIcon,
@@ -52,7 +48,8 @@ const EditProductionPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [production, setProduction] = useState<Production | null>(null);
   const [form, setForm] = useState<UpdateProductionForm>({
-    productionDate: new Date().toISOString().split('T')[0],
+    productionDate: new Date().toISOString().split("T")[0],
+    status: "In Production",
     shift: "Morning",
     location: "",
     machine: "",
@@ -106,11 +103,12 @@ const EditProductionPage: React.FC = () => {
       const res = await productionService.getProductionById(id!);
       if (res.success && res.data) {
         const productionData = res.data as Production;
-        setProduction(productionData); 
-        
+        setProduction(productionData);
+
         // Populate form with existing data
         setForm({
-          productionDate: productionData.productionDate.split('T')[0],
+          productionDate: productionData.productionDate.split("T")[0],
+          status: productionData.status || "In Production",
           shift: productionData.shift,
           location: productionData.location,
           machine: productionData.machine,
@@ -118,7 +116,7 @@ const EditProductionPage: React.FC = () => {
           inputType: productionData.inputType,
           inputQty: productionData.inputQty,
           inputUnit: productionData.inputUnit,
-          outputDetails: productionData.outputDetails.map(output => ({
+          outputDetails: productionData.outputDetails.map((output) => ({
             itemName: output.itemName,
             productQty: output.productQty,
             productUnit: output.productUnit,
@@ -128,7 +126,7 @@ const EditProductionPage: React.FC = () => {
           attachments: [],
           removedAttachments: [],
         });
-        
+
         // Set existing attachments
         if (productionData.attachments) {
           setExistingAttachments(productionData.attachments);
@@ -163,17 +161,25 @@ const EditProductionPage: React.FC = () => {
       async (position) => {
         try {
           const { latitude, longitude } = position.coords;
-          
+
           // Use reverse geocoding to get readable address
           const address = await reverseGeocode(latitude, longitude);
-          
+
           if (address) {
-            setForm((prev: UpdateProductionForm) => ({ ...prev, location: address }));
+            setForm((prev: UpdateProductionForm) => ({
+              ...prev,
+              location: address,
+            }));
             toast.success("Location fetched successfully");
           } else {
             // Fallback to coordinates if reverse geocoding fails
-            const coordsAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-            setForm((prev: UpdateProductionForm) => ({ ...prev, location: coordsAddress }));
+            const coordsAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(
+              6
+            )}`;
+            setForm((prev: UpdateProductionForm) => ({
+              ...prev,
+              location: coordsAddress,
+            }));
             toast.success("Location coordinates fetched");
           }
         } catch (error) {
@@ -186,7 +192,7 @@ const EditProductionPage: React.FC = () => {
       (error) => {
         console.error("Geolocation error:", error);
         let errorMessage = "Failed to get location";
-        
+
         switch (error.code) {
           case error.PERMISSION_DENIED:
             errorMessage = "Location access denied by user";
@@ -198,7 +204,7 @@ const EditProductionPage: React.FC = () => {
             errorMessage = "Location request timed out";
             break;
         }
-        
+
         toast.error(errorMessage);
         setLocationLoading(false);
       },
@@ -206,55 +212,58 @@ const EditProductionPage: React.FC = () => {
     );
   };
 
-  const reverseGeocode = async (latitude: number, longitude: number): Promise<string | null> => {
+  const reverseGeocode = async (
+    latitude: number,
+    longitude: number
+  ): Promise<string | null> => {
     try {
       // Using OpenStreetMap Nominatim API for reverse geocoding (free)
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
         {
           headers: {
-            'User-Agent': 'Dullet-POS-App/1.0'
-          }
+            "User-Agent": "Dullet-POS-App/1.0",
+          },
         }
       );
 
       if (!response.ok) {
-        throw new Error('Reverse geocoding failed');
+        throw new Error("Reverse geocoding failed");
       }
 
       const data = await response.json();
-      
+
       if (data && data.display_name) {
         // Extract relevant parts of the address
         const address = data.address;
-        let formattedAddress = '';
+        let formattedAddress = "";
 
         if (address) {
           const parts = [];
-          
+
           // Add building/house number and road
           if (address.house_number && address.road) {
             parts.push(`${address.house_number} ${address.road}`);
           } else if (address.road) {
             parts.push(address.road);
           }
-          
+
           // Add locality/suburb
           if (address.suburb || address.locality || address.village) {
             parts.push(address.suburb || address.locality || address.village);
           }
-          
+
           // Add city
           if (address.city || address.town) {
             parts.push(address.city || address.town);
           }
-          
+
           // Add state
           if (address.state) {
             parts.push(address.state);
           }
-          
-          formattedAddress = parts.join(', ');
+
+          formattedAddress = parts.join(", ");
         }
 
         return formattedAddress || data.display_name;
@@ -283,13 +292,8 @@ const EditProductionPage: React.FC = () => {
       newErrors.location = "Location is required";
     }
 
-    if (!form.machine.trim()) {
-      newErrors.machine = "Machine is required";
-    }
+   
 
-    if (!form.operator) {
-      newErrors.operator = "Operator is required";
-    }
 
     if (!form.inputType.trim()) {
       newErrors.inputType = "Input type is required";
@@ -303,20 +307,44 @@ const EditProductionPage: React.FC = () => {
       newErrors.inputUnit = "Input unit is required";
     }
 
-    // Output details validation
+    // Output details validation - mandatory when status is "Finished"
     const outputErrors: string[] = [];
-    form.outputDetails.forEach((output: OutputDetail, index: number) => {
-      if (!output.itemName.trim()) {
-        outputErrors[index] = `Output ${index + 1}: Item name is required`;
-      } else if (!output.productQty || output.productQty <= 0) {
-        outputErrors[index] = `Output ${index + 1}: Quantity must be greater than 0`;
-      } else if (!output.productUnit.trim()) {
-        outputErrors[index] = `Output ${index + 1}: Unit is required`;
-      }
-    });
+    const isFinished = form.status === "Finished";
+    if (isFinished && form.outputDetails.length === 0) {
+      newErrors.outputDetails = [
+        "At least one output detail is required when status is Finished",
+      ];
+    } else {
+      form.outputDetails.forEach((output: OutputDetail, index: number) => {
+        if (isFinished) {
+          // Mandatory validation for "Finished" status
+          if (!output.itemName.trim()) {
+            outputErrors[index] = `Output ${index + 1}: Item name is required`;
+          } else if (!output.productQty || output.productQty <= 0) {
+            outputErrors[index] = `Output ${
+              index + 1
+            }: Quantity must be greater than 0`;
+          } else if (!output.productUnit.trim()) {
+            outputErrors[index] = `Output ${index + 1}: Unit is required`;
+          }
+        } else {
+          // Optional validation for "In Production" status - only validate if fields are filled
+          if (
+            output.itemName.trim() &&
+            (!output.productQty || output.productQty <= 0)
+          ) {
+            outputErrors[index] = `Output ${
+              index + 1
+            }: Quantity must be greater than 0`;
+          } else if (output.itemName.trim() && !output.productUnit.trim()) {
+            outputErrors[index] = `Output ${index + 1}: Unit is required`;
+          }
+        }
+      });
 
-    if (outputErrors.length > 0) {
-      newErrors.outputDetails = outputErrors;
+      if (outputErrors.length > 0) {
+        newErrors.outputDetails = outputErrors;
+      }
     }
 
     setErrors(newErrors);
@@ -402,46 +430,54 @@ const EditProductionPage: React.FC = () => {
 
   const removeOutputDetail = (index: number) => {
     if (form.outputDetails.length > 1) {
-      const updatedOutputDetails = form.outputDetails.filter((_, i) => i !== index);
+      const updatedOutputDetails = form.outputDetails.filter(
+        (_, i) => i !== index
+      );
       setForm((prev) => ({ ...prev, outputDetails: updatedOutputDetails }));
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    
+
     // Validate files before processing
     const validFiles: File[] = [];
     const errors: string[] = [];
-    
+
     files.forEach((file) => {
       // Check if file exists and has a type
       if (!file || !file.type) {
-        errors.push(`Invalid file: ${file?.name || 'Unknown file'}`);
+        errors.push(`Invalid file: ${file?.name || "Unknown file"}`);
         return;
       }
-      
+
       // Check if file is an image
       if (!file.type.startsWith("image/")) {
         errors.push(`${file.name}: Only image files are allowed`);
         return;
       }
-      
+
       // Check file size (2MB = 2 * 1024 * 1024 bytes)
       const maxSize = 2 * 1024 * 1024;
       if (file.size > maxSize) {
-        errors.push(`${file.name}: File size must be under 2MB (current: ${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+        errors.push(
+          `${file.name}: File size must be under 2MB (current: ${(
+            file.size /
+            1024 /
+            1024
+          ).toFixed(2)}MB)`
+        );
         return;
       }
-      
+
       validFiles.push(file);
     });
-    
+
     // Show errors if any
     if (errors.length > 0) {
-      errors.forEach(error => toast.error(error));
+      errors.forEach((error) => toast.error(error));
     }
-    
+
     // Add valid files
     if (validFiles.length > 0) {
       const newFiles = [...selectedFiles, ...validFiles];
@@ -458,18 +494,18 @@ const EditProductionPage: React.FC = () => {
         };
         reader.readAsDataURL(file);
       });
-      
+
       toast.success(`${validFiles.length} image(s) added successfully`);
     }
-    
+
     // Clear the input
-    e.target.value = '';
+    e.target.value = "";
   };
 
   const removeFile = (index: number) => {
     const fileToRemove = selectedFiles[index];
     if (!fileToRemove) return;
-    
+
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
     setFilePreviews((prev) => {
       const updated = { ...prev };
@@ -479,19 +515,21 @@ const EditProductionPage: React.FC = () => {
   };
 
   const removeExistingAttachment = (attachmentId: string) => {
-    setExistingAttachments((prev) => prev.filter(file => file._id !== attachmentId));
+    setExistingAttachments((prev) =>
+      prev.filter((file) => file._id !== attachmentId)
+    );
     setForm((prev) => ({
       ...prev,
-      removedAttachments: [...(prev.removedAttachments || []), attachmentId]
+      removedAttachments: [...(prev.removedAttachments || []), attachmentId],
     }));
     toast.success("Attachment marked for removal");
   };
 
   const openPreview = (file: File | any, isExisting: boolean = false) => {
     if (!file) return;
-    
+
     let previewUrl = null;
-    
+
     if (isExisting) {
       if (file.fileType?.startsWith("image/") && file.base64Data) {
         previewUrl = `data:${file.fileType};base64,${file.base64Data}`;
@@ -501,7 +539,7 @@ const EditProductionPage: React.FC = () => {
         previewUrl = filePreviews[file.name] || null;
       }
     }
-    
+
     setPreviewModal({
       isOpen: true,
       file,
@@ -525,33 +563,37 @@ const EditProductionPage: React.FC = () => {
       toast.error("Invalid captured image");
       return;
     }
-    
+
     if (!imageFile.type.startsWith("image/")) {
       toast.error("Captured file is not an image");
       return;
     }
-    
+
     // Check file size (2MB limit)
     const maxSize = 2 * 1024 * 1024;
     if (imageFile.size > maxSize) {
-      toast.error(`Captured image is too large: ${(imageFile.size / 1024 / 1024).toFixed(2)}MB. Maximum allowed: 2MB`);
+      toast.error(
+        `Captured image is too large: ${(imageFile.size / 1024 / 1024).toFixed(
+          2
+        )}MB. Maximum allowed: 2MB`
+      );
       return;
     }
-    
+
     setSelectedFiles((prev) => [...prev, imageFile]);
-    
+
     // Use the provided imageData for preview
     setFilePreviews((prev) => ({
       ...prev,
       [imageFile.name]: imageData,
     }));
-    
+
     toast.success("Image captured successfully");
   };
 
   const getFileIcon = (file: any) => {
     const fileType = file?.fileType || file?.type || "";
-    
+
     if (fileType.startsWith("image/")) {
       return <PhotoIcon className="w-5 h-5 text-green-500" />;
     } else {
@@ -583,7 +625,8 @@ const EditProductionPage: React.FC = () => {
             Production Not Found
           </h2>
           <p className="text-gray-600 mb-6">
-            The production you're trying to edit doesn't exist or has been removed.
+            The production you're trying to edit doesn't exist or has been
+            removed.
           </p>
           <button
             onClick={() => navigate("/productions")}
@@ -596,7 +639,32 @@ const EditProductionPage: React.FC = () => {
       </div>
     );
   }
-
+  // Prevent editing if order is delivered
+  if (production.status === "Finished") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto">
+          <div className="bg-green-100 rounded-full p-3 mx-auto w-16 h-16 flex items-center justify-center mb-4">
+            <CheckCircleIcon className="h-8 w-8 text-green-600" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Production already marked {production?.status}
+          </h2>
+          <p className="text-gray-600 mb-6">
+            This production has been {production?.status} and cannot be edited.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate(`/productions/${production._id}`)}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+          >
+            <ArrowLeftIcon className="h-4 w-4 mr-2" />
+            View Production Details
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
@@ -610,7 +678,8 @@ const EditProductionPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Edit Production</h1>
           <p className="text-sm text-gray-600">
-            Update production record {productionService.formatBatchId(production.batchId)}
+            Update production record{" "}
+            {productionService.formatBatchId(production.batchId)}
           </p>
         </div>
       </div>
@@ -634,13 +703,17 @@ const EditProductionPage: React.FC = () => {
               <input
                 type="date"
                 value={form.productionDate}
-                onChange={(e) => handleInputChange("productionDate", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("productionDate", e.target.value)
+                }
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                   errors.productionDate ? "border-red-300" : "border-gray-300"
                 }`}
               />
               {errors.productionDate && (
-                <p className="mt-1 text-xs text-red-600">{errors.productionDate}</p>
+                <p className="mt-1 text-xs text-red-600">
+                  {errors.productionDate}
+                </p>
               )}
             </div>
 
@@ -674,7 +747,9 @@ const EditProductionPage: React.FC = () => {
                   type="text"
                   placeholder="Enter production location or click to fetch current location"
                   value={form.location}
-                  onChange={(e) => handleInputChange("location", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("location", e.target.value)
+                  }
                   className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     errors.location ? "border-red-300" : "border-gray-300"
                   }`}
@@ -687,13 +762,38 @@ const EditProductionPage: React.FC = () => {
                   title="Fetch current location"
                 >
                   {locationLoading ? (
-                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <svg
+                      className="w-4 h-4 animate-spin"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
                     </svg>
                   ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
                     </svg>
                   )}
                 </button>
@@ -702,14 +802,15 @@ const EditProductionPage: React.FC = () => {
                 <p className="mt-1 text-xs text-red-600">{errors.location}</p>
               )}
               <p className="mt-1 text-xs text-gray-500">
-                Click the location icon to automatically fetch your current address
+                Click the location icon to automatically fetch your current
+                address
               </p>
             </div>
 
             {/* Machine */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Machine *
+                Machine
               </label>
               <input
                 type="text"
@@ -728,7 +829,7 @@ const EditProductionPage: React.FC = () => {
             {/* Operator */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Operator *
+                Operator 
               </label>
               <input
                 type="text"
@@ -743,6 +844,26 @@ const EditProductionPage: React.FC = () => {
                 <p className="mt-1 text-xs text-red-600">{errors.operator}</p>
               )}
             </div>
+            {/* Status */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status *
+              </label>
+              <select
+                value={form.status}
+                disabled={production?.status === "Finished"}
+                onChange={(e) => handleInputChange("status", e.target.value)}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  errors.status ? "border-red-300" : "border-gray-300"
+                }`}
+              >
+                <option value="In Production">In Production</option>
+                <option value="Finished">Finished</option>
+              </select>
+              {errors.status && (
+                <p className="mt-1 text-xs text-red-600">{errors.status}</p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -750,7 +871,9 @@ const EditProductionPage: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center gap-2 mb-4">
             <CubeIcon className="w-5 h-5 text-green-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Input Details</h2>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Input Details
+            </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -784,7 +907,9 @@ const EditProductionPage: React.FC = () => {
                 step="0.01"
                 placeholder="0.00"
                 value={form.inputQty}
-                onChange={(e) => handleInputChange("inputQty", parseFloat(e.target.value) || 0)}
+                onChange={(e) =>
+                  handleInputChange("inputQty", parseFloat(e.target.value) || 0)
+                }
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                   errors.inputQty ? "border-red-300" : "border-gray-300"
                 }`}
@@ -820,130 +945,142 @@ const EditProductionPage: React.FC = () => {
         </div>
 
         {/* Output Details */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <CubeIcon className="w-5 h-5 text-orange-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Output Details</h2>
-            </div>
-            <button
-              type="button"
-              onClick={addOutputDetail}
-              className="inline-flex items-center px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <PlusIcon className="w-4 h-4 mr-1" />
-              Add Output
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {form.outputDetails.map((output, index) => (
-              <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium text-gray-900">
-                    Output {index + 1}
-                  </h3>
-                  {form.outputDetails.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeOutputDetail(index)}
-                      className="p-1 text-red-600 hover:bg-red-50 rounded"
-                    >
-                      <TrashIcon className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  {/* Item Name */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Item Name *
-                    </label>
-                    <select
-                      value={output.itemName}
-                      onChange={(e) =>
-                        handleOutputDetailChange(index, "itemName", e.target.value)
-                      }
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="">Select item</option>
-                      {itemNames.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Product Quantity */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Quantity *
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={output.productQty}
-                      onChange={(e) =>
-                        handleOutputDetailChange(
-                          index,
-                          "productQty",
-                          parseFloat(e.target.value) || 0
-                        )
-                      }
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* Product Unit */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Unit *
-                    </label>
-                    <select
-                      value={output.productUnit}
-                      onChange={(e) =>
-                        handleOutputDetailChange(index, "productUnit", e.target.value)
-                      }
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {outputUnits.map((unit) => (
-                        <option key={unit} value={unit}>
-                          {unit}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Notes */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Notes
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Optional notes"
-                      value={output.notes || ""}
-                      onChange={(e) =>
-                        handleOutputDetailChange(index, "notes", e.target.value)
-                      }
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                {errors.outputDetails && errors.outputDetails[index] && (
-                  <p className="mt-2 text-xs text-red-600">
-                    {errors.outputDetails[index]}
-                  </p>
-                )}
+        {form?.status === "Finished" ? (
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <CubeIcon className="w-5 h-5 text-orange-600" />
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Output Details
+                </h2>
               </div>
+              <button
+                type="button"
+                onClick={addOutputDetail}
+                className="inline-flex items-center px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <PlusIcon className="w-4 h-4 mr-1" />
+                Add Output
+              </button>
+            </div>
+
+          <div className="space-y-5">
+  {form.outputDetails.map((output, index) => (
+    <div
+      key={index}
+      className="p-4 sm:p-5 border border-gray-200 rounded-xl shadow-sm bg-white"
+    >
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
+        <h3 className="text-base font-semibold text-gray-900">
+          Output {index + 1}
+        </h3>
+        {form.outputDetails.length > 1 && (
+          <button
+            type="button"
+            onClick={() => removeOutputDetail(index)}
+            className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md px-2 py-1 transition"
+          >
+            <TrashIcon className="w-4 h-4" />
+            Remove
+          </button>
+        )}
+      </div>
+
+      {/* Form Fields Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Item Name */}
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Item Name <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={output.itemName}
+            onChange={(e) =>
+              handleOutputDetailChange(index, "itemName", e.target.value)
+            }
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">Select item</option>
+            {itemNames.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
             ))}
-          </div>
+          </select>
         </div>
+
+        {/* Quantity */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Quantity <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="0.00"
+            value={output.productQty}
+            onChange={(e) =>
+              handleOutputDetailChange(
+                index,
+                "productQty",
+                parseFloat(e.target.value) || 0
+              )
+            }
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+
+        {/* Unit */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Unit <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={output.productUnit}
+            onChange={(e) =>
+              handleOutputDetailChange(index, "productUnit", e.target.value)
+            }
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            {outputUnits.map((unit) => (
+              <option key={unit} value={unit}>
+                {unit}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Notes */}
+      <div className="mt-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Notes
+        </label>
+        <textarea
+          placeholder="Optional notes"
+          value={output.notes || ""}
+          rows={3}
+          onChange={(e) =>
+            handleOutputDetailChange(index, "notes", e.target.value)
+          }
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
+        />
+      </div>
+
+      {/* Error Message */}
+      {errors.outputDetails && errors.outputDetails[index] && (
+        <p className="mt-2 text-xs text-red-600">
+          {errors.outputDetails[index]}
+        </p>
+      )}
+    </div>
+  ))}
+</div>
+
+          </div>
+        ) : null}
 
         {/* Attachments */}
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -955,7 +1092,9 @@ const EditProductionPage: React.FC = () => {
           {/* Existing Attachments */}
           {existingAttachments.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Existing Attachments</h3>
+              <h3 className="text-sm font-medium text-gray-700 mb-3">
+                Existing Attachments
+              </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {existingAttachments.map((file, index) => (
                   <div
@@ -999,7 +1138,9 @@ const EditProductionPage: React.FC = () => {
           {/* New Attachments */}
           {selectedFiles.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">New Attachments</h3>
+              <h3 className="text-sm font-medium text-gray-700 mb-3">
+                New Attachments
+              </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {selectedFiles.map((file, index) => (
                   <div
@@ -1050,30 +1191,30 @@ const EditProductionPage: React.FC = () => {
           )}
 
           {/* File Upload */}
-            <div className="flex items-center gap-4">
-              <label className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                <PhotoIcon className="w-4 h-4" />
-                Choose Images
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={() => setCameraModalOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                <CameraIcon className="w-4 h-4" />
-                Take Photo
-              </button>
-              <p className="text-xs text-gray-500">
-                Only image files under 2MB are allowed
-              </p>
-            </div>
+          <div className="flex items-center gap-4">
+            <label className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+              <PhotoIcon className="w-4 h-4" />
+              Choose Images
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => setCameraModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              <CameraIcon className="w-4 h-4" />
+              Take Photo
+            </button>
+            <p className="text-xs text-gray-500">
+              Only image files under 2MB are allowed
+            </p>
+          </div>
         </div>
 
         {/* Remarks */}
@@ -1108,8 +1249,18 @@ const EditProductionPage: React.FC = () => {
           >
             {saving ? (
               <>
-                <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                <svg
+                  className="w-4 h-4 animate-spin"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
                 </svg>
                 Updating...
               </>
@@ -1146,10 +1297,14 @@ const EditProductionPage: React.FC = () => {
                   </h3>
                   <p className="text-xs sm:text-sm text-gray-500 truncate">
                     {previewModal.file &&
-                      ((previewModal.file?.fileSize || previewModal.file?.size) / 1024 / 1024).toFixed(
-                        2
-                      )}{" "}
-                    MB • {previewModal.file?.fileType || previewModal.file?.type}
+                      (
+                        (previewModal.file?.fileSize ||
+                          previewModal.file?.size) /
+                        1024 /
+                        1024
+                      ).toFixed(2)}{" "}
+                    MB •{" "}
+                    {previewModal.file?.fileType || previewModal.file?.type}
                   </p>
                 </div>
               </div>
@@ -1188,7 +1343,9 @@ const EditProductionPage: React.FC = () => {
             {/* Modal Footer - Fixed */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 sm:p-4 border-t border-gray-200 bg-white flex-shrink-0 gap-3 sm:gap-0">
               <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
-                {previewModal.isExisting ? "Existing attachment" : "New attachment"}
+                {previewModal.isExisting
+                  ? "Existing attachment"
+                  : "New attachment"}
               </div>
               <div className="flex gap-2 justify-center sm:justify-end">
                 <button

@@ -855,6 +855,7 @@ export interface Production {
   _id: string;
   batchId: string;
   productionDate: string;
+  status: 'In Production' | 'Finished';
   shift: 'Morning' | 'Afternoon' | 'Night';
   location: string;
   machine: string;
@@ -900,6 +901,7 @@ export interface ProductionStats {
 
 export interface CreateProductionForm {
   productionDate: string;
+  status: 'In Production' | 'Finished';
   shift: 'Morning' | 'Afternoon' | 'Night';
   location: string;
   machine: string;

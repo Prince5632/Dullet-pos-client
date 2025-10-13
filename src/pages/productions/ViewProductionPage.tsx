@@ -24,6 +24,7 @@ import { toast } from "react-hot-toast";
 import Modal from "../../components/ui/Modal";
 import Avatar from "../../components/ui/Avatar";
 import OrderActivityTimeline from "../../components/orders/OrderActivityTimeline";
+import ProductionStatusDropdown from "../../components/productions/ProductionStatusDropdown";
 
 const ViewProductionPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -189,7 +190,34 @@ const ViewProductionPage: React.FC = () => {
       day: "numeric",
     });
   };
+  function getTotalQuantities(items = []) {
+    if (!Array.isArray(items) || items.length === 0) {
+      return { kg: 0, quintal: 0, ton: 0 };
+    }
 
+    const totalKg = items.reduce((total, item) => {
+      const { productQty = 0, productUnit = "KG" } = item;
+
+      switch (productUnit?.toLowerCase()) {
+        case "kg":
+          return total + productQty;
+        case "quintal":
+          return total + productQty * 100;
+        case "ton":
+          return total + productQty * 1000;
+        default:
+          return total;
+      }
+    }, 0);
+
+    return {
+      kg: totalKg,
+      quintal: totalKg / 100,
+      ton: totalKg / 1000,
+    };
+  }
+
+  const totals = getTotalQuantities(production?.outputDetails);
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString("en-US", {
       year: "numeric",
@@ -239,36 +267,53 @@ const ViewProductionPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
         <div className="mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            {/* Left Section */}
+            <div className="flex items-start sm:items-center gap-3">
               <button
                 onClick={() => navigate("/productions")}
-                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
                 title="Back to productions"
               >
                 <ArrowLeftIcon className="w-5 h-5" />
               </button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+
+              <div className="flex flex-col">
+                <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 leading-tight">
                   Production{" "}
-                  {productionService.formatBatchId(production.batchId)}
+                  <span className="text-blue-600 font-bold">
+                    {productionService.formatBatchId(production.batchId)}
+                  </span>
                 </h1>
-                <p className="text-gray-600 mt-1">
+                <p className="text-gray-600 text-sm sm:text-base mt-1">
                   Created on {formatDate(production.createdAt)}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+
+            {/* Right Section */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-end">
+              <div className="w-full sm:w-auto">
+                <ProductionStatusDropdown
+                  production={production}
+                  onProductionUpdate={() => {
+                    loadProduction();
+                    loadActivities();
+                  }}
+                />
+              </div>
+
               <button
                 onClick={() => navigate(`/productions/${production._id}/edit`)}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                className="flex items-center justify-center w-full sm:w-auto px-3 sm:px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
                 <PencilIcon className="w-4 h-4 mr-2" />
                 Edit
               </button>
+
               <button
                 onClick={() => setDeleteModalOpen(true)}
-                className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                className="flex items-center justify-center w-full sm:w-auto px-3 sm:px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
               >
                 <TrashIcon className="w-4 h-4 mr-2" />
                 Delete
@@ -327,7 +372,7 @@ const ViewProductionPage: React.FC = () => {
                     <div>
                       <p className="text-sm text-gray-500">Machine</p>
                       <p className="font-medium text-gray-900">
-                        {production.machine}
+                        {production?.machine || "N/A"}
                       </p>
                     </div>
                   </div>
@@ -368,49 +413,74 @@ const ViewProductionPage: React.FC = () => {
             </div>
 
             {/* Output Details */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Output Details
-              </h2>
-              <div className="space-y-3">
-                {production.outputDetails.map((output, index) => (
-                  <div key={index} className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {output.itemName}
-                        </p>
-                        {output.notes && (
-                          <p className="text-sm text-gray-500 mt-1">
-                            {output.notes}
+            {production?.outputDetails?.length > 0 ? (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  Output Details
+                </h2>
+                <div className="space-y-3">
+                  {production.outputDetails.map((output, index) => (
+                    <div key={index} className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {output.itemName}
                           </p>
-                        )}
+                          {output.notes && (
+                            <p className="text-sm text-gray-500 mt-1">
+                              {output.notes}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-gray-900">
+                            {output.productQty} {output.productUnit}
+                          </p>
+                          <p className="text-sm text-gray-500">Quantity</p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium text-gray-900">
-                          {output.productQty} {output.productUnit}
+                    </div>
+                  ))}
+                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <p className="font-medium text-blue-900">
+                          Total Output
                         </p>
-                        <p className="text-sm text-gray-500">Quantity</p>
+                        <p className="text-sm text-blue-600">
+                          Combined quantity
+                        </p>
                       </div>
                     </div>
-                  </div>
-                ))}
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-blue-900">Total Output</p>
-                      <p className="text-sm text-blue-600">Combined quantity</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-blue-900">
-                        {production.totalOutputQty}{" "}
-                        {production.outputDetails[0]?.productUnit || "KG"}
-                      </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                      <div className="bg-white rounded-md p-3 border border-blue-100 shadow-sm">
+                        <p className="text-xs text-blue-600">
+                          In Kilograms (KG)
+                        </p>
+                        <p className="text-lg font-semibold text-blue-900">
+                          {totals.kg.toFixed(2)} KG
+                        </p>
+                      </div>
+
+                      <div className="bg-white rounded-md p-3 border border-blue-100 shadow-sm">
+                        <p className="text-xs text-blue-600">In Quintals</p>
+                        <p className="text-lg font-semibold text-blue-900">
+                          {totals.quintal.toFixed(2)} Qtl
+                        </p>
+                      </div>
+
+                      <div className="bg-white rounded-md p-3 border border-blue-100 shadow-sm">
+                        <p className="text-xs text-blue-600">In Tons</p>
+                        <p className="text-lg font-semibold text-blue-900">
+                          {totals.ton.toFixed(3)} Ton
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : null}
 
             {/* Attachments */}
             {production.attachments && production.attachments?.length > 0 && (
