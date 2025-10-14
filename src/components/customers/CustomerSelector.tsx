@@ -586,6 +586,7 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
                     <input
                       type="tel"
                       value={createFormData.phone}
+                      maxLength={10}
                       onChange={(e) => handleCreateFormChange('phone', e.target.value)}
                       onBlur={() => handleBlur('phone')}
                       className={getInputClasses('phone')}
@@ -673,6 +674,7 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
                       <input
                         type="text"
                         value={createFormData.address.pincode}
+                        maxLength={6}
                         onChange={(e) => handleCreateFormChange('address.pincode', e.target.value)}
                         onBlur={() => handleBlur('address.pincode')}
                         className={getInputClasses('address.pincode')}

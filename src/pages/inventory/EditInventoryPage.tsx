@@ -293,7 +293,7 @@ const EditInventoryPage: React.FC = () => {
                     type="number"
                     min="0"
                     step="0.01"
-                    value={formData.quantity}
+                    value={formData.quantity?.toString().replace(/^0+(?=\d)/, "") || ""}
                     onChange={(e) => handleInputChange(e)}
                     name="quantity"
                     className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
@@ -365,7 +365,7 @@ const EditInventoryPage: React.FC = () => {
                   type="number"
                   min="0"
                   step="0.01"
-                  value={formData.pricePerKg}
+                  value={formData.pricePerKg?.toString().replace(/^0+(?=\d)/, "") || ""}
                   onChange={(e) => handleInputChange(e)}
                   name="pricePerKg"
                   className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${

@@ -235,7 +235,7 @@ const AddInventoryPage: React.FC = () => {
                     type="number"
                     min="0"
                     step="0.01"
-                    value={form.quantity}
+                    value={form.quantity?.toString().replace(/^0+(?=\d)/, "") || ""}
                     onChange={(e) => handleFieldChange('quantity', parseFloat(e.target.value) || 0)}
                     className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
                       errors.quantity ? 'border-red-300' : 'border-gray-300'
@@ -307,7 +307,7 @@ const AddInventoryPage: React.FC = () => {
                   type="number"
                   min="0"
                   step="0.01"
-                  value={form.pricePerKg}
+                  value={form.pricePerKg?.toString().replace(/^0+(?=\d)/, "") || ""}
                   onChange={(e) => handleFieldChange('pricePerKg', parseFloat(e.target.value) || 0)}
                   className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
                     errors.pricePerKg ? 'border-red-300' : 'border-gray-300'
