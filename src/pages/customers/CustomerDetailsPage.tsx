@@ -393,7 +393,7 @@ const CustomerDetailsPage: React.FC = () => {
                     Net Balance Remaining
                   </span>
                   <span className="text-lg font-semibold text-red-600">
-                    {formatCurrency(customer.outstandingAmount || 0)}
+                    {formatCurrency(customer.netBalance || 0)}
                   </span>
                 </div>
 

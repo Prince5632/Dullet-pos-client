@@ -244,7 +244,7 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
           receiver: receiverSigToSend,
         },
         settlement: {
-          amountCollected:formData.remainingAmount,
+          amountCollected: formData.remainingAmount,
           notes: formData.settlementNotes,
         },
       };
@@ -254,14 +254,14 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
         payload
       );
       toast.success("Delivery recorded successfully");
-      
+
       // Update the order and close the modal
       onOrderUpdate(updatedOrder);
       onClose();
-      
+
       // Navigate to OrderDetailsPage with flag to open share modal
-      navigate(`/orders/${order._id}`, { 
-        state: { openShareModal: true } 
+      navigate(`/orders/${order._id}`, {
+        state: { openShareModal: true },
       });
     } catch (error) {
       const message =
@@ -402,23 +402,39 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
           </div>
           <input
             id="amount-collected"
-            type="number"
             min="0"
             max={order.totalAmount - order.paidAmount || 0}
             value={formData.remainingAmount}
-            onChange={(e) =>
-              handleInputChange(
-                "remainingAmount",
-                parseFloat(e.target.value) || 0
-              )
-            }
+            onChange={(e) => {
+              let value = e.target.value.toString(); // ensure string
+
+              // 1️⃣ Allow only digits + one optional dot
+              if (!/^\d*\.?\d*$/.test(value)) return;
+
+              // 2️⃣ Remove leading zeros but keep one if "0." case
+              value = value.replace(/^0+(?=\d)/, "");
+
+              // 3️⃣ Apply max limit check — only after it’s a valid float
+              const maxValue = order.totalAmount - order.paidAmount || 0;
+
+              // 🔹 Don't convert early — allow typing like "12."
+              const numericValue = parseFloat(value);
+
+              if (!isNaN(numericValue) && numericValue > maxValue) return;
+
+              // ✅ 4️⃣ Pass both numeric and string version
+              handleInputChange("remainingAmount", value);
+            }}
             className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             placeholder="0"
             disabled={order.paidAmount === order.totalAmount}
           />
         </div>
         <p className="text-xs text-gray-500 mt-1">
-          Maximum remaining amount: ₹{(order.totalAmount - order.paidAmount - formData.remainingAmount || 0).toLocaleString()}
+          Maximum remaining amount: ₹
+          {(
+            order.totalAmount - order.paidAmount - formData.remainingAmount || 0
+          ).toLocaleString()}
         </p>
         {(order.paidAmount || 0) > 0 && (
           <p className="text-xs text-green-600 mt-1">
@@ -550,8 +566,6 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
     </div>
   );
 
-
-
   const renderStep3 = () => (
     <div className="space-y-6">
       <h3 className="text-lg font-medium text-gray-900 flex items-center">
@@ -589,12 +603,6 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
       </div>
     </div>
   );
-
-
-
-
-
-
 
   return (
     <Modal
