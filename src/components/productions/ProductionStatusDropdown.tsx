@@ -630,7 +630,7 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
                         type="number"
                         min="0"
                         step="0.01"
-                        value={output.productQty}
+                        value={output.productQty?.toString().replace(/^0+(?=\d)/, "") || ""}
                         onChange={(e) =>
                           handleOutputDetailChange(
                             index,

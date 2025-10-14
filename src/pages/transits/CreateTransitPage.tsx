@@ -594,7 +594,7 @@ newErrors.driverId = validateField(
                           type="number"
                           min="0"
                           step="0.01"
-                          value={product.quantity}
+                          value={product.quantity?.toString().replace(/^0+(?=\d)/, "") || ""}
                           onChange={(e) =>
                             updateProductDetail(
                               index,
