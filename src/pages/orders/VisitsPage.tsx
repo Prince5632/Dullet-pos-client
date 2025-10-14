@@ -16,6 +16,7 @@ import {
   ArrowPathIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
+import Select from "react-select"
 import { orderService } from "../../services/orderService";
 import { customerService } from "../../services/customerService";
 import { userService } from "../../services/userService";
@@ -122,6 +123,10 @@ const OrdersPage: React.FC = () => {
   // State
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+   const customerOptions = customers?.map((customer) => ({
+    value: customer?._id,
+    label: customer?.businessName,
+  }));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [godowns, setGodowns] = useState<Godown[]>([]);
@@ -876,18 +881,57 @@ const OrdersPage: React.FC = () => {
               <div className="mt-3 pt-3 border-t border-gray-200">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {/* Common Filters */}
-                  <select
-                    value={customerFilter}
-                    onChange={(e) => setCustomerFilter(e.target.value)}
-                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="">All Customers</option>
-                    {customers.map((customer) => (
-                      <option key={customer._id} value={customer._id}>
-                        {customer.businessName}
-                      </option>
-                    ))}
-                  </select>
+              <Select
+                    options={customerOptions}
+                    value={
+                      customerOptions.find(
+                        (opt) => opt.value === customerFilter
+                      ) || null
+                    }
+                    onChange={(selected) =>
+                      setCustomerFilter(selected ? selected.value : "")
+                    }
+                    placeholder="All Customers"
+                    isClearable
+                    className="text-xs"
+                    styles={{
+                      control: (base, state) => ({
+                        ...base,
+                        minHeight: "32px",
+                        borderColor: state.isFocused ? "#3b82f6" : "#d1d5db", // blue-500 or gray-300
+                        boxShadow: state.isFocused
+                          ? "0 0 0 1px #3b82f6"
+                          : "none",
+                        "&:hover": { borderColor: "#3b82f6" },
+                      }),
+                      valueContainer: (base) => ({
+                        ...base,
+                        padding: "0 6px",
+                      }),
+                      input: (base) => ({
+                        ...base,
+                        margin: 0,
+                        padding: 0,
+                      }),
+                      singleValue: (base) => ({
+                        ...base,
+                        fontSize: "12px",
+                      }),
+                      placeholder: (base) => ({
+                        ...base,
+                        fontSize: "12px",
+                        color: "#9ca3af",
+                      }),
+                      dropdownIndicator: (base) => ({
+                        ...base,
+                        padding: "0 4px",
+                      }),
+                      clearIndicator: (base) => ({
+                        ...base,
+                        padding: "0 4px",
+                      }),
+                    }}
+                  />
 
                   {/* <div className="relative"> */}
                   <input

@@ -16,6 +16,7 @@ import {
   ArrowPathIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
+import Select from "react-select";
 import { orderService } from "../../services/orderService";
 import { customerService } from "../../services/customerService";
 import { userService } from "../../services/userService";
@@ -77,7 +78,6 @@ type OrdersFilters = {
   visitStatus: string;
   hasImage: string;
   address: string;
-  
 };
 
 const OrdersPage: React.FC = () => {
@@ -95,7 +95,7 @@ const OrdersPage: React.FC = () => {
     setSort,
     clearAll,
   } = usePersistedFilters<OrdersFilters>({
-    namespace:  PERSIST_NS.ORDERS,
+    namespace: PERSIST_NS.ORDERS,
     defaultFilters: {
       search: "",
       customerId: "",
@@ -120,6 +120,10 @@ const OrdersPage: React.FC = () => {
   // State
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const customerOptions = customers?.map((customer) => ({
+    value: customer?._id,
+    label: customer?.businessName,
+  }));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [godowns, setGodowns] = useState<Godown[]>([]);
@@ -237,18 +241,13 @@ const OrdersPage: React.FC = () => {
     try {
       setDeleteLoading(true);
       await orderService.deleteOrder(orderToDelete._id);
-      toast.success(
-        `Order deleted successfully`
-      );
+      toast.success(`Order deleted successfully`);
       setDeleteModalOpen(false);
       setOrderToDelete(null);
       handleSync(); // Sync all data after deletion
     } catch (error: any) {
       console.error("Failed to delete order:", error);
-      toast.error(
-        error.message ||
-          `Failed to delete order`
-      );
+      toast.error(error.message || `Failed to delete order`);
     } finally {
       setDeleteLoading(false);
     }
@@ -272,21 +271,17 @@ const OrdersPage: React.FC = () => {
         sortOrder,
       };
 
-      const params =
-       {
-              ...commonParams,
-              status: statusFilter,
-              paymentStatus: paymentStatusFilter,
-              priority: priorityFilter,
-              minAmount: minAmountFilter,
-              maxAmount: maxAmountFilter,
-              godownId: godownFilter,
-            }
-         
+      const params = {
+        ...commonParams,
+        status: statusFilter,
+        paymentStatus: paymentStatusFilter,
+        priority: priorityFilter,
+        minAmount: minAmountFilter,
+        maxAmount: maxAmountFilter,
+        godownId: godownFilter,
+      };
 
-      const response =
-       await orderService.getOrders(params)
-          
+      const response = await orderService.getOrders(params);
 
       if (response.success && response.data) {
         setOrders(response.data.orders || []);
@@ -351,20 +346,18 @@ const OrdersPage: React.FC = () => {
 
       if (hasPermission("orders.read")) {
         // Build params for stats based on view type and current filters
-        const statsParams =
-         {
-                godownId: godownFilter,
-                search: debouncedSearchTerm,
-                status: statusFilter,
-                paymentStatus: paymentStatusFilter,
-                customerId: customerFilter,
-                dateFrom: dateFromFilter,
-                dateTo: dateToFilter,
-                priority: priorityFilter,
-                minAmount: minAmountFilter,
-                maxAmount: maxAmountFilter,
-              }
-           
+        const statsParams = {
+          godownId: godownFilter,
+          search: debouncedSearchTerm,
+          status: statusFilter,
+          paymentStatus: paymentStatusFilter,
+          customerId: customerFilter,
+          dateFrom: dateFromFilter,
+          dateTo: dateToFilter,
+          priority: priorityFilter,
+          minAmount: minAmountFilter,
+          maxAmount: maxAmountFilter,
+        };
 
         promises.push(orderService.getOrderStats(statsParams));
       }
@@ -475,20 +468,17 @@ const OrdersPage: React.FC = () => {
   // Load godowns with filtered counts
   const loadGodowns = useCallback(async () => {
     try {
-      const godownParams =
-
-     {
-              search: debouncedSearchTerm,
-              status: statusFilter,
-              paymentStatus: paymentStatusFilter,
-              customerId: customerFilter,
-              dateFrom: dateFromFilter,
-              dateTo: dateToFilter,
-              priority: priorityFilter,
-              minAmount: minAmountFilter,
-              maxAmount: maxAmountFilter,
-            }
-          
+      const godownParams = {
+        search: debouncedSearchTerm,
+        status: statusFilter,
+        paymentStatus: paymentStatusFilter,
+        customerId: customerFilter,
+        dateFrom: dateFromFilter,
+        dateTo: dateToFilter,
+        priority: priorityFilter,
+        minAmount: minAmountFilter,
+        maxAmount: maxAmountFilter,
+      };
 
       const res = await godownService.getGodowns(godownParams);
       if (res.success && res.data) setGodowns(res.data.godowns);
@@ -598,8 +588,6 @@ const OrdersPage: React.FC = () => {
 
   // Table columns
   const getColumns = (): TableColumn<any>[] => {
-
-
     // Default order columns
     return [
       {
@@ -801,11 +789,10 @@ const OrdersPage: React.FC = () => {
               <div className="flex items-center gap-4">
                 <div>
                   <h1 className="text-lg font-semibold text-gray-900">
-                Orders
+                    Orders
                   </h1>
                   <p className="text-xs text-gray-500 hidden sm:block">
-                Manage customer orders
-                
+                    Manage customer orders
                   </p>
                 </div>
                 {/* View switch removed; visits has its own tab */}
@@ -813,7 +800,6 @@ const OrdersPage: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
-            
               <button
                 onClick={handleSync}
                 disabled={syncing}
@@ -829,9 +815,7 @@ const OrdersPage: React.FC = () => {
                 className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
               >
                 <PlusIcon className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">
-                  {"New Order"}
-                </span>
+                <span className="hidden sm:inline">{"New Order"}</span>
                 <span className="sm:hidden">New</span>
               </Link>
             </div>
@@ -848,10 +832,7 @@ const OrdersPage: React.FC = () => {
               <MagnifyingGlassIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder={
-                 "Search orders..."
-                  
-                }
+                placeholder={"Search orders..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="block w-full pl-8 pr-8 py-2 text-sm border border-gray-300 rounded-md bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -867,53 +848,53 @@ const OrdersPage: React.FC = () => {
             </div>
 
             {/* Status Pills - Mobile First */}
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                {[
-                  {
-                    value: "pending",
-                    label: "Pending",
-                    count: orders.filter((o) => o.status === "pending").length,
-                  },
-                  {
-                    value: "approved",
-                    label: "Approved",
-                    count: orders.filter((o) => o.status === "approved").length,
-                  },
-                  // {
-                  //   value: "processing",
-                  //   label: "Production",
-                  //   count: orders.filter((o) => o.status === "processing")
-                  //     .length,
-                  // },
-                  // {
-                  //   value: "completed",
-                  //   label: "Done",
-                  //   count: orders.filter((o) => o.status === "completed")
-                  //     .length,
-                  // },
-                ].map((status) => (
-                  <button
-                    key={status.value}
-                    onClick={() =>
-                      setStatusFilter(
-                        statusFilter === status.value ? "" : status.value
-                      )
-                    }
-                    className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
-                      statusFilter === status.value
-                        ? "bg-blue-100 text-blue-800"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    <span>{status.label}</span>
-                    {/* {status.count > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {[
+                {
+                  value: "pending",
+                  label: "Pending",
+                  count: orders.filter((o) => o.status === "pending").length,
+                },
+                {
+                  value: "approved",
+                  label: "Approved",
+                  count: orders.filter((o) => o.status === "approved").length,
+                },
+                // {
+                //   value: "processing",
+                //   label: "Production",
+                //   count: orders.filter((o) => o.status === "processing")
+                //     .length,
+                // },
+                // {
+                //   value: "completed",
+                //   label: "Done",
+                //   count: orders.filter((o) => o.status === "completed")
+                //     .length,
+                // },
+              ].map((status) => (
+                <button
+                  key={status.value}
+                  onClick={() =>
+                    setStatusFilter(
+                      statusFilter === status.value ? "" : status.value
+                    )
+                  }
+                  className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
+                    statusFilter === status.value
+                      ? "bg-blue-100 text-blue-800"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  <span>{status.label}</span>
+                  {/* {status.count > 0 && (
                       <span className="text-xs bg-white rounded px-1">
                         {status.count}
                       </span>
                     )} */}
-                  </button>
-                ))}
-              </div>
+                </button>
+              ))}
+            </div>
 
             {/* Filter Toggle */}
             <div className="flex items-center justify-between">
@@ -949,18 +930,57 @@ const OrdersPage: React.FC = () => {
               <div className="mt-3 pt-3 border-t border-gray-200">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {/* Common Filters */}
-                  <select
-                    value={customerFilter}
-                    onChange={(e) => setCustomerFilter(e.target.value)}
-                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="">All Customers</option>
-                    {customers.map((customer) => (
-                      <option key={customer._id} value={customer._id}>
-                        {customer.businessName}
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                    options={customerOptions}
+                    value={
+                      customerOptions.find(
+                        (opt) => opt.value === customerFilter
+                      ) || null
+                    }
+                    onChange={(selected) =>
+                      setCustomerFilter(selected ? selected.value : "")
+                    }
+                    placeholder="All Customers"
+                    isClearable
+                    className="text-xs"
+                    styles={{
+                      control: (base, state) => ({
+                        ...base,
+                        minHeight: "32px",
+                        borderColor: state.isFocused ? "#3b82f6" : "#d1d5db", // blue-500 or gray-300
+                        boxShadow: state.isFocused
+                          ? "0 0 0 1px #3b82f6"
+                          : "none",
+                        "&:hover": { borderColor: "#3b82f6" },
+                      }),
+                      valueContainer: (base) => ({
+                        ...base,
+                        padding: "0 6px",
+                      }),
+                      input: (base) => ({
+                        ...base,
+                        margin: 0,
+                        padding: 0,
+                      }),
+                      singleValue: (base) => ({
+                        ...base,
+                        fontSize: "12px",
+                      }),
+                      placeholder: (base) => ({
+                        ...base,
+                        fontSize: "12px",
+                        color: "#9ca3af",
+                      }),
+                      dropdownIndicator: (base) => ({
+                        ...base,
+                        padding: "0 4px",
+                      }),
+                      clearIndicator: (base) => ({
+                        ...base,
+                        padding: "0 4px",
+                      }),
+                    }}
+                  />
 
                   {/* <div className="relative"> */}
                   <input
@@ -1001,49 +1021,47 @@ const OrdersPage: React.FC = () => {
                   )}
 
                   {/* Order-specific Filters */}
-                    <>
-                      <select
-                        value={paymentStatusFilter}
-                        onChange={(e) => setPaymentStatusFilter(e.target.value)}
-                        className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      >
-                        <option value="">Payment Status</option>
-                        {orderService.getPaymentStatuses().map((status) => (
-                          <option key={status.value} value={status.value}>
-                            {status.label}
-                          </option>
-                        ))}
-                      </select>
+                  <>
+                    <select
+                      value={paymentStatusFilter}
+                      onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                      className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="">Payment Status</option>
+                      {orderService.getPaymentStatuses().map((status) => (
+                        <option key={status.value} value={status.value}>
+                          {status.label}
+                        </option>
+                      ))}
+                    </select>
 
-                      <select
-                        value={priorityFilter}
-                        onChange={(e) => setPriorityFilter(e.target.value)}
-                        className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      >
-                        <option value="">All Priorities</option>
-                        <option value="normal">Normal</option>
-                        <option value="high">High</option>
-                        <option value="urgent">Urgent</option>
-                      </select>
+                    <select
+                      value={priorityFilter}
+                      onChange={(e) => setPriorityFilter(e.target.value)}
+                      className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="">All Priorities</option>
+                      <option value="normal">Normal</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
 
-                      <input
-                        type="number"
-                        value={minAmountFilter}
-                        onChange={(e) => setMinAmountFilter(e.target.value)}
-                        placeholder="Min Amount"
-                        className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
+                    <input
+                      type="number"
+                      value={minAmountFilter}
+                      onChange={(e) => setMinAmountFilter(e.target.value)}
+                      placeholder="Min Amount"
+                      className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
 
-                      <input
-                        type="number"
-                        value={maxAmountFilter}
-                        onChange={(e) => setMaxAmountFilter(e.target.value)}
-                        placeholder="Max Amount"
-                        className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
-                    </>
-
-          
+                    <input
+                      type="number"
+                      value={maxAmountFilter}
+                      onChange={(e) => setMaxAmountFilter(e.target.value)}
+                      placeholder="Max Amount"
+                      className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </>
                 </div>
               </div>
             )}
@@ -1084,14 +1102,13 @@ const OrdersPage: React.FC = () => {
                         <p className="text-sm flex items-center gap-2 font-medium text-gray-900">
                           All
                           {"Orders"}
-                            <span className="text-[10px] text-emerald-700 bg-emerald-100 rounded px-1.5 py-0.5">
-                              Orders:{" "}
-                              {godowns.reduce(
-                                (sum, x) => sum + (x.orderCount || 0),
-                                0
-                              )}
-                            </span>
-                         
+                          <span className="text-[10px] text-emerald-700 bg-emerald-100 rounded px-1.5 py-0.5">
+                            Orders:{" "}
+                            {godowns.reduce(
+                              (sum, x) => sum + (x.orderCount || 0),
+                              0
+                            )}
+                          </span>
                         </p>
                         <div className="flex items-center gap-2">
                           <p className="text-xs text-gray-500">
@@ -1124,9 +1141,7 @@ const OrdersPage: React.FC = () => {
                           <p className="text-sm font-medium flex gap-2 text-gray-900">
                             {g.name}
                             <span className="text-[10px] flex justify-center items-center text-gray-700 bg-gray-100 rounded px-1.5 py-0.5">
-                           Orders: {" "}
-                              {g.orderCount
-                                 || 0}
+                              Orders: {g.orderCount || 0}
                             </span>
                           </p>
                           <div className="flex items-center gap-2">
@@ -1233,7 +1248,6 @@ const OrdersPage: React.FC = () => {
         {/* Compact Stats for other roles */}
         {!loading &&
           orders.length > 0 &&
-       
           user?.role?.name?.toLowerCase() !== "super admin" &&
           user?.role?.name?.toLowerCase() !== "admin" && (
             <div className="grid grid-cols-3 gap-2 mb-4">
@@ -1274,19 +1288,16 @@ const OrdersPage: React.FC = () => {
               <p className="text-xs text-gray-500 mb-4">
                 {statusFilter || searchTerm
                   ? "Try adjusting filters"
-                 
                   : "Create your first order"}
               </p>
               {!statusFilter && !searchTerm ? (
-     
-                  <Link
-                    to="/orders/new"
-                    className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-                  >
-                    <PlusIcon className="h-4 w-4 mr-1" />
-                    Create Order
-                  </Link>
-              
+                <Link
+                  to="/orders/new"
+                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                >
+                  <PlusIcon className="h-4 w-4 mr-1" />
+                  Create Order
+                </Link>
               ) : (
                 <button
                   onClick={clearFilters}
@@ -1351,17 +1362,13 @@ const OrdersPage: React.FC = () => {
                       </div>
                       <div className="flex items-center space-x-1">
                         <Link
-                          to={
-                           `/orders/${order._id}`
-                          }
+                          to={`/orders/${order._id}`}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                         >
                           <EyeIcon className="h-4 w-4" />
                         </Link>
                         <Link
-                          to={
-                            `/orders/${order._id}/edit`
-                          }
+                          to={`/orders/${order._id}/edit`}
                           className="p-1.5 text-gray-600 hover:bg-gray-50 rounded-md transition-colors"
                         >
                           <PencilIcon className="h-4 w-4" />
@@ -1504,8 +1511,8 @@ const OrdersPage: React.FC = () => {
                   </div>
                   <div className="text-xs text-gray-500">
                     {`Amount: ${orderService.formatCurrency(
-                          orderToDelete.totalAmount
-                        )}`}
+                      orderToDelete.totalAmount
+                    )}`}
                   </div>
                 </div>
               </div>
@@ -1513,10 +1520,8 @@ const OrdersPage: React.FC = () => {
           )}
 
           <p className="text-sm text-gray-600 mb-6">
-            Are you sure you want to delete this{" "}
-            order? This action will
-            permanently remove the order
-            from the database and cannot be undone.
+            Are you sure you want to delete this order? This action will
+            permanently remove the order from the database and cannot be undone.
           </p>
 
           <div className="flex items-center gap-2">
