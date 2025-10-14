@@ -60,7 +60,11 @@ const schema = yup.object({
   notes: yup.string().optional(),
   paidAmount: yup.number().min(0, "Paid amount must be positive").optional(),
   isTaxable: yup.boolean().optional(),
-  taxPercentage: yup.number().min(0, "Tax percentage must be positive").max(100, "Tax percentage cannot exceed 100").optional(),
+  taxPercentage: yup
+    .number()
+    .min(0, "Tax percentage must be positive")
+    .max(100, "Tax percentage cannot exceed 100")
+    .optional(),
 });
 
 const EditOrderPage: React.FC = () => {
@@ -121,27 +125,28 @@ const EditOrderPage: React.FC = () => {
   const watchedValues = watch();
 
   // Location-based product and pricing helpers
-  const normalizeCity = (raw?: string): string => (raw || '').toLowerCase().trim();
+  const normalizeCity = (raw?: string): string =>
+    (raw || "").toLowerCase().trim();
   const canonicalCity = (raw?: string): string => {
     const city = normalizeCity(raw);
     switch (city) {
-      case 'ludhaina':
-        return 'ludhiana';
-      case 'fatehgarh':
-        return 'fatehgarh sahib';
+      case "ludhaina":
+        return "ludhiana";
+      case "fatehgarh":
+        return "fatehgarh sahib";
       default:
         return city;
     }
   };
   const getCurrentCity = (): string => {
-    const g = godowns.find(gd => gd._id === order?.godown?._id);
+    const g = godowns.find((gd) => gd._id === order?.godown?._id);
     const rawCity = g?.location?.city;
     const normalizedCity = canonicalCity(rawCity);
     console.log("getCurrentCity debug:", {
       orderGodownId: order?.godown?._id,
       foundGodown: g,
       rawCity,
-      normalizedCity
+      normalizedCity,
     });
     return normalizedCity;
   };
@@ -155,9 +160,11 @@ const EditOrderPage: React.FC = () => {
   };
   const currentProducts = useMemo(() => {
     const city = getCurrentCity();
-    const area = godowns.find(g => g._id === order?.godown?._id)?.location?.area?.toLowerCase();
+    const area = godowns
+      .find((g) => g._id === order?.godown?._id)
+      ?.location?.area?.toLowerCase();
     const tokensToMatch = [city, area ? `${city}:${area}` : ""].filter(Boolean);
-    
+
     console.log("currentProducts filtering:", {
       city,
       area,
@@ -165,22 +172,27 @@ const EditOrderPage: React.FC = () => {
       orderGodownId: order?.godown?._id,
       godownsCount: godowns.length,
       productsCount: products.length,
-      productsWithTokens: products.filter(p => Array.isArray(p.cityTokens)).length
+      productsWithTokens: products.filter((p) => Array.isArray(p.cityTokens))
+        .length,
     });
-    
+
     if (!tokensToMatch.length) {
       console.log("No tokens to match, returning empty array");
       return [] as QuickProduct[];
     }
-    
+
     const filtered = products.filter(
       (p) =>
         Array.isArray(p.cityTokens) &&
         p.cityTokens.some((token) => tokensToMatch.includes(token))
     );
-    
-    console.log("Filtered products:", filtered.length, filtered.map(p => ({ name: p.name, cityTokens: p.cityTokens })));
-    
+
+    console.log(
+      "Filtered products:",
+      filtered.length,
+      filtered.map((p) => ({ name: p.name, cityTokens: p.cityTokens }))
+    );
+
     return filtered;
   }, [products, order, godowns]);
 
@@ -207,7 +219,9 @@ const EditOrderPage: React.FC = () => {
   useEffect(() => {
     const loadGodowns = async () => {
       try {
-        const response = await apiService.get<{ godowns: Godown[] }>(API_CONFIG.ENDPOINTS.GODOWNS);
+        const response = await apiService.get<{ godowns: Godown[] }>(
+          API_CONFIG.ENDPOINTS.GODOWNS
+        );
         if (response.success && response.data) {
           setGodowns(response.data.godowns);
         }
@@ -240,13 +254,14 @@ const EditOrderPage: React.FC = () => {
         if (data.deliveryInstructions)
           setValue("deliveryInstructions", data.deliveryInstructions);
         if (data.notes) setValue("notes", data.notes);
-        
+
         // Set original paid amount and reset additional payment
-        const originalPaid = typeof data.paidAmount === "number" ? data.paidAmount : 0;
+        const originalPaid =
+          typeof data.paidAmount === "number" ? data.paidAmount : 0;
         setOriginalPaidAmount(originalPaid);
         setAdditionalPayment(0);
         setValue("paidAmount", originalPaid); // Keep form in sync
-        
+
         // Set tax fields
         const orderIsTaxable = data.isTaxable || false;
         const orderTaxPercentage = data.taxPercentage || 5;
@@ -274,7 +289,7 @@ const EditOrderPage: React.FC = () => {
       currentProductsLength: currentProducts.length,
       orderItemsLength: orderItems.length,
       hasCurrentProducts: currentProducts.length > 0,
-      hasOrderItems: orderItems.length > 0
+      hasOrderItems: orderItems.length > 0,
     });
 
     if (currentProducts.length > 0 && orderItems.length > 0) {
@@ -287,11 +302,11 @@ const EditOrderPage: React.FC = () => {
           packaging: item.packaging,
           isBagSelection: item.isBagSelection,
         })),
-        availableProducts: currentProducts.map(p => ({
+        availableProducts: currentProducts.map((p) => ({
           name: p.name,
           key: p.key,
-          bagSizeKg: p.bagSizeKg
-        }))
+          bagSizeKg: p.bagSizeKg,
+        })),
       });
 
       const convertedItems: Record<string, SelectedItem> = {};
@@ -303,7 +318,7 @@ const EditOrderPage: React.FC = () => {
           packaging: item.packaging,
           isBagSelection: item.isBagSelection,
           itemId: item._id,
-          index
+          index,
         });
 
         // Try to find matching product by name from currentProducts (godown-filtered products)
@@ -311,38 +326,55 @@ const EditOrderPage: React.FC = () => {
         const matchingProduct = currentProducts.find((p) => {
           const productNameLower = p.name.toLowerCase();
           const itemNameLower = item.productName.toLowerCase();
-          
+
           // Exact match
           if (productNameLower === itemNameLower) return true;
-          
+
           // Contains match (both directions)
-          if (productNameLower.includes(itemNameLower) || itemNameLower.includes(productNameLower)) return true;
-          
+          if (
+            productNameLower.includes(itemNameLower) ||
+            itemNameLower.includes(productNameLower)
+          )
+            return true;
+
           // Remove common words and try again
-          const cleanProductName = productNameLower.replace(/\b(atta|flour|kg|bag|bags)\b/g, '').trim();
-          const cleanItemName = itemNameLower.replace(/\b(atta|flour|kg|bag|bags)\b/g, '').trim();
-          
-          if (cleanProductName && cleanItemName && 
-              (cleanProductName.includes(cleanItemName) || cleanItemName.includes(cleanProductName))) {
+          const cleanProductName = productNameLower
+            .replace(/\b(atta|flour|kg|bag|bags)\b/g, "")
+            .trim();
+          const cleanItemName = itemNameLower
+            .replace(/\b(atta|flour|kg|bag|bags)\b/g, "")
+            .trim();
+
+          if (
+            cleanProductName &&
+            cleanItemName &&
+            (cleanProductName.includes(cleanItemName) ||
+              cleanItemName.includes(cleanProductName))
+          ) {
             return true;
           }
-          
+
           return false;
         });
 
         console.log(
           `Matching product for "${item.productName}":`,
-          matchingProduct ? {
-            name: matchingProduct.name,
-            key: matchingProduct.key,
-            bagSizeKg: matchingProduct.bagSizeKg
-          } : "NOT FOUND"
+          matchingProduct
+            ? {
+                name: matchingProduct.name,
+                key: matchingProduct.key,
+                bagSizeKg: matchingProduct.bagSizeKg,
+              }
+            : "NOT FOUND"
         );
 
         if (matchingProduct) {
           const packaging = item.packaging || "Loose";
           // Use isBagSelection from backend if available, otherwise calculate
-          const isBagSelection = item.isBagSelection !== undefined ? item.isBagSelection : packaging !== "Loose";
+          const isBagSelection =
+            item.isBagSelection !== undefined
+              ? item.isBagSelection
+              : packaging !== "Loose";
           let bagPieces: number | undefined = undefined;
           let bags: number | undefined = undefined;
 
@@ -371,16 +403,21 @@ const EditOrderPage: React.FC = () => {
             product: productWithOriginalName,
             mode: "kg",
             quantityKg: item.quantity,
-            packaging: packaging as SelectedItem['packaging'],
+            packaging: packaging as SelectedItem["packaging"],
             isBagSelection,
             bagPieces,
             bags,
           };
 
           // Create unique key using item ID if available, otherwise use product key + index
-          const uniqueKey = item._id ? `${matchingProduct.key}_${item._id}` : `${matchingProduct.key}_${index}`;
-          
-          console.log(`Converted item for "${item.productName}" with key "${uniqueKey}":`, convertedItem);
+          const uniqueKey = item._id
+            ? `${matchingProduct.key}_${item._id}`
+            : `${matchingProduct.key}_${index}`;
+
+          console.log(
+            `Converted item for "${item.productName}" with key "${uniqueKey}":`,
+            convertedItem
+          );
           convertedItems[uniqueKey] = convertedItem;
         }
       });
@@ -391,17 +428,20 @@ const EditOrderPage: React.FC = () => {
         convertedItems
       );
       setSelectedItems(convertedItems);
-      
+
       console.log("Final selectedItems set:", {
         convertedItemsCount: Object.keys(convertedItems).length,
         convertedItemsKeys: Object.keys(convertedItems),
-        willDisableSaveButton: Object.keys(convertedItems).length === 0
+        willDisableSaveButton: Object.keys(convertedItems).length === 0,
       });
     } else {
       console.log("Conversion skipped - conditions not met:", {
         currentProductsLength: currentProducts.length,
         orderItemsLength: orderItems.length,
-        reason: currentProducts.length === 0 ? "No current products" : "No order items"
+        reason:
+          currentProducts.length === 0
+            ? "No current products"
+            : "No order items",
       });
     }
   }, [currentProducts, orderItems]);
@@ -421,9 +461,12 @@ const EditOrderPage: React.FC = () => {
       setIsBagSelection(!!existing.isBagSelection);
       setBagPieces(existing.bagPieces || existing.bags || 1);
       // Set currentBagSize based on existing selection
-      if (existing.isBagSelection && existing.packaging === '5kg Bags') {
+      if (existing.isBagSelection && existing.packaging === "5kg Bags") {
         setCurrentBagSize(5);
-      } else if (existing.isBagSelection && existing.packaging === '40kg Bags') {
+      } else if (
+        existing.isBagSelection &&
+        existing.packaging === "40kg Bags"
+      ) {
         setCurrentBagSize(40);
       } else {
         setCurrentBagSize(product.bagSizeKg || 40);
@@ -459,9 +502,9 @@ const EditOrderPage: React.FC = () => {
     setIsBagSelection(!!item.isBagSelection);
     setBagPieces(item.bagPieces || item.bags || 1);
     // Set currentBagSize based on existing selection
-    if (item.isBagSelection && item.packaging === '5kg Bags') {
+    if (item.isBagSelection && item.packaging === "5kg Bags") {
       setCurrentBagSize(5);
-    } else if (item.isBagSelection && item.packaging === '40kg Bags') {
+    } else if (item.isBagSelection && item.packaging === "40kg Bags") {
       setCurrentBagSize(40);
     } else {
       setCurrentBagSize(item.product.bagSizeKg || 40);
@@ -482,7 +525,7 @@ const EditOrderPage: React.FC = () => {
     setActiveProduct(product);
     setActiveItemKey(null);
     setEditingItemKey(null); // Not editing an existing item
-    
+
     // Always initialize fresh values for new items
     if (product.bagSizeKg === 5) {
       // For 5kg products, default to bag selection with 5kg bags
@@ -514,15 +557,15 @@ const EditOrderPage: React.FC = () => {
     setIsBagSelection(!!item.isBagSelection);
     setBagPieces(item.bagPieces || item.bags || 1);
     // Set currentBagSize based on existing selection
-    if (item.isBagSelection && item.packaging === '5kg Bags') {
+    if (item.isBagSelection && item.packaging === "5kg Bags") {
       setCurrentBagSize(5);
-    } else if (item.isBagSelection && item.packaging === '10kg Bags') {
+    } else if (item.isBagSelection && item.packaging === "10kg Bags") {
       setCurrentBagSize(10);
-    } else if (item.isBagSelection && item.packaging === '25kg Bags') {
+    } else if (item.isBagSelection && item.packaging === "25kg Bags") {
       setCurrentBagSize(25);
-    } else if (item.isBagSelection && item.packaging === '40kg Bags') {
+    } else if (item.isBagSelection && item.packaging === "40kg Bags") {
       setCurrentBagSize(40);
-    } else if (item.isBagSelection && item.packaging === '50kg Bags') {
+    } else if (item.isBagSelection && item.packaging === "50kg Bags") {
       setCurrentBagSize(50);
     } else {
       setCurrentBagSize(item.product.bagSizeKg || 40);
@@ -539,7 +582,7 @@ const EditOrderPage: React.FC = () => {
     if (isBagSelection) {
       const pieces = Number.isFinite(bagPieces) ? bagPieces : 0;
       if (!pieces || pieces <= 0) {
-        toast.error('Enter valid bag pieces');
+        toast.error("Enter valid bag pieces");
         return;
       }
       pieceCount = pieces;
@@ -548,33 +591,36 @@ const EditOrderPage: React.FC = () => {
     }
 
     if (!totalKg || totalKg <= 0) {
-      toast.error('Enter valid quantity');
+      toast.error("Enter valid quantity");
       return;
     }
 
-    let packaging: SelectedItem['packaging'] = 'Loose';
+    let packaging: SelectedItem["packaging"] = "Loose";
     if (isBagSelection) {
       // Determine packaging based on current bag size
       if (currentBagSize === 5) {
-        packaging = '5kg Bags';
+        packaging = "5kg Bags";
       } else if (currentBagSize === 10) {
-        packaging = '10kg Bags';
+        packaging = "10kg Bags";
       } else if (currentBagSize === 25) {
-        packaging = '25kg Bags';
+        packaging = "25kg Bags";
       } else if (currentBagSize === 40) {
-        packaging = '40kg Bags';
+        packaging = "40kg Bags";
       } else if (currentBagSize === 50) {
-        packaging = '50kg Bags';
-      } else if (activeProduct.defaultPackaging && activeProduct.defaultPackaging !== 'Loose') {
+        packaging = "50kg Bags";
+      } else if (
+        activeProduct.defaultPackaging &&
+        activeProduct.defaultPackaging !== "Loose"
+      ) {
         packaging = activeProduct.defaultPackaging as typeof packaging;
       } else {
-        packaging = 'Custom';
+        packaging = "Custom";
       }
     }
 
     const item: SelectedItem = {
       product: activeProduct,
-      mode: 'kg',
+      mode: "kg",
       quantityKg: totalKg,
       packaging,
       bags: bagsCount,
@@ -583,7 +629,7 @@ const EditOrderPage: React.FC = () => {
     };
 
     let itemKey: string;
-    
+
     if (editingItemKey) {
       // If editing an existing item, use the existing key
       itemKey = editingItemKey;
@@ -591,7 +637,7 @@ const EditOrderPage: React.FC = () => {
       // If adding a new item, generate unique key for multiple items of same product
       const existingItem = selectedItems[activeProduct.key];
       itemKey = activeProduct.key;
-      
+
       if (existingItem) {
         // If item already exists, create a new unique key
         let counter = 1;
@@ -601,8 +647,8 @@ const EditOrderPage: React.FC = () => {
         itemKey = `${activeProduct.key}_${counter}`;
       }
     }
-    
-    setSelectedItems(prev => ({ ...prev, [itemKey]: item }));
+
+    setSelectedItems((prev) => ({ ...prev, [itemKey]: item }));
     setActiveProduct(null);
     setActiveItemKey(null);
     setEditingItemKey(null); // Clear editing item key
@@ -627,15 +673,15 @@ const EditOrderPage: React.FC = () => {
     if (it.isBagSelection) {
       // Determine the actual bag size used based on packaging or calculation
       let actualBagSize: number;
-      if (it.packaging === '5kg Bags') {
+      if (it.packaging === "5kg Bags") {
         actualBagSize = 5;
-      } else if (it.packaging === '10kg Bags') {
+      } else if (it.packaging === "10kg Bags") {
         actualBagSize = 10;
-      } else if (it.packaging === '25kg Bags') {
+      } else if (it.packaging === "25kg Bags") {
         actualBagSize = 25;
-      } else if (it.packaging === '40kg Bags') {
+      } else if (it.packaging === "40kg Bags") {
         actualBagSize = 40;
-      } else if (it.packaging === '50kg Bags') {
+      } else if (it.packaging === "50kg Bags") {
         actualBagSize = 50;
       } else if (it.bagPieces && it.bagPieces > 0) {
         // Calculate bag size from total kg and pieces
@@ -659,7 +705,8 @@ const EditOrderPage: React.FC = () => {
   };
 
   const itemsArray = useMemo(
-    () => Object.entries(selectedItems).map(([key, item]) => ({ key, ...item })),
+    () =>
+      Object.entries(selectedItems).map(([key, item]) => ({ key, ...item })),
     [selectedItems]
   );
 
@@ -704,7 +751,9 @@ const EditOrderPage: React.FC = () => {
     }
   };
   const onSubmit = async (data: UpdateOrderForm) => {
-    console.log("🚀 onSubmit FUNCTION CALLED! This means form submission is working!");
+    console.log(
+      "🚀 onSubmit FUNCTION CALLED! This means form submission is working!"
+    );
     console.log("onSubmit called with data:", data);
     console.log("itemsArray:", itemsArray);
     console.log("selectedItems:", selectedItems);
@@ -934,186 +983,226 @@ const EditOrderPage: React.FC = () => {
                   </div>
                 )}
 
-        {/* Selected Products - Click to Edit */}
-        {Object.keys(selectedItems).length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 mb-3">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-900 flex items-center">
-                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1.5"></span>
-                Selected Products ({itemsArray.length})
-              </h3>
-              <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full border border-blue-200">
-                Click to Edit
-              </div>
-            </div>
-            <div className="space-y-2">
-              {itemsArray.map((it) => {
-                const kg = it.quantityKg || 0;
-                const lineTotal = kg * it.product.pricePerKg;
-                
-                return (
-                  <button
-                    type="button"
-                    key={it.key}
-                    onClick={() => openQtyModalForExistingItem(it.key, it)}
-                    className="w-full text-left p-3 rounded-lg border border-blue-200 bg-blue-50 hover:border-blue-300 hover:bg-blue-100 transition-all duration-200 active:scale-[0.99]"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-medium text-gray-900 truncate">
-                            {it.product.name}
-                          </h4>
-                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                            ₹{formatNumber(it.product.pricePerKg)}/kg
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-600 mt-1">
-                          {formatQuantity(it)}  • ₹{formatNumber(lineTotal)}
-                        </div>
+                {/* Selected Products - Click to Edit */}
+                {Object.keys(selectedItems).length > 0 && (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 mb-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1.5"></span>
+                        Selected Products ({itemsArray.length})
+                      </h3>
+                      <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full border border-blue-200">
+                        Click to Edit
                       </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeItem(it.key);
-                        }}
-                        className="p-1.5 rounded-md border border-red-200 bg-red-50 hover:bg-red-100 active:scale-95 transition-colors"
-                      >
-                        <XMarkIcon className="h-4 w-4 text-red-500" />
-                      </button>
                     </div>
-                  </button>
-                );
-              })}
-            </div>
-            
-            {/* Total Summary */}
-            <div className="mt-3 pt-3 border-t border-blue-200">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-700">Total Amount:</span>
-                <span className="text-lg font-bold text-blue-600">
-                  ₹{formatNumber(totalAmount)}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
+                    <div className="space-y-2">
+                      {itemsArray.map((it) => {
+                        const kg = it.quantityKg || 0;
+                        const lineTotal = kg * it.product.pricePerKg;
 
-        {/* Available Products - Click to Add */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 mb-3">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-900 flex items-center">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
-              Available Products
-            </h3>
-            <div className="flex items-center gap-2">
-              <div className="text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-200">
-                Click to Add
-              </div>
-              {loadingProducts && (
-                <span className="text-xs text-gray-500">Loading...</span>
-              )}
-              {productsError && (
-                <span className="text-xs text-red-600">{productsError}</span>
-              )}
-            </div>
-          </div>
+                        return (
+                          <button
+                            type="button"
+                            key={it.key}
+                            onClick={() =>
+                              openQtyModalForExistingItem(it.key, it)
+                            }
+                            className="w-full text-left p-3 rounded-lg border border-blue-200 bg-blue-50 hover:border-blue-300 hover:bg-blue-100 transition-all duration-200 active:scale-[0.99]"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-sm font-medium text-gray-900 truncate">
+                                    {it.product.name}
+                                  </h4>
+                                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                                    ₹{formatNumber(it.product.pricePerKg)}/kg
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-600 mt-1">
+                                  {formatQuantity(it)} • ₹
+                                  {formatNumber(lineTotal)}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeItem(it.key);
+                                }}
+                                className="p-1.5 rounded-md border border-red-200 bg-red-50 hover:bg-red-100 active:scale-95 transition-colors"
+                              >
+                                <XMarkIcon className="h-4 w-4 text-red-500" />
+                              </button>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
 
-          {/* If godown selected but no products match */}
-          {order && currentProducts.length === 0 && (
-            <div className="text-center py-8">
-              <div className="text-amber-400 mb-2">
-                <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              </div>
-              <div className="text-sm text-amber-600">
-                No products available for the selected godown. Please confirm that this location has assigned catalog items.
-              </div>
-            </div>
-          )}
+                    {/* Total Summary */}
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-700">
+                          Total Amount:
+                        </span>
+                        <span className="text-lg font-bold text-blue-600">
+                          ₹{formatNumber(totalAmount)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-          {/* Available products grouped display */}
-          {order &&
-            currentProducts.length > 0 &&
-            (() => {
-              const baseProductGroups = currentProducts.reduce(
-                (groups, product) => {
-                  const baseName = product.name;
-                  if (!groups[baseName]) {
-                    groups[baseName] = [];
-                  }
-                  groups[baseName].push(product);
-                  return groups;
-                },
-                {} as Record<string, QuickProduct[]>
-              );
+                {/* Available Products - Click to Add */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 mb-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
+                      Available Products
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-200">
+                        Click to Add
+                      </div>
+                      {loadingProducts && (
+                        <span className="text-xs text-gray-500">
+                          Loading...
+                        </span>
+                      )}
+                      {productsError && (
+                        <span className="text-xs text-red-600">
+                          {productsError}
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-              // Show all products as "add new" options
-               const availableGroups = Object.entries(baseProductGroups).map(([baseName, variants]) => {
-                 return { baseName, variants };
-               });
+                  {/* If godown selected but no products match */}
+                  {order && currentProducts.length === 0 && (
+                    <div className="text-center py-8">
+                      <div className="text-amber-400 mb-2">
+                        <svg
+                          className="w-12 h-12 mx-auto"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="text-sm text-amber-600">
+                        No products available for the selected godown. Please
+                        confirm that this location has assigned catalog items.
+                      </div>
+                    </div>
+                  )}
 
-               return availableGroups.map(({ baseName, variants }) => (
-                 <div key={baseName} className="mb-4 last:mb-0">
+                  {/* Available products grouped display */}
+                  {order &&
+                    currentProducts.length > 0 &&
+                    (() => {
+                      const baseProductGroups = currentProducts.reduce(
+                        (groups, product) => {
+                          const baseName = product.name;
+                          if (!groups[baseName]) {
+                            groups[baseName] = [];
+                          }
+                          groups[baseName].push(product);
+                          return groups;
+                        },
+                        {} as Record<string, QuickProduct[]>
+                      );
 
-                   <div className="grid grid-cols-1 gap-2">
-                     {variants.map((variant) => {
-                       // Check for any items of this product (including numbered variants)
-                       const productItemsInCart = Object.keys(selectedItems).filter(key => 
-                         key === variant.key || key.startsWith(`${variant.key}_`)
-                       );
-                       const hasItemsInCart = productItemsInCart.length > 0;
-                       
-                       return (
-                         <button
-                           type="button"
-                           key={variant.key}
-                           onClick={() => openQtyModalForNewItem(variant)}
-                           className={`w-full text-left p-3 rounded-lg border transition-all duration-200 active:scale-[0.99] ${
-                             hasItemsInCart
-                               ? "border-emerald-200 bg-emerald-50 hover:border-emerald-300 hover:bg-emerald-100"
-                               : "border-gray-200 bg-white hover:border-emerald-300 hover:bg-emerald-50"
-                           }`}
-                         >
-                           <div className="flex items-center justify-between">
-                             <div className="flex-1 min-w-0">
-                               <div className="flex items-center gap-2">
-                                 <h4 className="text-sm font-medium text-gray-900 truncate">
-                                   {variant.name}
-                                 </h4>
-                                 <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                                   ₹{formatNumber(variant.pricePerKg)}/kg
-                                 </span>
-                                 {hasItemsInCart && (
-                                   <span className="text-xs text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-medium">
-                                     In Cart {productItemsInCart.length > 1 ? `(${productItemsInCart.length})` : ''}
-                                   </span>
-                                 )}
-                               </div>
-                             {variant.bagSizeKg && (
-                               <div className="text-xs text-gray-500 mt-1">
-                                 Available in {variant.bagSizeKg}kg bags
-                               </div>
-                             )}
-                           </div>
-                           <div className="flex items-center text-emerald-600">
-                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                             </svg>
-                           </div>
-                         </div>
-                       </button>
-                     );
-                   })}
-                   </div>
-                 </div>
-               ));
-            })()}
-        </div>
+                      // Show all products as "add new" options
+                      const availableGroups = Object.entries(
+                        baseProductGroups
+                      ).map(([baseName, variants]) => {
+                        return { baseName, variants };
+                      });
 
+                      return availableGroups.map(({ baseName, variants }) => (
+                        <div key={baseName} className="mb-4 last:mb-0">
+                          <div className="grid grid-cols-1 gap-2">
+                            {variants.map((variant) => {
+                              // Check for any items of this product (including numbered variants)
+                              const productItemsInCart = Object.keys(
+                                selectedItems
+                              ).filter(
+                                (key) =>
+                                  key === variant.key ||
+                                  key.startsWith(`${variant.key}_`)
+                              );
+                              const hasItemsInCart =
+                                productItemsInCart.length > 0;
 
+                              return (
+                                <button
+                                  type="button"
+                                  key={variant.key}
+                                  onClick={() =>
+                                    openQtyModalForNewItem(variant)
+                                  }
+                                  className={`w-full text-left p-3 rounded-lg border transition-all duration-200 active:scale-[0.99] ${
+                                    hasItemsInCart
+                                      ? "border-emerald-200 bg-emerald-50 hover:border-emerald-300 hover:bg-emerald-100"
+                                      : "border-gray-200 bg-white hover:border-emerald-300 hover:bg-emerald-50"
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <h4 className="text-sm font-medium text-gray-900 truncate">
+                                          {variant.name}
+                                        </h4>
+                                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                                          ₹{formatNumber(variant.pricePerKg)}/kg
+                                        </span>
+                                        {hasItemsInCart && (
+                                          <span className="text-xs text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-medium">
+                                            In Cart{" "}
+                                            {productItemsInCart.length > 1
+                                              ? `(${productItemsInCart.length})`
+                                              : ""}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {variant.bagSizeKg && (
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          Available in {variant.bagSizeKg}kg
+                                          bags
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center text-emerald-600">
+                                      <svg
+                                        className="w-5 h-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                        />
+                                      </svg>
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                </div>
 
                 {/* Order Details */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4">
@@ -1196,8 +1285,6 @@ const EditOrderPage: React.FC = () => {
                         className="w-full px-2.5 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors resize-none text-xs"
                       />
                     </div>
-
-                  
                   </div>
                 </div>
               </div>
@@ -1271,7 +1358,9 @@ const EditOrderPage: React.FC = () => {
                     {/* Tax Amount */}
                     {isTaxable && (
                       <div className="flex justify-between text-xs">
-                        <span className="text-gray-600">Tax ({taxPercentage}%)</span>
+                        <span className="text-gray-600">
+                          Tax ({taxPercentage}%)
+                        </span>
                         <span className="text-gray-900">
                           {orderService.formatCurrency(calculateTaxAmount())}
                         </span>
@@ -1291,70 +1380,81 @@ const EditOrderPage: React.FC = () => {
                       <h4 className="text-[10px] font-semibold text-gray-900 uppercase tracking-wide">
                         Tax Settings
                       </h4>
-                      
-                      <div className="space-y-2">
-                         <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                           <div className="flex-1">
-                             <div className="flex items-center gap-2">
-                               <span className="text-xs font-medium text-gray-700">
-                                 Apply Tax {`${taxPercentage}%`}
-                               </span>
-                               <label className="relative inline-flex items-center cursor-pointer">
-                                 <input
-                                   type="checkbox"
-                                   checked={isTaxable}
-                                   onChange={(e) => {
-                                     const checked = e.target.checked;
-                                     setIsTaxable(checked);
-                                     setValue("isTaxable", checked);
-                                   }}
-                                   className="sr-only peer"
-                                 />
-                                 <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
-                               </label>
-                             </div>
-                             <p className="text-[10px] text-gray-500 mt-0.5">
-                               {isTaxable ? `${taxPercentage}% tax applied` : 'No tax applied'}
-                             </p>
-                           </div>
-                           
-                           {isTaxable && (
-                             <div className="text-right">
-                               <div className="text-xs font-medium text-emerald-600">
-                                 +{orderService.formatCurrency(calculateTaxAmount())}
-                               </div>
-                               <div className="text-[10px] text-gray-500">
-                                 Tax Amount
-                               </div>
-                             </div>
-                           )}
-                         </div>
 
-                         {/* Tax Percentage Input */}
-                         {isTaxable && (
-                           <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
-                             <span className="text-xs font-medium text-gray-700">
-                               Tax Rate
-                             </span>
-                             <div className="flex items-center gap-1">
-                               <input
-                                 type="number"
-                                 value={taxPercentage}
-                                 onChange={(e) => {
-                                   const value = Math.max(0, Math.min(100, parseFloat(e.target.value) || 0));
-                                   setTaxPercentage(value);
-                                   setValue("taxPercentage", value);
-                                 }}
-                                 min="0"
-                                 max="100"
-                                 step="0.1"
-                                 className="w-16 px-2 py-1 border border-gray-300 rounded text-xs text-right focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                               />
-                               <span className="text-xs text-gray-500">%</span>
-                             </div>
-                           </div>
-                         )}
-                       </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-gray-700">
+                                Apply Tax {`${taxPercentage}%`}
+                              </span>
+                              <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={isTaxable}
+                                  onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    setIsTaxable(checked);
+                                    setValue("isTaxable", checked);
+                                  }}
+                                  className="sr-only peer"
+                                />
+                                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                              </label>
+                            </div>
+                            <p className="text-[10px] text-gray-500 mt-0.5">
+                              {isTaxable
+                                ? `${taxPercentage}% tax applied`
+                                : "No tax applied"}
+                            </p>
+                          </div>
+
+                          {isTaxable && (
+                            <div className="text-right">
+                              <div className="text-xs font-medium text-emerald-600">
+                                +
+                                {orderService.formatCurrency(
+                                  calculateTaxAmount()
+                                )}
+                              </div>
+                              <div className="text-[10px] text-gray-500">
+                                Tax Amount
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Tax Percentage Input */}
+                        {isTaxable && (
+                          <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
+                            <span className="text-xs font-medium text-gray-700">
+                              Tax Rate
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                value={taxPercentage}
+                                onChange={(e) => {
+                                  const value = Math.max(
+                                    0,
+                                    Math.min(
+                                      100,
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  );
+                                  setTaxPercentage(value);
+                                  setValue("taxPercentage", value);
+                                }}
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                className="w-16 px-2 py-1 border border-gray-300 rounded text-xs text-right focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                              />
+                              <span className="text-xs text-gray-500">%</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Payment Section */}
@@ -1377,23 +1477,34 @@ const EditOrderPage: React.FC = () => {
                         {/* Additional Payment Input */}
                         <div className="flex justify-between items-center text-xs">
                           <span className="text-gray-600">
-                            {originalPaidAmount > 0 ? "Additional Payment" : "Payment Amount"}
+                            {originalPaidAmount > 0
+                              ? "Additional Payment"
+                              : "Payment Amount"}
                           </span>
                           <div className="flex items-center gap-0.5">
                             <span className="text-gray-500 text-xs">₹</span>
                             <input
                               type="number"
-                              value={additionalPayment}
+                              value={additionalPayment.toString().replace(/^0+(?=\d)/, "")}
                               onChange={(e) => {
-                                const value = parseFloat(e.target.value) || 0;
-                                const maxAdditional = Math.max(0, totalAmount - originalPaidAmount);
-                                const clampedValue = Math.min(value, maxAdditional);
-                                setAdditionalPayment(clampedValue);
-                                setValue("paidAmount", originalPaidAmount + clampedValue);
+                                let value = parseFloat(e.target.value) || 0;
+                                const maxAdditional = Math.max(
+                                  0,
+                                  totalAmount - originalPaidAmount
+                                );
+                                if (value > maxAdditional) return;
+                                setAdditionalPayment(value);
+                                setValue(
+                                  "paidAmount",
+                                  originalPaidAmount + value
+                                );
                               }}
                               placeholder="0"
-                              min="0"
-                              max={Math.max(0, totalAmount - originalPaidAmount)}
+                              // min="0"
+                              max={Math.max(
+                                0,
+                                totalAmount - originalPaidAmount
+                              )}
                               step="0.01"
                               className="w-20 px-1.5 py-1 border border-gray-300 rounded text-xs text-right focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                             />
@@ -1403,7 +1514,9 @@ const EditOrderPage: React.FC = () => {
                         {/* Total Paid Amount */}
                         {originalPaidAmount > 0 && additionalPayment > 0 && (
                           <div className="flex justify-between items-center text-xs border-t border-gray-100 pt-1">
-                            <span className="text-gray-600 font-medium">Total Paid</span>
+                            <span className="text-gray-600 font-medium">
+                              Total Paid
+                            </span>
                             <span className="font-medium text-blue-600">
                               {orderService.formatCurrency(totalPaidAmount)}
                             </span>
@@ -1421,7 +1534,10 @@ const EditOrderPage: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => {
-                              const maxAdditional = Math.max(0, totalAmount - originalPaidAmount);
+                              const maxAdditional = Math.max(
+                                0,
+                                totalAmount - originalPaidAmount
+                              );
                               setAdditionalPayment(maxAdditional);
                               setValue("paidAmount", totalAmount);
                             }}
@@ -1450,9 +1566,17 @@ const EditOrderPage: React.FC = () => {
                       type="submit"
                       disabled={saving || itemsArray.length === 0}
                       onClick={() => {
-                        console.log("Desktop Save button clicked! Disabled:", saving || itemsArray.length === 0, "itemsArray.length:", itemsArray.length);
+                        console.log(
+                          "Desktop Save button clicked! Disabled:",
+                          saving || itemsArray.length === 0,
+                          "itemsArray.length:",
+                          itemsArray.length
+                        );
                         console.log("Form errors:", errors);
-                        console.log("Form is valid:", Object.keys(errors).length === 0);
+                        console.log(
+                          "Form is valid:",
+                          Object.keys(errors).length === 0
+                        );
                       }}
                       className="w-full flex justify-center items-center py-2 px-3 border border-transparent rounded-lg shadow-sm text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
                     >
@@ -1503,9 +1627,17 @@ const EditOrderPage: React.FC = () => {
                     type="button"
                     disabled={saving || itemsArray.length === 0}
                     onClick={() => {
-                      console.log("Mobile Save button clicked! Disabled:", saving || itemsArray.length === 0, "itemsArray.length:", itemsArray.length);
+                      console.log(
+                        "Mobile Save button clicked! Disabled:",
+                        saving || itemsArray.length === 0,
+                        "itemsArray.length:",
+                        itemsArray.length
+                      );
                       console.log("Form errors:", errors);
-                      console.log("Form is valid:", Object.keys(errors).length === 0);
+                      console.log(
+                        "Form is valid:",
+                        Object.keys(errors).length === 0
+                      );
                       console.log("Manually triggering form submission...");
                       handleSubmit(onSubmit)();
                     }}
@@ -1571,7 +1703,9 @@ const EditOrderPage: React.FC = () => {
                   <div className="text-center">
                     <div className="text-lg mb-1">📦</div>
                     <div>Loose Packaging</div>
-                    <div className="text-xs text-gray-500 mt-1">Custom weight</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Custom weight
+                    </div>
                   </div>
                 </button>
                 <button
@@ -1591,7 +1725,9 @@ const EditOrderPage: React.FC = () => {
                   <div className="text-center">
                     <div className="text-lg mb-1">🛍️</div>
                     <div>Bag Packaging</div>
-                    <div className="text-xs text-gray-500 mt-1">Standard bags</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Standard bags
+                    </div>
                   </div>
                 </button>
               </div>
@@ -1604,10 +1740,10 @@ const EditOrderPage: React.FC = () => {
               </label>
               <div className="grid grid-cols-4 gap-2">
                 {[5, 10, 40, 50].map((weight) => {
-                  const isActive = isBagSelection 
-                    ? (currentBagSize === weight && bagPieces === 1)
-                    : (kg === weight);
-                  
+                  const isActive = isBagSelection
+                    ? currentBagSize === weight && bagPieces === 1
+                    : kg === weight;
+
                   return (
                     <button
                       key={weight}
@@ -1643,7 +1779,9 @@ const EditOrderPage: React.FC = () => {
                 <div className="flex items-center">
                   <button
                     type="button"
-                    onClick={() => setKg((prev) => Math.max(0, (Number(prev) || 0) - 0.5))}
+                    onClick={() =>
+                      setKg((prev) => Math.max(0, (Number(prev) || 0) - 0.5))
+                    }
                     disabled={kg <= 0}
                     className="px-4 py-2 border border-gray-300 rounded-l-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-medium active:scale-95"
                   >
@@ -1688,67 +1826,69 @@ const EditOrderPage: React.FC = () => {
                 <label className="block text-xs font-medium text-gray-700 mb-2">
                   Number of Bags
                 </label>
-             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3 gap-2 w-full">
-  {/* Quantity Controls */}
-  <div className="flex items-center justify-center sm:justify-start w-full sm:w-auto">
-    <button
-      type="button"
-      onClick={() => {
-        const newPieces = Math.max(1, (Number(bagPieces) || 1) - 1);
-        setBagPieces(newPieces);
-        setKg(newPieces * currentBagSize);
-      }}
-      disabled={bagPieces <= 1}
-      className="px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-l-lg bg-gray-50 hover:bg-gray-100 
+                <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3 gap-2 w-full">
+                  {/* Quantity Controls */}
+                  <div className="flex items-center justify-center sm:justify-start w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPieces = Math.max(
+                          1,
+                          (Number(bagPieces) || 1) - 1
+                        );
+                        setBagPieces(newPieces);
+                        setKg(newPieces * currentBagSize);
+                      }}
+                      disabled={bagPieces <= 1}
+                      className="px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-l-lg bg-gray-50 hover:bg-gray-100 
       disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500 
       text-sm sm:text-base font-medium active:scale-95 transition-transform duration-100 w-10 sm:w-auto"
-    >
-      -
-    </button>
+                    >
+                      -
+                    </button>
 
-    <input
-      type="number"
-      min={1}
-      step={1}
-      value={bagPieces || ""}
-      onChange={(e) => {
-        const value = e.target.value;
-        if (value === "") {
-          setBagPieces(1);
-          setKg(currentBagSize);
-          return;
-        }
-        const count = Math.max(1, Math.floor(Number(value)));
-        setBagPieces(count);
-        setKg(count * currentBagSize);
-      }}
-      className="flex-1 px-2 py-2 sm:px-3 border-t border-b border-gray-300 text-center text-sm sm:text-base font-medium 
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={bagPieces || ""}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === "") {
+                          setBagPieces(1);
+                          setKg(currentBagSize);
+                          return;
+                        }
+                        const count = Math.max(1, Math.floor(Number(value)));
+                        setBagPieces(count);
+                        setKg(count * currentBagSize);
+                      }}
+                      className="flex-1 px-2 py-2 sm:px-3 border-t border-b border-gray-300 text-center text-sm sm:text-base font-medium 
       focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 w-16 sm:w-20"
-      placeholder="1"
-    />
+                      placeholder="1"
+                    />
 
-    <button
-      type="button"
-      onClick={() => {
-        const newPieces = (Number(bagPieces) || 1) + 1;
-        setBagPieces(newPieces);
-        setKg(newPieces * currentBagSize);
-      }}
-      className="px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-r-lg bg-gray-50 hover:bg-gray-100 
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPieces = (Number(bagPieces) || 1) + 1;
+                        setBagPieces(newPieces);
+                        setKg(newPieces * currentBagSize);
+                      }}
+                      className="px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-r-lg bg-gray-50 hover:bg-gray-100 
       focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm sm:text-base font-medium active:scale-95 
       transition-transform duration-100 w-10 sm:w-auto"
-    >
-      +
-    </button>
-  </div>
+                    >
+                      +
+                    </button>
+                  </div>
 
-  {/* Total Display */}
-  <div className="text-center sm:text-left text-xs sm:text-sm text-gray-600">
-    × {currentBagSize}kg ={" "}
-    <span className="font-semibold text-gray-900">{kg}kg</span>
-  </div>
-</div>
-
+                  {/* Total Display */}
+                  <div className="text-center sm:text-left text-xs sm:text-sm text-gray-600">
+                    × {currentBagSize}kg ={" "}
+                    <span className="font-semibold text-gray-900">{kg}kg</span>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1756,7 +1896,9 @@ const EditOrderPage: React.FC = () => {
             <div className="mb-4 p-3 bg-gray-50 rounded-lg">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Total Weight:</span>
-                <span className="text-sm font-medium text-gray-900">{kg}kg</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {kg}kg
+                </span>
               </div>
               <div className="flex justify-between items-center mt-1">
                 <span className="text-sm text-gray-600">Total Amount:</span>

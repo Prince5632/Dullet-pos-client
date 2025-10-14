@@ -929,11 +929,16 @@ const QuickOrderPage: React.FC = () => {
                 Paid Amount
               </label>
               <input
-                type="number"
-                min={0}
-                step={0.01}
+                min={"0"}
                 value={paidAmount}
-                onChange={(e) => setPaidAmount(Number(e.target.value) || 0)}
+                onChange={(e) => {
+                  let value = e.target.value.toString();
+                  if (!/^\d*\.?\d*$/.test(value)) return;
+                  value = value.replace(/^0+(?=\d)/, "");
+                  let numericValue = parseFloat(value) || 0;
+                  if (numericValue > totalAmount) return;
+                  setPaidAmount(value as SetStateAction<number>);
+                }}
                 className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
