@@ -20,10 +20,11 @@ import { orderService } from "../../services/orderService";
 import { customerService } from "../../services/customerService";
 import { userService } from "../../services/userService";
 import { godownService } from "../../services/godownService";
+import { roleService } from "../../services/roleService";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDebounce } from "../../hooks/useDebounce";
 import { usePersistedFilters } from "../../hooks/usePersistedFilters";
-import type { Order, Customer, TableColumn, Godown } from "../../types";
+import type { Order, Customer, TableColumn, Godown, Role } from "../../types";
 import Table from "../../components/ui/Table";
 import Pagination from "../../components/ui/Pagination";
 import Avatar from "../../components/ui/Avatar";
@@ -77,7 +78,7 @@ type OrdersFilters = {
   visitStatus: string;
   hasImage: string;
   address: string;
-  
+  roleId: string;
 };
 
 const OrdersPage: React.FC = () => {
@@ -112,6 +113,7 @@ const OrdersPage: React.FC = () => {
       visitStatus: "",
       hasImage: "",
       address: "",
+      roleId: "",
     },
     defaultPagination: { page: 1, limit: 10 },
     defaultSort: { sortBy: "orderDate", sortOrder: "desc" },
@@ -123,6 +125,7 @@ const OrdersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const godownFilter = filters.godownId;
   const setGodownFilter = (v: string) => setFilters({ godownId: v });
   const [viewType, setViewType] = useState<"orders" | "visits">(() =>
@@ -168,6 +171,8 @@ const OrdersPage: React.FC = () => {
   const setHasImageFilter = (v: string) => setFilters({ hasImage: v });
   const addressFilter = filters.address;
   const setAddressFilter = (v: string) => setFilters({ address: v });
+  const roleFilter = filters.roleId;
+  const setRoleFilter = (v: string) => setFilters({ roleId: v });
 
   // Pagination
   const currentPage = pagination.page;
@@ -281,6 +286,7 @@ const OrdersPage: React.FC = () => {
               minAmount: minAmountFilter,
               maxAmount: maxAmountFilter,
               godownId: godownFilter,
+              roleId: roleFilter,
             }
          
 
@@ -324,6 +330,7 @@ const OrdersPage: React.FC = () => {
     minAmountFilter,
     maxAmountFilter,
     godownFilter,
+    roleFilter,
     // Visit-specific filters
     scheduleStatusFilter,
     visitStatusFilter,
@@ -337,6 +344,15 @@ const OrdersPage: React.FC = () => {
       setCustomers(customerList);
     } catch (err) {
       console.error("Failed to load customers:", err);
+    }
+  }, []);
+
+  const loadRoles = useCallback(async () => {
+    try {
+      const roleList = await roleService.getSimpleRoles();
+      setRoles(roleList);
+    } catch (err) {
+      console.error("Failed to load roles:", err);
     }
   }, []);
 
@@ -363,6 +379,7 @@ const OrdersPage: React.FC = () => {
                 priority: priorityFilter,
                 minAmount: minAmountFilter,
                 maxAmount: maxAmountFilter,
+                roleId: roleFilter,
               }
            
 
@@ -455,6 +472,7 @@ const OrdersPage: React.FC = () => {
     priorityFilter,
     minAmountFilter,
     maxAmountFilter,
+    roleFilter,
   ]);
 
   useEffect(() => {
@@ -464,6 +482,10 @@ const OrdersPage: React.FC = () => {
   useEffect(() => {
     loadCustomers();
   }, [loadCustomers]);
+
+  useEffect(() => {
+    loadRoles();
+  }, [loadRoles]);
 
   useEffect(() => {
     fetchStats();
@@ -487,6 +509,7 @@ const OrdersPage: React.FC = () => {
               priority: priorityFilter,
               minAmount: minAmountFilter,
               maxAmount: maxAmountFilter,
+              roleId: roleFilter,
             }
           
 
@@ -507,6 +530,7 @@ const OrdersPage: React.FC = () => {
     priorityFilter,
     minAmountFilter,
     maxAmountFilter,
+    roleFilter,
     // Visit-specific filters
     scheduleStatusFilter,
     visitStatusFilter,
@@ -933,7 +957,8 @@ const OrdersPage: React.FC = () => {
                 paymentStatusFilter ||
                 customerFilter ||
                 dateFromFilter ||
-                dateToFilter) && (
+                dateToFilter ||
+                roleFilter) && (
                 <button
                   onClick={clearFilters}
                   className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded-md transition-colors"
@@ -1041,6 +1066,19 @@ const OrdersPage: React.FC = () => {
                         placeholder="Max Amount"
                         className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
+
+                      <select
+                        value={roleFilter}
+                        onChange={(e) => setRoleFilter(e.target.value)}
+                        className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="">All Roles</option>
+                        {roles.map((role) => (
+                          <option key={role._id} value={role._id}>
+                            {role.name}
+                          </option>
+                        ))}
+                      </select>
                     </>
 
           

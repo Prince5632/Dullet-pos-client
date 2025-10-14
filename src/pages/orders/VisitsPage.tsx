@@ -20,10 +20,11 @@ import { orderService } from "../../services/orderService";
 import { customerService } from "../../services/customerService";
 import { userService } from "../../services/userService";
 import { godownService } from "../../services/godownService";
+import { roleService } from "../../services/roleService";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDebounce } from "../../hooks/useDebounce";
 import { usePersistedFilters } from "../../hooks/usePersistedFilters";
-import type { Order, Customer, TableColumn, Godown } from "../../types";
+import type { Order, Customer, TableColumn, Godown, Role } from "../../types";
 import { apiService } from "../../services/api";
 import { API_CONFIG } from "../../config/api";
 import Table from "../../components/ui/Table";
@@ -79,7 +80,7 @@ type OrdersFilters = {
   visitStatus: string;
   hasImage: string;
   address: string;
-  
+  roleId: string;
 };
 
 const OrdersPage: React.FC = () => {
@@ -114,6 +115,7 @@ const OrdersPage: React.FC = () => {
       visitStatus: "",
       hasImage: "",
       address: "",
+      roleId: "",
     },
     defaultPagination: { page: 1, limit: 10 },
     defaultSort: { sortBy: "orderDate", sortOrder: "desc" },
@@ -125,8 +127,11 @@ const OrdersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const godownFilter = filters.godownId;
   const setGodownFilter = (v: string) => setFilters({ godownId: v });
+  const roleFilter = filters.roleId;
+  const setRoleFilter = (v: string) => setFilters({ roleId: v });
   const [viewType, setViewType] = useState<"orders" | "visits">(() =>
     isVisitsRoute ? "visits" : "orders"
   );
@@ -282,6 +287,7 @@ const OrdersPage: React.FC = () => {
               hasImage: hasImageFilter,
               address: addressFilter,
               godownId: godownFilter,
+              roleId: roleFilter,
             };
 
       const response =
@@ -329,6 +335,7 @@ const OrdersPage: React.FC = () => {
     visitStatusFilter,
     hasImageFilter,
     addressFilter,
+    roleFilter,
   ]);
 
   const loadCustomers = useCallback(async () => {
@@ -337,6 +344,15 @@ const OrdersPage: React.FC = () => {
       setCustomers(customerList);
     } catch (err) {
       console.error("Failed to load customers:", err);
+    }
+  }, []);
+
+  const loadRoles = useCallback(async () => {
+    try {
+      const roleList = await roleService.getSimpleRoles();
+      setRoles(roleList);
+    } catch (err) {
+      console.error("Failed to load roles:", err);
     }
   }, []);
 
@@ -358,6 +374,7 @@ const OrdersPage: React.FC = () => {
                 customerId: customerFilter,
                 dateFrom: dateFromFilter,
                 dateTo: dateToFilter,
+                roleId: roleFilter,
               };
 
         promises.push(orderService.getOrderStats(statsParams));
@@ -460,6 +477,10 @@ const OrdersPage: React.FC = () => {
   }, [loadCustomers]);
 
   useEffect(() => {
+    loadRoles();
+  }, [loadRoles]);
+
+  useEffect(() => {
     fetchStats();
   }, [fetchStats]);
   // Cross-page reset: visiting Customers clears Orders persisted filters/pagination if present
@@ -479,6 +500,7 @@ const OrdersPage: React.FC = () => {
               visitStatus: visitStatusFilter,
               hasImage: hasImageFilter,
               address: addressFilter,
+              roleId: roleFilter,
             };
 
       const res = await godownService.getGodowns(godownParams);
@@ -503,6 +525,7 @@ const OrdersPage: React.FC = () => {
     visitStatusFilter,
     hasImageFilter,
     addressFilter,
+    roleFilter,
   ]);
 
   useEffect(() => {
@@ -555,6 +578,7 @@ const OrdersPage: React.FC = () => {
     visitStatusFilter,
     hasImageFilter,
     addressFilter,
+    roleFilter,
   ]);
 
   // Persisted filters: do not auto-clear on view type change
@@ -949,6 +973,19 @@ const OrdersPage: React.FC = () => {
                         placeholder="Search by location..."
                         className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
+
+                      <select
+                        value={roleFilter}
+                        onChange={(e) => setRoleFilter(e.target.value)}
+                        className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="">All Roles</option>
+                        {roles.map((role) => (
+                          <option key={role._id} value={role._id}>
+                            {role.name}
+                          </option>
+                        ))}
+                      </select>
                     </>
                   )}
                 </div>
@@ -1075,12 +1112,12 @@ const OrdersPage: React.FC = () => {
                 No {"visits"} found
               </h3>
               <p className="text-xs text-gray-500 mb-4">
-                {statusFilter || searchTerm
+                {statusFilter || searchTerm || roleFilter
                   ? "Try adjusting filters"
                   
                   : "Create your first visit"}
               </p>
-              {!statusFilter && !searchTerm ? (
+              {!statusFilter && !searchTerm && !roleFilter ? (
            
                   <Link
                     to="/visits/new"
