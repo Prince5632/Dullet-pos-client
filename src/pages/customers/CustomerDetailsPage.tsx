@@ -97,7 +97,7 @@ const CustomerDetailsPage: React.FC = () => {
 
   // Open payment modal when outstanding > 0
   const openPaymentModal = () => {
-    const outstanding = customer?.outstandingAmount || 0;
+    const outstanding = customer?.netBalance || 0;
     setPaymentAmount(Number(outstanding) || 0);
     setPaymentMode("Cash");
     setIsPaymentModalOpen(true);
@@ -107,7 +107,7 @@ const CustomerDetailsPage: React.FC = () => {
 
   const handleSubmitPayment = async () => {
     if (!id) return;
-    const outstanding = customer?.outstandingAmount || 0;
+    const outstanding = customer?.netBalance || 0;
     if (paymentAmount <= 0) {
       toast.error("Please enter a valid amount greater than 0.");
       return;
@@ -397,7 +397,7 @@ const CustomerDetailsPage: React.FC = () => {
                   </span>
                 </div>
 
-                {Number(customer.outstandingAmount || 0) > 0 && (
+                {Number(customer.netBalance || 0) > 0 && (
                   <div className="pt-2">
                     <button
                       onClick={openPaymentModal}
@@ -529,12 +529,16 @@ const CustomerDetailsPage: React.FC = () => {
             <div className="relative">
               <input
                 type="number"
-                value={paymentAmount}
+                value={paymentAmount?.toString().replace(/^0+(?=\d)/, "") || ""}
                 min={0}
                 max={Number(customer?.outstandingAmount || 0)}
                 step={0.01}
                 required
-                onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                onChange={(e) => {
+                  if(Number(e.target.value) > Number(customer?.netBalance || 0)){
+                    return
+                  }
+                  setPaymentAmount(Number(e.target.value))}}
                 placeholder="Enter payment amount"
                 className="block w-full rounded-lg border border-gray-300 bg-gray-50 px-6 py-2.5 text-sm text-gray-700 
                    focus:border-green-600 focus:ring-2 focus:ring-green-100 focus:outline-none transition"
@@ -546,7 +550,7 @@ const CustomerDetailsPage: React.FC = () => {
             <p className="mt-2 text-xs text-gray-500 italic">
               Max:{" "}
               <span className="font-medium text-gray-700">
-                {formatCurrency(customer?.outstandingAmount || 0)}
+                {formatCurrency(customer?.netBalance || 0)}
               </span>
             </p>
           </div>
