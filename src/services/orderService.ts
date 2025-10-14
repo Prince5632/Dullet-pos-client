@@ -10,7 +10,8 @@ import type {
   QuickProduct,
   CreateQuickOrderForm,
   ApiResponse,
-  PaginationResponse
+  PaginationResponse,
+  DeliveryTimePdfChanges
 } from '../types';
 
 export interface OrderListParams {
@@ -600,6 +601,61 @@ class OrderService {
     });
     
     return errors;
+  }
+
+  // Get delivery time PDF changes by order ID
+  async getDeliveryTimePdfChanges(orderId: string): Promise<ApiResponse<DeliveryTimePdfChanges>> {
+    try {
+      const response = await apiService.get<DeliveryTimePdfChanges>(
+        API_CONFIG.ENDPOINTS.DELIVERY_TIME_PDF_CHANGES(orderId)
+      );
+      return response;
+    } catch (error: any) {
+      // If no entry exists (404), we'll handle this in the calling function
+      if (error.status === 404) {
+        throw new Error('DELIVERY_TIME_PDF_CHANGES_NOT_FOUND');
+      }
+      throw error;
+    }
+  }
+
+  // Create delivery time PDF changes entry
+  async createDeliveryTimePdfChanges(orderId: string): Promise<ApiResponse<DeliveryTimePdfChanges>> {
+    try {
+      const response = await apiService.post<DeliveryTimePdfChanges>(
+        API_CONFIG.ENDPOINTS.DELIVERY_TIME_PDF_CHANGES(orderId),
+        {}
+      );
+      return response;
+    } catch (error: any) {
+      throw new Error(error.message || 'Failed to create delivery time PDF changes entry');
+    }
+  }
+
+  // Get or create delivery time PDF changes
+  async getOrCreateDeliveryTimePdfChanges(orderId: string): Promise<DeliveryTimePdfChanges> {
+    try {
+      // First, try to get existing entry
+      const response = await this.getDeliveryTimePdfChanges(orderId);
+      if (response.success && response.data) {
+        return response.data;
+      }
+      throw new Error('Failed to get delivery time PDF changes');
+    } catch (error: any) {
+      // If entry doesn't exist, create it
+      if (error.message === 'DELIVERY_TIME_PDF_CHANGES_NOT_FOUND') {
+        try {
+          const createResponse = await this.createDeliveryTimePdfChanges(orderId);
+          if (createResponse.success && createResponse.data) {
+            return createResponse.data;
+          }
+          throw new Error('Failed to create delivery time PDF changes entry');
+        } catch (createError: any) {
+          throw new Error(`Failed to create delivery time PDF changes: ${createError.message}`);
+        }
+      }
+      throw error;
+    }
   }
 
   // Delete order or visit

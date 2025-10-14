@@ -431,6 +431,23 @@ export interface Order {
   };
 }
 
+export interface DeliveryTimePdfChanges {
+  _id: string;
+  orderId: string;
+  customerId: string;
+  items: OrderItem[];
+  subTotal: number;
+  taxAmount: number;
+  previousBalance: number;
+  totalAmount: number;
+  paidAmount: number;
+  netBalanceRemaining: number;
+  recordedAt: string;
+  recordedBy: string;
+  paymentDifference?: number;
+  isFullyPaid?: boolean;
+}
+
 export interface CreateOrderForm {
   customer: string;
   items: OrderItem[];
@@ -837,7 +854,7 @@ export interface TransactionListParams {
 
 // Production Types
 export interface OutputDetail {
-  itemName: 'Atta' | 'Chokar';
+  itemName: 'Atta' | 'Chokar' | "Wastage";
   productQty: number;
   productUnit: 'KG' | 'Quintal' | 'Ton' | 'Bags' | '5Kg Bags' | '40Kg Bags';
   notes?: string;
@@ -889,12 +906,14 @@ export interface ProductionStats {
   // Enhanced stats for atta/chokar breakdown
   totalAttaProduction?: number;
   totalChokarProduction?: number;
+  totalWastageProduction?: number;
   averageAttaProduction?: number;
   productionByUnit?: {
     [unit: string]: {
       totalQty: number;
       attaQty: number;
       chokarQty: number;
+      wastageQty: number;
     };
   };
 }

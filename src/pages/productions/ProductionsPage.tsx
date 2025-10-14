@@ -144,18 +144,21 @@ const ProductionsPage: React.FC = () => {
     // Convert all weight-based quantities to KG for calculation
     let totalAttaProductionKG = 0;
     let totalChokarProductionKG = 0;
+    let totalWastageProductionKG = 0;
     let totalInputConsumptionKG = 0;
     let attaProductionCount = 0;
 
     // Separate tracking for bags
     let totalAttaBags = 0;
     let totalChokarBags = 0;
+    let totalWastageBags = 0;
 
     const unitBreakdown: {
       [unit: string]: {
         totalQty: number;
         attaQty: number;
         chokarQty: number;
+        wastageQty: number;
         bagCount?: number;
       };
     } = {};
@@ -171,7 +174,12 @@ const ProductionsPage: React.FC = () => {
         const unit = output.productUnit;
 
         if (!unitBreakdown[unit]) {
-          unitBreakdown[unit] = { totalQty: 0, attaQty: 0, chokarQty: 0 };
+          unitBreakdown[unit] = {
+            totalQty: 0,
+            attaQty: 0,
+            chokarQty: 0,
+            wastageQty: 0,
+          };
         }
 
         unitBreakdown[unit].totalQty += output.productQty;
@@ -191,6 +199,13 @@ const ProductionsPage: React.FC = () => {
             totalChokarBags += output.productQty;
           }
           unitBreakdown[unit].chokarQty += output.productQty;
+        } else if (output.itemName === "Wastage") {
+          if (isWeightUnit(unit)) {
+            totalWastageProductionKG += convertToKG(output.productQty, unit);
+          } else if (isBagUnit(unit)) {
+            totalWastageBags += output.productQty;
+          }
+          unitBreakdown[unit].wastageQty += output.productQty;
         }
 
         // For bag units, track bag count
@@ -214,6 +229,14 @@ const ProductionsPage: React.FC = () => {
       totalChokarProductionKG,
       displayUnit
     );
+    const totalWastageProduction = convertFromKG(
+      totalWastageProductionKG,
+      displayUnit
+    );
+    const totalWastageConsumption = convertFromKG(
+      totalWastageProductionKG,
+      displayUnit
+    );
     const totalInputConsumption = convertFromKG(
       totalInputConsumptionKG,
       displayUnit
@@ -224,10 +247,12 @@ const ProductionsPage: React.FC = () => {
     return {
       totalAttaProduction,
       totalChokarProduction,
+      totalWastageProduction,
       totalInputConsumption,
       averageAttaProduction,
       totalAttaBags,
       totalChokarBags,
+      totalWastageBags,
       displayUnit,
       unitBreakdown,
       filteredProductionsCount: productionsData.length,
@@ -554,25 +579,34 @@ const ProductionsPage: React.FC = () => {
         label: "Location",
         render: (value) => (
           <div className="min-w-[200px] py-1">
-            <span className="text-xs text-gray-500 whitespace-normal break-words">{value}</span>
+            <span className="text-xs text-gray-500 whitespace-normal break-words">
+              {value}
+            </span>
           </div>
         ),
       },
       {
         key: "operator",
         label: "Operator",
-        render: (_, production) => (
-          <div className="flex items-center gap-2">
-            <Avatar
-              name={production.operator || "Unknown"}
-              size="sm"
-              className="w-6 h-6"
-            />
-            <span className="text-xs text-gray-700 truncate">
-              {production.operator || "Unknown"}
-            </span>
-          </div>
-        ),
+        render: (_, production) =>
+          production.operator ? (
+            <div className="flex items-center gap-2">
+              <Avatar
+                name={production.operator || "Not Assigned"}
+                size="sm"
+                className="w-6 h-6"
+              />
+              <span className="text-xs text-gray-700 truncate">
+                {production.operator || "Not Assigned"}
+              </span>
+            </div>
+          ) : (
+            <div className="flex justify-center items-center gap-2">
+              <span className="text-xs text-center text-gray-700 truncate">
+                Not Assigned
+              </span>
+            </div>
+          ),
       },
 
       {
@@ -706,7 +740,7 @@ const ProductionsPage: React.FC = () => {
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {/* Total Atta Production */}
             <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200">
               <div className="flex items-center justify-between">
@@ -799,7 +833,52 @@ const ProductionsPage: React.FC = () => {
                 </div>
               </div>
             </div>
-
+            {/* Total Wastage Production */}
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-6 rounded-lg border border-amber-200">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-700">
+                    Total Wastage Production
+                  </p>
+                  {unitFilter && isBagUnit(unitFilter) ? (
+                    <p className="text-2xl font-bold text-amber-900">
+                      {enhancedStats?.totalWastageBags?.toLocaleString() || 0}{" "}
+                      Bags
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold text-amber-900">
+                        {enhancedStats?.totalWastageProduction?.toLocaleString() ||
+                          0}
+                      </p>
+                      <p className="text-xs text-amber-600 font-medium">
+                        {enhancedStats?.displayUnit || "KG"}
+                      </p>
+                      {enhancedStats?.totalWastageBags > 0 && (
+                        <p className="text-sm text-amber-600 mt-1">
+                          {enhancedStats.totalWastageBags.toLocaleString()} Bags
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+                <div className="w-12 h-12 bg-amber-200 rounded-lg flex items-center justify-center">
+                  <svg
+                    className="w-6 h-6 text-amber-700"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
             {/* Total Input Consumption */}
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg border border-blue-200">
               <div className="flex items-center justify-between">

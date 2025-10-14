@@ -66,26 +66,6 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({ data }) => {
   };
   const outstanding = Number(orderData?.customer?.outstandingAmount) || 0;
   const paid = Number(orderData?.paidAmount) || 0;
-  let customerPreviousBalance;
-  let customerTotalBalance;
-
-  if (outstanding > 0 && paid > 0 && outstanding > paid) {
-    const newBalance = Math.max(0, outstanding - paid);
-    customerPreviousBalance = formatPriceWithCommas(newBalance);
-    customerTotalBalance = customerPreviousBalance;
-  } else if (outstanding > 0 && paid > 0 && outstanding < paid) {
-    const newBalance = Math.max(0, outstanding);
-    customerPreviousBalance = formatPriceWithCommas(newBalance);
-    customerTotalBalance = formatPriceWithCommas(
-      newBalance + orderData?.totalAmount
-    );
-  } else if (outstanding > 0 && paid <= 0) {
-    customerPreviousBalance = formatPriceWithCommas(outstanding);
-    customerTotalBalance = customerPreviousBalance;
-  } else {
-    customerPreviousBalance = formatPriceWithCommas(orderData?.totalAmount);
-    customerTotalBalance = customerPreviousBalance;
-  }
 
   // Simple number to words conversion (basic implementation)
 
@@ -314,12 +294,14 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({ data }) => {
                     <tr className="summary-row  total-row prev-balance">
                       <td className="summary-label">Previous Balance:</td>
                       <td className="summary-value">
-                        ₹{customerPreviousBalance}
+                        ₹{orderData?.previousBalance || 0}
                       </td>
                     </tr>
                     <tr className="summary-row total-row">
                       <td className="summary-label">Total Amount:</td>
-                      <td className="summary-value">₹{customerTotalBalance}</td>
+                      <td className="summary-value">
+                        ₹{orderData?.totalAmount || 0}
+                      </td>
                     </tr>
                     {orderData.paidAmount !== undefined && (
                       <tr className="summary-row">
@@ -334,7 +316,7 @@ const DeliveryInvoiceTemplate: React.FC<DeliveryInvoiceProps> = ({ data }) => {
                       <td className="summary-value">
                         ₹
                         {formatPriceWithCommas(
-                          orderData?.customer?.outstandingAmount || 0
+                          orderData?.netBalanceRemaining || 0
                         )}
                       </td>
                     </tr>

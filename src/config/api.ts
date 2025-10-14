@@ -50,6 +50,8 @@ export const API_CONFIG = {
     // Quick-order endpoints
     QUICK_PRODUCTS: "/api/orders/quick/products",
     QUICK_ORDER: "/api/orders/quick",
+    // Delivery time PDF changes endpoints
+    DELIVERY_TIME_PDF_CHANGES: (orderId: string) => `/api/orders/${orderId}/delivery-time-pdf-changes`,
 
     // Godown endpoints
     GODOWNS: "/api/godowns",

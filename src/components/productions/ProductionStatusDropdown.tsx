@@ -25,7 +25,11 @@ import { useAuth } from "../../contexts/AuthContext";
 import Modal from "../ui/Modal";
 import Badge from "../ui/Badge";
 import PhotoCaptureModal from "../common/PhotoCaptureModal";
-import type { Production, OutputDetail, ProductionAttachment } from "../../types";
+import type {
+  Production,
+  OutputDetail,
+  ProductionAttachment,
+} from "../../types";
 import { cn } from "../../utils";
 
 interface ProductionStatusDropdownProps {
@@ -70,9 +74,13 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
     remarks: "",
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [filePreviews, setFilePreviews] = useState<{ [key: string]: string }>({});
+  const [filePreviews, setFilePreviews] = useState<{ [key: string]: string }>(
+    {}
+  );
   const [removedAttachments, setRemovedAttachments] = useState<string[]>([]);
-  const [existingAttachments, setExistingAttachments] = useState<ProductionAttachment[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<
+    ProductionAttachment[]
+  >([]);
   const [previewModal, setPreviewModal] = useState<{
     isOpen: boolean;
     file: File | null;
@@ -85,22 +93,36 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
     existingAttachment: null,
   });
 
-  const canManage = hasPermission("production.manage") || hasRole("Super Admin");
+  const canManage =
+    hasPermission("production.manage") || hasRole("Super Admin");
 
   // Initialize form with production data when modal opens
   useEffect(() => {
     if (finishModalOpen && production) {
       setForm({
-        outputDetails: production.outputDetails && production.outputDetails.length > 0 
-          ? production.outputDetails 
-          : [
-              {
-                itemName: "Atta",
-                productQty: 0,
-                productUnit: "KG",
-                notes: "",
-              },
-            ],
+        outputDetails:
+          production.outputDetails && production.outputDetails.length > 0
+            ? production.outputDetails
+            : [
+                {
+                  itemName: "Atta",
+                  productQty: 0,
+                  productUnit: "KG",
+                  notes: "",
+                },
+                {
+                  itemName: "Chokar",
+                  productQty: 0,
+                  productUnit: "KG",
+                  notes: "",
+                },
+                {
+                  itemName: "Wastage",
+                  productQty: 0,
+                  productUnit: "KG",
+                  notes: "",
+                },
+              ],
         attachments: [],
         remarks: production.remarks || "",
       });
@@ -112,7 +134,9 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
     }
   }, [finishModalOpen, production]);
 
-  const getStatusVariant = (status: string): "success" | "warning" | "default" => {
+  const getStatusVariant = (
+    status: string
+  ): "success" | "warning" | "default" => {
     switch (status) {
       case "Finished":
         return "success";
@@ -184,7 +208,10 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
         removedAttachments: removedAttachments,
       };
 
-      const res = await productionService.updateProduction(production._id, updatePayload);
+      const res = await productionService.updateProduction(
+        production._id,
+        updatePayload
+      );
 
       if (res.success && res.data) {
         // Create the updated production object with proper typing
@@ -197,7 +224,7 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
           // Ensure inputUnit is properly typed
           inputUnit: production.inputUnit as "KG" | "Quintal" | "Ton",
         };
-        
+
         onProductionUpdate(updatedProduction);
         toast.success("Production marked as finished");
         setFinishModalOpen(false);
@@ -262,41 +289,43 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
 
   const removeOutputDetail = (index: number) => {
     if (form.outputDetails.length > 1) {
-      const updatedOutputDetails = form.outputDetails.filter((_, i) => i !== index);
+      const updatedOutputDetails = form.outputDetails.filter(
+        (_, i) => i !== index
+      );
       setForm((prev) => ({ ...prev, outputDetails: updatedOutputDetails }));
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    
+
     const validFiles: File[] = [];
     const errors: string[] = [];
-    
+
     files.forEach((file) => {
       if (!file || !file.type) {
-        errors.push(`Invalid file: ${file?.name || 'Unknown file'}`);
+        errors.push(`Invalid file: ${file?.name || "Unknown file"}`);
         return;
       }
-      
+
       if (!file.type.startsWith("image/")) {
         errors.push(`${file.name}: Only image files are allowed`);
         return;
       }
-      
+
       const maxSize = 2 * 1024 * 1024;
       if (file.size > maxSize) {
         errors.push(`${file.name}: File size must be under 2MB`);
         return;
       }
-      
+
       validFiles.push(file);
     });
-    
+
     if (errors.length > 0) {
-      errors.forEach(error => toast.error(error));
+      errors.forEach((error) => toast.error(error));
     }
-    
+
     if (validFiles.length > 0) {
       const newFiles = [...selectedFiles, ...validFiles];
       setSelectedFiles(newFiles);
@@ -311,17 +340,17 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
         };
         reader.readAsDataURL(file);
       });
-      
+
       toast.success(`${validFiles.length} image(s) added successfully`);
     }
-    
-    e.target.value = '';
+
+    e.target.value = "";
   };
 
   const removeFile = (index: number) => {
     const fileToRemove = selectedFiles[index];
     if (!fileToRemove) return;
-    
+
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
     setFilePreviews((prev) => {
       const updated = { ...prev };
@@ -340,12 +369,12 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
 
   const openPreview = (file: File) => {
     if (!file) return;
-    
+
     let previewUrl = null;
     if (file.type?.startsWith("image/")) {
       previewUrl = filePreviews[file.name] || null;
     }
-    
+
     setPreviewModal({
       isOpen: true,
       file,
@@ -356,12 +385,12 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
 
   const openExistingAttachmentPreview = (attachment: ProductionAttachment) => {
     if (!attachment) return;
-    
+
     let previewUrl = null;
     if (attachment.fileType?.startsWith("image/")) {
       previewUrl = `data:${attachment.fileType};base64,${attachment.base64Data}`;
     }
-    
+
     setPreviewModal({
       isOpen: true,
       file: null,
@@ -384,31 +413,35 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
       toast.error("Invalid captured image");
       return;
     }
-    
+
     if (!imageFile.type.startsWith("image/")) {
       toast.error("Captured file is not an image");
       return;
     }
-    
+
     const maxSize = 2 * 1024 * 1024;
     if (imageFile.size > maxSize) {
-      toast.error(`Captured image is too large: ${(imageFile.size / 1024 / 1024).toFixed(2)}MB. Maximum allowed: 2MB`);
+      toast.error(
+        `Captured image is too large: ${(imageFile.size / 1024 / 1024).toFixed(
+          2
+        )}MB. Maximum allowed: 2MB`
+      );
       return;
     }
-    
+
     setSelectedFiles((prev) => [...prev, imageFile]);
-    
+
     setFilePreviews((prev) => ({
       ...prev,
       [imageFile.name]: imageData,
     }));
-    
+
     toast.success("Image captured successfully");
   };
 
   const getFileIcon = (file: File) => {
     const fileType = file?.type || "";
-    
+
     if (fileType.startsWith("image/")) {
       return <PhotoIcon className="w-5 h-5 text-green-500" />;
     } else {
@@ -434,7 +467,7 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
           <MenuButton
             className={cn(
               "inline-flex items-center gap-x-1.5 rounded-lg px-3 py-2 text-sm font-medium shadow-sm ring-1 ring-inset focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200",
-              getStatusVariant(production.status) === "success" 
+              getStatusVariant(production.status) === "success"
                 ? "bg-green-50 text-green-700 ring-green-600/20"
                 : getStatusVariant(production.status) === "warning"
                 ? "bg-yellow-50 text-yellow-700 ring-yellow-600/20"
@@ -530,11 +563,12 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
         preventAutoClose={true}
       >
         <div className="space-y-6">
-          
           {/* Output Details */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Output Details</h3>
+              <h3 className="text-lg font-medium text-gray-900">
+                Output Details
+              </h3>
               <button
                 type="button"
                 onClick={addOutputDetail}
@@ -547,7 +581,10 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
 
             <div className="space-y-4">
               {form.outputDetails.map((output, index) => (
-                <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                <div
+                  key={index}
+                  className="p-4 border border-gray-200 rounded-lg"
+                >
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-medium text-gray-700">
                       Output {index + 1}
@@ -571,12 +608,17 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
                       <select
                         value={output.itemName}
                         onChange={(e) =>
-                          handleOutputDetailChange(index, "itemName", e.target.value)
+                          handleOutputDetailChange(
+                            index,
+                            "itemName",
+                            e.target.value
+                          )
                         }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
                         <option value="Atta">Atta</option>
                         <option value="Chokar">Chokar</option>
+                        <option value="Wastage">Wastage</option>
                       </select>
                     </div>
 
@@ -607,7 +649,11 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
                       <select
                         value={output.productUnit}
                         onChange={(e) =>
-                          handleOutputDetailChange(index, "productUnit", e.target.value)
+                          handleOutputDetailChange(
+                            index,
+                            "productUnit",
+                            e.target.value
+                          )
                         }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
@@ -667,7 +713,9 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
             {/* Existing Attachments */}
             {existingAttachments.length > 0 && (
               <div className="mb-6">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">Previously Uploaded</h4>
+                <h4 className="text-sm font-medium text-gray-700 mb-3">
+                  Previously Uploaded
+                </h4>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {existingAttachments.map((attachment, index) => (
                     <div key={`existing-${index}`} className="relative group">
@@ -688,14 +736,18 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            onClick={() => openExistingAttachmentPreview(attachment)}
+                            onClick={() =>
+                              openExistingAttachmentPreview(attachment)
+                            }
                             className="p-2 bg-white rounded-full text-gray-700 hover:text-blue-600 transition-colors"
                           >
                             <EyeIcon className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
-                            onClick={() => removeExistingAttachment(attachment._id)}
+                            onClick={() =>
+                              removeExistingAttachment(attachment._id)
+                            }
                             className="p-2 bg-white rounded-full text-red-600 hover:text-red-700 transition-colors"
                           >
                             <XMarkIcon className="w-4 h-4" />
@@ -721,7 +773,9 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
             {/* New File Uploads */}
             {selectedFiles.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-3">New Uploads</h4>
+                <h4 className="text-sm font-medium text-gray-700 mb-3">
+                  New Uploads
+                </h4>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {selectedFiles.map((file, index) => (
                     <div key={`new-${index}`} className="relative group">
@@ -776,7 +830,10 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
             {existingAttachments.length === 0 && selectedFiles.length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 <PhotoIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p>No attachments yet. Use the camera or upload button to add images.</p>
+                <p>
+                  No attachments yet. Use the camera or upload button to add
+                  images.
+                </p>
               </div>
             )}
           </div>
@@ -788,7 +845,9 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
             </label>
             <textarea
               value={form.remarks}
-              onChange={(e) => setForm((prev) => ({ ...prev, remarks: e.target.value }))}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, remarks: e.target.value }))
+              }
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Optional remarks for finishing this production..."
@@ -834,7 +893,7 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
         onClose={closePreviewModal}
         title="File Preview"
         size="lg"
-       >
+      >
         <div className="space-y-4">
           {previewModal.file && (
             <>
@@ -852,149 +911,164 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
               )}
             </>
           )}
-           {/* Attachments */}
-           <div>
-             <div className="flex items-center justify-between mb-4">
-               <h3 className="text-lg font-medium text-gray-900">Attachments</h3>
-               <div className="flex gap-2">
-                 <button
-                   type="button"
-                   onClick={() => setCameraModalOpen(true)}
-                   className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                 >
-                   <CameraIcon className="w-4 h-4" />
-                   Camera
-                 </button>
-                 <label className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer">
-                   <PhotoIcon className="w-4 h-4" />
-                   Upload
-                   <input
-                     type="file"
-                     multiple
-                     accept="image/*"
-                     onChange={handleFileSelect}
-                     className="hidden"
-                   />
-                 </label>
-               </div>
-             </div>
+          {/* Attachments */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Attachments</h3>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCameraModalOpen(true)}
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                >
+                  <CameraIcon className="w-4 h-4" />
+                  Camera
+                </button>
+                <label className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer">
+                  <PhotoIcon className="w-4 h-4" />
+                  Upload
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            </div>
 
-             {/* Existing Attachments */}
-             {existingAttachments.length > 0 && (
-               <div className="mb-6">
-                 <h4 className="text-sm font-medium text-gray-700 mb-3">Previously Uploaded</h4>
-                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                   {existingAttachments.map((attachment, index) => (
-                     <div key={`existing-${index}`} className="relative group">
-                       <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
-                         {attachment.fileType?.startsWith("image/") ? (
-                           <img
-                             src={`data:${attachment.fileType};base64,${attachment.base64Data}`}
-                             alt={attachment.fileName}
-                             className="w-full h-full object-cover"
-                           />
-                         ) : (
-                           <div className="w-full h-full flex items-center justify-center">
-                             <DocumentIcon className="w-8 h-8 text-blue-500" />
-                           </div>
-                         )}
-                       </div>
-                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
-                         <div className="flex gap-2">
-                           <button
-                             type="button"
-                             onClick={() => openExistingAttachmentPreview(attachment)}
-                             className="p-2 bg-white rounded-full text-gray-700 hover:text-blue-600 transition-colors"
-                           >
-                             <EyeIcon className="w-4 h-4" />
-                           </button>
-                           <button
-                             type="button"
-                             onClick={() => removeExistingAttachment(attachment?._id)}
-                             className="p-2 bg-white rounded-full text-gray-700 hover:text-red-600 transition-colors"
-                           >
-                             <XMarkIcon className="w-4 h-4" />
-                           </button>
-                         </div>
-                       </div>
-                       <div className="absolute bottom-2 left-2 right-2">
-                         <div className="bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded truncate">
-                           {attachment.fileName}
-                         </div>
-                       </div>
-                       <div className="absolute top-2 left-2">
-                         <div className="bg-green-500 text-white text-xs px-2 py-1 rounded">
-                           Existing
-                         </div>
-                       </div>
-                     </div>
-                   ))}
-                 </div>
-               </div>
-             )}
+            {/* Existing Attachments */}
+            {existingAttachments.length > 0 && (
+              <div className="mb-6">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">
+                  Previously Uploaded
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {existingAttachments.map((attachment, index) => (
+                    <div key={`existing-${index}`} className="relative group">
+                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
+                        {attachment.fileType?.startsWith("image/") ? (
+                          <img
+                            src={`data:${attachment.fileType};base64,${attachment.base64Data}`}
+                            alt={attachment.fileName}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <DocumentIcon className="w-8 h-8 text-blue-500" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openExistingAttachmentPreview(attachment)
+                            }
+                            className="p-2 bg-white rounded-full text-gray-700 hover:text-blue-600 transition-colors"
+                          >
+                            <EyeIcon className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removeExistingAttachment(attachment?._id)
+                            }
+                            className="p-2 bg-white rounded-full text-gray-700 hover:text-red-600 transition-colors"
+                          >
+                            <XMarkIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="absolute bottom-2 left-2 right-2">
+                        <div className="bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded truncate">
+                          {attachment.fileName}
+                        </div>
+                      </div>
+                      <div className="absolute top-2 left-2">
+                        <div className="bg-green-500 text-white text-xs px-2 py-1 rounded">
+                          Existing
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
-             {/* New File Uploads */}
-             {selectedFiles.length > 0 && (
-               <div>
-                 <h4 className="text-sm font-medium text-gray-700 mb-3">New Uploads</h4>
-                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                   {selectedFiles.map((file, index) => (
-                     <div key={`new-${index}`} className="relative group">
-                       <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-blue-200">
-                         {filePreviews[file.name] ? (
-                           <img
-                             src={filePreviews[file.name]}
-                             alt={file.name}
-                             className="w-full h-full object-cover"
-                           />
-                         ) : (
-                           <div className="w-full h-full flex items-center justify-center">
-                             {getFileIcon(file)}
-                           </div>
-                         )}
-                       </div>
-                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
-                         <div className="flex gap-2">
-                           <button
-                             type="button"
-                             onClick={() => openPreview(file)}
-                             className="p-2 bg-white rounded-full text-gray-700 hover:text-blue-600 transition-colors"
-                           >
-                             <EyeIcon className="w-4 h-4" />
-                           </button>
-                           <button
-                             type="button"
-                             onClick={() => removeFile(index)}
-                             className="p-2 bg-white rounded-full text-gray-700 hover:text-red-600 transition-colors"
-                           >
-                             <XMarkIcon className="w-4 h-4" />
-                           </button>
-                         </div>
-                       </div>
-                       <div className="absolute bottom-2 left-2 right-2">
-                         <div className="bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded truncate">
-                           {file.name}
-                         </div>
-                       </div>
-                       <div className="absolute top-2 left-2">
-                         <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded">
-                           New
-                         </div>
-                       </div>
-                     </div>
-                   ))}
-                 </div>
-               </div>
-             )}
+            {/* New File Uploads */}
+            {selectedFiles.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-3">
+                  New Uploads
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {selectedFiles.map((file, index) => (
+                    <div key={`new-${index}`} className="relative group">
+                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-blue-200">
+                        {filePreviews[file.name] ? (
+                          <img
+                            src={filePreviews[file.name]}
+                            alt={file.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            {getFileIcon(file)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openPreview(file)}
+                            className="p-2 bg-white rounded-full text-gray-700 hover:text-blue-600 transition-colors"
+                          >
+                            <EyeIcon className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index)}
+                            className="p-2 bg-white rounded-full text-gray-700 hover:text-red-600 transition-colors"
+                          >
+                            <XMarkIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="absolute bottom-2 left-2 right-2">
+                        <div className="bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded truncate">
+                          {file.name}
+                        </div>
+                      </div>
+                      <div className="absolute top-2 left-2">
+                        <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                          New
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
-             {/* Show message when no attachments */}
-             {(!production.attachments || production.attachments.filter(attachment => !removedAttachments.includes(attachment?._id)).length === 0) && selectedFiles.length === 0 && (
-               <div className="text-center py-8 text-gray-500">
-                 <PhotoIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                 <p>No attachments yet. Use the camera or upload button to add images.</p>
-               </div>
-             )}
-           </div>
+            {/* Show message when no attachments */}
+            {(!production.attachments ||
+              production.attachments.filter(
+                (attachment) => !removedAttachments.includes(attachment?._id)
+              ).length === 0) &&
+              selectedFiles.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <PhotoIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p>
+                    No attachments yet. Use the camera or upload button to add
+                    images.
+                  </p>
+                </div>
+              )}
+          </div>
         </div>
       </Modal>
 
@@ -1025,13 +1099,19 @@ const ProductionStatusDropdown: React.FC<ProductionStatusDropdownProps> = ({
           {previewModal.existingAttachment && (
             <>
               <div className="text-sm text-gray-600">
-                <strong>File:</strong> {previewModal.existingAttachment.fileName}
+                <strong>File:</strong>{" "}
+                {previewModal.existingAttachment.fileName}
               </div>
               <div className="text-sm text-gray-600">
-                <strong>Size:</strong> {(previewModal.existingAttachment.fileSize / 1024).toFixed(2)} KB
+                <strong>Size:</strong>{" "}
+                {(previewModal.existingAttachment.fileSize / 1024).toFixed(2)}{" "}
+                KB
               </div>
               <div className="text-sm text-gray-600">
-                <strong>Uploaded:</strong> {new Date(previewModal.existingAttachment.uploadedAt).toLocaleDateString()}
+                <strong>Uploaded:</strong>{" "}
+                {new Date(
+                  previewModal.existingAttachment.uploadedAt
+                ).toLocaleDateString()}
               </div>
               {previewModal.previewUrl && (
                 <div className="flex justify-center">

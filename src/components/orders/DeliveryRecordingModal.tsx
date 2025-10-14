@@ -31,7 +31,7 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
   const [formData, setFormData] = useState({
     notes: "",
     amountCollected: order.paidAmount || 0,
-    remainingAmount: order.totalAmount - order.paidAmount || 0,
+    remainingAmount: 0,
     settlementNotes: "",
     paymentTerms: order.paymentTerms || "Cash",
     location: {
@@ -276,7 +276,7 @@ const DeliveryRecordingModal: React.FC<DeliveryRecordingModalProps> = ({
     setFormData({
       notes: "",
       amountCollected: order.paidAmount || 0,
-      remainingAmount: order.totalAmount - order.paidAmount || 0,
+      remainingAmount: 0,
       settlementNotes: "",
       paymentTerms: order.paymentTerms || "Cash",
       location: { address: "" },

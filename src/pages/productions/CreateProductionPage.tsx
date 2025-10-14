@@ -484,7 +484,7 @@ const CreateProductionPage: React.FC = () => {
 
   const inputUnits = ["KG", "Quintal", "Ton"];
   const outputUnits = ["KG", "Quintal", "Ton"];
-  const itemNames = ["Atta", "Chokar"];
+  const itemNames = ["Atta", "Chokar","Wastage"];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">

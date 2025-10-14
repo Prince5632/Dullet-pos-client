@@ -64,6 +64,18 @@ const EditProductionPage: React.FC = () => {
         productUnit: "KG",
         notes: "",
       },
+      {
+        itemName: "Chokar",
+        productQty: 0,
+        productUnit: "KG",
+        notes: "",
+      },
+      {
+        itemName: "Wastage",
+        productQty: 0,
+        productUnit: "KG",
+        notes: "",
+      },
     ],
     remarks: "",
     attachments: [],
@@ -116,12 +128,15 @@ const EditProductionPage: React.FC = () => {
           inputType: productionData.inputType,
           inputQty: productionData.inputQty,
           inputUnit: productionData.inputUnit,
-          outputDetails: productionData.outputDetails.map((output) => ({
-            itemName: output.itemName,
-            productQty: output.productQty,
-            productUnit: output.productUnit,
-            notes: output.notes || "",
-          })),
+          outputDetails:
+            productionData.outputDetails?.length > 0
+              ? productionData.outputDetails.map((output) => ({
+                  itemName: output.itemName,
+                  productQty: output.productQty,
+                  productUnit: output.productUnit,
+                  notes: output.notes || "",
+                }))
+              : form.outputDetails,
           remarks: productionData.remarks || "",
           attachments: [],
           removedAttachments: [],
@@ -291,9 +306,6 @@ const EditProductionPage: React.FC = () => {
     if (!form.location.trim()) {
       newErrors.location = "Location is required";
     }
-
-   
-
 
     if (!form.inputType.trim()) {
       newErrors.inputType = "Input type is required";
@@ -603,7 +615,7 @@ const EditProductionPage: React.FC = () => {
 
   const inputUnits = ["KG", "Quintal", "Ton"];
   const outputUnits = ["KG", "Quintal", "Ton"];
-  const itemNames = ["Atta", "Chokar"];
+  const itemNames = ["Atta", "Chokar", "Wastage"];
 
   if (loading) {
     return (
@@ -829,7 +841,7 @@ const EditProductionPage: React.FC = () => {
             {/* Operator */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Operator 
+                Operator
               </label>
               <input
                 type="text"
@@ -964,121 +976,128 @@ const EditProductionPage: React.FC = () => {
               </button>
             </div>
 
-          <div className="space-y-5">
-  {form.outputDetails.map((output, index) => (
-    <div
-      key={index}
-      className="p-4 sm:p-5 border border-gray-200 rounded-xl shadow-sm bg-white"
-    >
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
-        <h3 className="text-base font-semibold text-gray-900">
-          Output {index + 1}
-        </h3>
-        {form.outputDetails.length > 1 && (
-          <button
-            type="button"
-            onClick={() => removeOutputDetail(index)}
-            className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md px-2 py-1 transition"
-          >
-            <TrashIcon className="w-4 h-4" />
-            Remove
-          </button>
-        )}
-      </div>
+            <div className="space-y-5">
+              {form.outputDetails.map((output, index) => (
+                <div
+                  key={index}
+                  className="p-4 sm:p-5 border border-gray-200 rounded-xl shadow-sm bg-white"
+                >
+                  {/* Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
+                    <h3 className="text-base font-semibold text-gray-900">
+                      Output {index + 1}
+                    </h3>
+                    {form.outputDetails.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeOutputDetail(index)}
+                        className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md px-2 py-1 transition"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                        Remove
+                      </button>
+                    )}
+                  </div>
 
-      {/* Form Fields Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Item Name */}
-        <div className="sm:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Item Name <span className="text-red-500">*</span>
-          </label>
-          <select
-            value={output.itemName}
-            onChange={(e) =>
-              handleOutputDetailChange(index, "itemName", e.target.value)
-            }
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">Select item</option>
-            {itemNames.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </div>
+                  {/* Form Fields Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Item Name */}
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Item Name <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={output.itemName}
+                        onChange={(e) =>
+                          handleOutputDetailChange(
+                            index,
+                            "itemName",
+                            e.target.value
+                          )
+                        }
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">Select item</option>
+                        {itemNames.map((item) => (
+                          <option key={item} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-        {/* Quantity */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Quantity <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="0.00"
-            value={output.productQty}
-            onChange={(e) =>
-              handleOutputDetailChange(
-                index,
-                "productQty",
-                parseFloat(e.target.value) || 0
-              )
-            }
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
+                    {/* Quantity */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Quantity <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={output.productQty}
+                        onChange={(e) =>
+                          handleOutputDetailChange(
+                            index,
+                            "productQty",
+                            parseFloat(e.target.value) || 0
+                          )
+                        }
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
 
-        {/* Unit */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Unit <span className="text-red-500">*</span>
-          </label>
-          <select
-            value={output.productUnit}
-            onChange={(e) =>
-              handleOutputDetailChange(index, "productUnit", e.target.value)
-            }
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            {outputUnits.map((unit) => (
-              <option key={unit} value={unit}>
-                {unit}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+                    {/* Unit */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Unit <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={output.productUnit}
+                        onChange={(e) =>
+                          handleOutputDetailChange(
+                            index,
+                            "productUnit",
+                            e.target.value
+                          )
+                        }
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        {outputUnits.map((unit) => (
+                          <option key={unit} value={unit}>
+                            {unit}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
 
-      {/* Notes */}
-      <div className="mt-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Notes
-        </label>
-        <textarea
-          placeholder="Optional notes"
-          value={output.notes || ""}
-          rows={3}
-          onChange={(e) =>
-            handleOutputDetailChange(index, "notes", e.target.value)
-          }
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
-        />
-      </div>
+                  {/* Notes */}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Notes
+                    </label>
+                    <textarea
+                      placeholder="Optional notes"
+                      value={output.notes || ""}
+                      rows={3}
+                      onChange={(e) =>
+                        handleOutputDetailChange(index, "notes", e.target.value)
+                      }
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
+                    />
+                  </div>
 
-      {/* Error Message */}
-      {errors.outputDetails && errors.outputDetails[index] && (
-        <p className="mt-2 text-xs text-red-600">
-          {errors.outputDetails[index]}
-        </p>
-      )}
-    </div>
-  ))}
-</div>
-
+                  {/* Error Message */}
+                  {errors.outputDetails && errors.outputDetails[index] && (
+                    <p className="mt-2 text-xs text-red-600">
+                      {errors.outputDetails[index]}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         ) : null}
 
