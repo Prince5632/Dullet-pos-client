@@ -19,6 +19,7 @@ export const API_CONFIG = {
 
     // Role endpoints
     ROLES: "/api/roles",
+    ROLES_SIMPLE: "/api/roles/simple",
     ROLE_BY_ID: (id: string) => `/api/roles/${id}`,
     ROLE_PERMISSIONS: (id: string) => `/api/roles/${id}/permissions`,
     ACTIVATE_ROLE: (id: string) => `/api/roles/${id}/activate`,
@@ -51,7 +52,8 @@ export const API_CONFIG = {
     QUICK_PRODUCTS: "/api/orders/quick/products",
     QUICK_ORDER: "/api/orders/quick",
     // Delivery time PDF changes endpoints
-    DELIVERY_TIME_PDF_CHANGES: (orderId: string) => `/api/orders/${orderId}/delivery-time-pdf-changes`,
+    DELIVERY_TIME_PDF_CHANGES: (orderId: string) =>
+      `/api/orders/${orderId}/delivery-time-pdf-changes`,
 
     // Godown endpoints
     GODOWNS: "/api/godowns",
@@ -79,11 +81,13 @@ export const API_CONFIG = {
     // Transit endpoints
     TRANSITS: "/api/transits",
     TRANSIT_BY_ID: (id: string) => `/api/transits/${id}`,
-    TRANSIT_BY_TRANSIT_ID: (transitId: string) => `/api/transits/transit/${transitId}`,
+    TRANSIT_BY_TRANSIT_ID: (transitId: string) =>
+      `/api/transits/transit/${transitId}`,
     TRANSIT_UPDATE_STATUS: (id: string) => `/api/transits/${id}/status`,
     TRANSIT_ASSIGN_DRIVER: (id: string) => `/api/transits/${id}/assign-driver`,
     TRANSIT_STATS: "/api/transits/stats",
-    TRANSIT_BY_LOCATION: (location: string) => `/api/transits/location/${location}`,
+    TRANSIT_BY_LOCATION: (location: string) =>
+      `/api/transits/location/${location}`,
     TRANSIT_BULK_UPDATE_STATUS: "/api/transits/bulk/status",
     TRANSIT_PENDING: "/api/transits/pending",
     TRANSIT_MY_TRANSITS: "/api/transits/my-transits",
@@ -92,11 +96,14 @@ export const API_CONFIG = {
     // Production endpoints
     PRODUCTIONS: "/api/productions",
     PRODUCTION_BY_ID: (id: string) => `/api/productions/${id}`,
-    PRODUCTION_BY_BATCH_ID: (batchId: string) => `/api/productions/batch/${batchId}`,
+    PRODUCTION_BY_BATCH_ID: (batchId: string) =>
+      `/api/productions/batch/${batchId}`,
     PRODUCTION_STATS: "/api/productions/stats",
-    PRODUCTION_BY_LOCATION: (location: string) => `/api/productions/location/${location}`,
+    PRODUCTION_BY_LOCATION: (location: string) =>
+      `/api/productions/location/${location}`,
     PRODUCTION_SUMMARY: "/api/productions/summary",
-    PRODUCTION_AUDIT_TRAIL: (id: string) => `/api/productions/${id}/audit-trail`,
+    PRODUCTION_AUDIT_TRAIL: (id: string) =>
+      `/api/productions/${id}/audit-trail`,
 
     // Transaction endpoints
     TRANSACTIONS: "/api/transactions",

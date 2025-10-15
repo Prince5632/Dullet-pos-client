@@ -20,6 +20,7 @@ class GodownService {
     visitStatus?: string;
     hasImage?: string;
     address?: string;
+    roleId?: string;
   } = {}): Promise<ApiResponse<{ godowns: Godown[] }>> {
     const queryParams = new URLSearchParams();
     

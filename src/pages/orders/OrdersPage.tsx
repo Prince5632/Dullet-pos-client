@@ -21,10 +21,11 @@ import { orderService } from "../../services/orderService";
 import { customerService } from "../../services/customerService";
 import { userService } from "../../services/userService";
 import { godownService } from "../../services/godownService";
+import { roleService } from "../../services/roleService";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDebounce } from "../../hooks/useDebounce";
 import { usePersistedFilters } from "../../hooks/usePersistedFilters";
-import type { Order, Customer, TableColumn, Godown } from "../../types";
+import type { Order, Customer, TableColumn, Godown, Role } from "../../types";
 import Table from "../../components/ui/Table";
 import Pagination from "../../components/ui/Pagination";
 import Avatar from "../../components/ui/Avatar";
@@ -78,6 +79,7 @@ type OrdersFilters = {
   visitStatus: string;
   hasImage: string;
   address: string;
+  roleId: string;
 };
 
 const OrdersPage: React.FC = () => {
@@ -112,6 +114,7 @@ const OrdersPage: React.FC = () => {
       visitStatus: "",
       hasImage: "",
       address: "",
+      roleId: "",
     },
     defaultPagination: { page: 1, limit: 10 },
     defaultSort: { sortBy: "orderDate", sortOrder: "desc" },
@@ -127,6 +130,7 @@ const OrdersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const godownFilter = filters.godownId;
   const setGodownFilter = (v: string) => setFilters({ godownId: v });
   const [viewType, setViewType] = useState<"orders" | "visits">(() =>
@@ -172,6 +176,8 @@ const OrdersPage: React.FC = () => {
   const setHasImageFilter = (v: string) => setFilters({ hasImage: v });
   const addressFilter = filters.address;
   const setAddressFilter = (v: string) => setFilters({ address: v });
+  const roleFilter = filters.roleId;
+  const setRoleFilter = (v: string) => setFilters({ roleId: v });
 
   // Pagination
   const currentPage = pagination.page;
@@ -271,15 +277,18 @@ const OrdersPage: React.FC = () => {
         sortOrder,
       };
 
-      const params = {
-        ...commonParams,
-        status: statusFilter,
-        paymentStatus: paymentStatusFilter,
-        priority: priorityFilter,
-        minAmount: minAmountFilter,
-        maxAmount: maxAmountFilter,
-        godownId: godownFilter,
-      };
+      const params =
+       {
+              ...commonParams,
+              status: statusFilter,
+              paymentStatus: paymentStatusFilter,
+              priority: priorityFilter,
+              minAmount: minAmountFilter,
+              maxAmount: maxAmountFilter,
+              godownId: godownFilter,
+              roleId: roleFilter,
+            }
+         
 
       const response = await orderService.getOrders(params);
 
@@ -319,6 +328,7 @@ const OrdersPage: React.FC = () => {
     minAmountFilter,
     maxAmountFilter,
     godownFilter,
+    roleFilter,
     // Visit-specific filters
     scheduleStatusFilter,
     visitStatusFilter,
@@ -335,6 +345,15 @@ const OrdersPage: React.FC = () => {
     }
   }, []);
 
+  const loadRoles = useCallback(async () => {
+    try {
+      const roleList = await roleService.getSimpleRoles();
+      setRoles(roleList);
+    } catch (err) {
+      console.error("Failed to load roles:", err);
+    }
+  }, []);
+
   const fetchStats = useCallback(async () => {
     const roleName = user?.role?.name?.toLowerCase();
     if (roleName !== "super admin" && roleName !== "admin") return;
@@ -346,18 +365,21 @@ const OrdersPage: React.FC = () => {
 
       if (hasPermission("orders.read")) {
         // Build params for stats based on view type and current filters
-        const statsParams = {
-          godownId: godownFilter,
-          search: debouncedSearchTerm,
-          status: statusFilter,
-          paymentStatus: paymentStatusFilter,
-          customerId: customerFilter,
-          dateFrom: dateFromFilter,
-          dateTo: dateToFilter,
-          priority: priorityFilter,
-          minAmount: minAmountFilter,
-          maxAmount: maxAmountFilter,
-        };
+        const statsParams =
+         {
+                godownId: godownFilter,
+                search: debouncedSearchTerm,
+                status: statusFilter,
+                paymentStatus: paymentStatusFilter,
+                customerId: customerFilter,
+                dateFrom: dateFromFilter,
+                dateTo: dateToFilter,
+                priority: priorityFilter,
+                minAmount: minAmountFilter,
+                maxAmount: maxAmountFilter,
+                roleId: roleFilter,
+              }
+           
 
         promises.push(orderService.getOrderStats(statsParams));
       }
@@ -448,6 +470,7 @@ const OrdersPage: React.FC = () => {
     priorityFilter,
     minAmountFilter,
     maxAmountFilter,
+    roleFilter,
   ]);
 
   useEffect(() => {
@@ -459,6 +482,10 @@ const OrdersPage: React.FC = () => {
   }, [loadCustomers]);
 
   useEffect(() => {
+    loadRoles();
+  }, [loadRoles]);
+
+  useEffect(() => {
     fetchStats();
   }, [fetchStats]);
   // Cross-page reset: visiting Customers clears Orders persisted filters/pagination if present
@@ -468,17 +495,21 @@ const OrdersPage: React.FC = () => {
   // Load godowns with filtered counts
   const loadGodowns = useCallback(async () => {
     try {
-      const godownParams = {
-        search: debouncedSearchTerm,
-        status: statusFilter,
-        paymentStatus: paymentStatusFilter,
-        customerId: customerFilter,
-        dateFrom: dateFromFilter,
-        dateTo: dateToFilter,
-        priority: priorityFilter,
-        minAmount: minAmountFilter,
-        maxAmount: maxAmountFilter,
-      };
+      const godownParams =
+
+     {
+              search: debouncedSearchTerm,
+              status: statusFilter,
+              paymentStatus: paymentStatusFilter,
+              customerId: customerFilter,
+              dateFrom: dateFromFilter,
+              dateTo: dateToFilter,
+              priority: priorityFilter,
+              minAmount: minAmountFilter,
+              maxAmount: maxAmountFilter,
+              roleId: roleFilter,
+            }
+          
 
       const res = await godownService.getGodowns(godownParams);
       if (res.success && res.data) setGodowns(res.data.godowns);
@@ -497,6 +528,7 @@ const OrdersPage: React.FC = () => {
     priorityFilter,
     minAmountFilter,
     maxAmountFilter,
+    roleFilter,
     // Visit-specific filters
     scheduleStatusFilter,
     visitStatusFilter,
@@ -914,7 +946,8 @@ const OrdersPage: React.FC = () => {
                 paymentStatusFilter ||
                 customerFilter ||
                 dateFromFilter ||
-                dateToFilter) && (
+                dateToFilter ||
+                roleFilter) && (
                 <button
                   onClick={clearFilters}
                   className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded-md transition-colors"
@@ -1054,14 +1087,29 @@ const OrdersPage: React.FC = () => {
                       className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
 
-                    <input
-                      type="number"
-                      value={maxAmountFilter}
-                      onChange={(e) => setMaxAmountFilter(e.target.value)}
-                      placeholder="Max Amount"
-                      className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </>
+                      <input
+                        type="number"
+                        value={maxAmountFilter}
+                        onChange={(e) => setMaxAmountFilter(e.target.value)}
+                        placeholder="Max Amount"
+                        className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+
+                      <select
+                        value={roleFilter}
+                        onChange={(e) => setRoleFilter(e.target.value)}
+                        className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="">All Roles</option>
+                        {roles.map((role) => (
+                          <option key={role._id} value={role._id}>
+                            {role.name}
+                          </option>
+                        ))}
+                      </select>
+                    </>
+
+          
                 </div>
               </div>
             )}

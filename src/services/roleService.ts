@@ -133,6 +133,15 @@ class RoleService {
     return response.data?.roles || [];
   }
 
+  // Get simple roles for dropdown (optimized endpoint)
+  async getSimpleRoles(): Promise<Role[]> {
+    const response = await apiService.get<{ roles: Role[] }>(API_CONFIG.ENDPOINTS.ROLES_SIMPLE);
+    if (response.success && response.data) {
+      return response.data.roles;
+    }
+    throw new Error(response.message || 'Failed to get simple roles');
+  }
+
   // Bulk operations
   async bulkActivateRoles(roleIds: string[]): Promise<void> {
     const promises = roleIds.map(id => this.activateRole(id));
