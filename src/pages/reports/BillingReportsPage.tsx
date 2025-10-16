@@ -40,8 +40,8 @@ const BillingReportsPage: React.FC = () => {
 
   // Load persisted state on mount and clear other namespaces
   useEffect(() => {
-    clearOtherNamespaces(PERSIST_NS.CUSTOMER_REPORTS);
-    const persistedFilters = persistenceService.getNS<any>(PERSIST_NS.CUSTOMER_REPORTS, 'filters', {
+    clearOtherNamespaces(PERSIST_NS.BILLING_REPORTS);
+    const persistedFilters = persistenceService.getNS<any>(PERSIST_NS.BILLING_REPORTS, 'filters', {
       startDate: '',
       endDate: '',
       inactiveDays: 7,
@@ -65,7 +65,7 @@ const BillingReportsPage: React.FC = () => {
   // Persist filters
   useEffect(() => {
     if (!initRef.current) return;
-    persistenceService.setNS(PERSIST_NS.CUSTOMER_REPORTS, 'filters', {
+    persistenceService.setNS(PERSIST_NS.BILLING_REPORTS, 'filters', {
       startDate,
       endDate,
       inactiveDays,
@@ -143,16 +143,18 @@ const BillingReportsPage: React.FC = () => {
     setEndDate(dateRange.endDate);
     setDateRangeError('');
     
-    // Trigger report fetch with new dates
-    setTimeout(() => {
-      fetchReports();
-    }, 100);
   };
 
   useEffect(() => {
     fetchReports();
   }, [activeTab]);
 
+  // Fetch reports when date filters change
+  useEffect(() => {
+    if (initRef.current) {
+      fetchReports();
+    }
+  }, [startDate, endDate, sortBy, sortOrder, inactiveDays]);
   const fetchReports = async () => {
     try {
       setLoading(true);
@@ -506,7 +508,7 @@ const BillingReportsPage: React.FC = () => {
                 <ChartBarIcon className="w-4 h-4 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Reports</h1>
+                <h1 className="text-lg font-semibold text-gray-900">Billing Reports</h1>
                 <p className="text-xs text-gray-500 hidden sm:block">Track performance insights</p>
               </div>
             </div>

@@ -92,6 +92,8 @@ export const PERSIST_NS = {
   VISITS: "visits",
   CUSTOMERS: "customers",
   SALES_EXEC_REPORTS: "sales_exec_reports",
+  BILLING_REPORTS: "billing_reports",
+  PERFORMANCE_REPORTS: "performance_reports",
   INVENTORY: "inventory",
   TRANSITS: "transits",
   USERS: "users",

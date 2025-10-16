@@ -120,11 +120,6 @@ const CustomerReportsPage: React.FC = () => {
       setStartDate('');
       setEndDate('');
       setDateRangeError('');
-      
-      // Trigger report fetch with cleared dates
-      setTimeout(() => {
-        fetchReports();
-      }, 100);
       return;
     }
     
@@ -142,16 +137,18 @@ const CustomerReportsPage: React.FC = () => {
     setStartDate(dateRange.startDate);
     setEndDate(dateRange.endDate);
     setDateRangeError('');
-    
-    // Trigger report fetch with new dates
-    setTimeout(() => {
-      fetchReports();
-    }, 100);
   };
 
   useEffect(() => {
     fetchReports();
   }, [activeTab]);
+
+  // Fetch reports when date filters change
+  useEffect(() => {
+    if (initRef.current) {
+      fetchReports();
+    }
+  }, [startDate, endDate, sortBy, sortOrder, inactiveDays]);
 
   const fetchReports = async () => {
     try {
@@ -506,7 +503,7 @@ const CustomerReportsPage: React.FC = () => {
                 <ChartBarIcon className="w-4 h-4 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Reports</h1>
+                <h1 className="text-lg font-semibold text-gray-900"> Customer Reports</h1>
                 <p className="text-xs text-gray-500 hidden sm:block">Track performance insights</p>
               </div>
             </div>

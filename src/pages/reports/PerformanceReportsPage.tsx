@@ -19,7 +19,11 @@ import {
 import { getSalesExecutiveReports } from "../../services/reportService";
 import { godownService } from "../../services/godownService";
 import type { SalesExecutiveReportResponse } from "../../services/reportService";
-import { persistenceService, PERSIST_NS, clearOtherNamespaces } from "../../services/persistenceService";
+import {
+  persistenceService,
+  PERSIST_NS,
+  clearOtherNamespaces,
+} from "../../services/persistenceService";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import Table from "../../components/ui/Table";
 import Badge from "../../components/ui/Badge";
@@ -45,32 +49,48 @@ const PerformanceReportsPage: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [dateRangeError, setDateRangeError] = useState("");
   const [reportType, setReportType] = useState<ReportType>(() => {
-    const saved = persistenceService.getNS<string>(PERSIST_NS.SALES_EXEC_REPORTS, 'reportType', "orders");
+    const saved = persistenceService.getNS<string>(
+      PERSIST_NS.PERFORMANCE_REPORTS,
+      "reportType",
+      "orders"
+    );
     return (saved as ReportType) || "orders";
   });
   const [syncing, setSyncing] = useState(false);
-  const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(null);
-  const [userActivityFilter, setUserActivityFilter] = useState<"all" | "active" | "inactive">("active");
+  const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(
+    null
+  );
+  const [userActivityFilter, setUserActivityFilter] = useState<
+    "all" | "active" | "inactive"
+  >("active");
   const initRef = useRef(false);
 
   // Load persisted state on mount and clear other namespaces
   useEffect(() => {
-    clearOtherNamespaces(PERSIST_NS.SALES_EXEC_REPORTS);
-    const persistedFilters = persistenceService.getNS<any>(PERSIST_NS.SALES_EXEC_REPORTS, 'filters', {
-      startDate: "",
-      endDate: "",
-      department: "",
-      godownId: "",
-      selectedRoles: [],
-      showFilters: false,
-      reportType: "orders",
-      activeQuickFilter: null,
-      userActivityFilter: "active",
-    });
-    const persistedSort = persistenceService.getNS<any>(PERSIST_NS.SALES_EXEC_REPORTS, 'sort', {
-      sortBy: "totalRevenue",
-      sortOrder: "desc",
-    });
+    clearOtherNamespaces(PERSIST_NS.PERFORMANCE_REPORTS);
+    const persistedFilters = persistenceService.getNS<any>(
+      PERSIST_NS.PERFORMANCE_REPORTS,
+      "filters",
+      {
+        startDate: "",
+        endDate: "",
+        department: "",
+        godownId: "",
+        selectedRoles: [],
+        showFilters: false,
+        reportType: "orders",
+        activeQuickFilter: null,
+        userActivityFilter: "active",
+      }
+    );
+    const persistedSort = persistenceService.getNS<any>(
+      PERSIST_NS.PERFORMANCE_REPORTS,
+      "sort",
+      {
+        sortBy: "totalRevenue",
+        sortOrder: "desc",
+      }
+    );
 
     setStartDate(persistedFilters.startDate || "");
     setEndDate(persistedFilters.endDate || "");
@@ -89,7 +109,7 @@ const PerformanceReportsPage: React.FC = () => {
   // Persist filters
   useEffect(() => {
     if (!initRef.current) return;
-    persistenceService.setNS(PERSIST_NS.SALES_EXEC_REPORTS, 'filters', {
+    persistenceService.setNS(PERSIST_NS.PERFORMANCE_REPORTS, "filters", {
       startDate,
       endDate,
       department,
@@ -100,12 +120,25 @@ const PerformanceReportsPage: React.FC = () => {
       activeQuickFilter,
       userActivityFilter,
     });
-  }, [startDate, endDate, department, godownId, selectedRoles, showFilters, reportType, activeQuickFilter, userActivityFilter]);
+  }, [
+    startDate,
+    endDate,
+    department,
+    godownId,
+    selectedRoles,
+    showFilters,
+    reportType,
+    activeQuickFilter,
+    userActivityFilter,
+  ]);
 
   // Persist sort
   useEffect(() => {
     if (!initRef.current) return;
-    persistenceService.setNS(PERSIST_NS.SALES_EXEC_REPORTS, 'sort', { sortBy, sortOrder });
+    persistenceService.setNS(PERSIST_NS.PERFORMANCE_REPORTS, "sort", {
+      sortBy,
+      sortOrder,
+    });
   }, [sortBy, sortOrder]);
 
   // Quick date filter helper functions
@@ -113,10 +146,10 @@ const PerformanceReportsPage: React.FC = () => {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(endDate.getDate() - days);
-    
+
     return {
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0]
+      startDate: startDate.toISOString().split("T")[0],
+      endDate: endDate.toISOString().split("T")[0],
     };
   };
   const loadRoles = useCallback(async () => {
@@ -131,10 +164,10 @@ const PerformanceReportsPage: React.FC = () => {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setMonth(endDate.getMonth() - months);
-    
+
     return {
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0]
+      startDate: startDate.toISOString().split("T")[0],
+      endDate: endDate.toISOString().split("T")[0],
     };
   };
 
@@ -142,23 +175,26 @@ const PerformanceReportsPage: React.FC = () => {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setFullYear(endDate.getFullYear() - years);
-    
+
     return {
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0]
+      startDate: startDate.toISOString().split("T")[0],
+      endDate: endDate.toISOString().split("T")[0],
     };
   };
 
-  const handleQuickFilter = (type: 'days' | 'months' | 'years', value: number) => {
+  const handleQuickFilter = (
+    type: "days" | "months" | "years",
+    value: number
+  ) => {
     const filterKey = `${type}-${value}`;
-    
+
     // Check if this filter is already active - if so, deactivate it
     if (activeQuickFilter === filterKey) {
       setActiveQuickFilter(null);
-      setStartDate('');
-      setEndDate('');
-      setDateRangeError('');
-      
+      setStartDate("");
+      setEndDate("");
+      setDateRangeError("");
+
       // Apply filters without date range
       const params = {
         sortBy,
@@ -166,32 +202,33 @@ const PerformanceReportsPage: React.FC = () => {
         ...(department && { department }),
         ...(godownId && { godownId }),
         ...(selectedRoles.length > 0 && { roleIds: selectedRoles }),
-        ...(userActivityFilter && userActivityFilter !== "all" && { userActivityFilter }),
-        type: reportType === "orders" ? "order" : "visit"
+        ...(userActivityFilter &&
+          userActivityFilter !== "all" && { userActivityFilter }),
+        type: reportType === "orders" ? "order" : "visit",
       };
-      
+
       fetchReports(params);
       fetchGodowns({});
       return;
     }
-    
+
     // Activate the new filter
     setActiveQuickFilter(filterKey);
-    
+
     let dateRange;
-    
-    if (type === 'days') {
+
+    if (type === "days") {
       dateRange = getQuickDateRange(value);
-    } else if (type === 'months') {
+    } else if (type === "months") {
       dateRange = getQuickDateRangeMonth(value);
     } else {
       dateRange = getQuickDateRangeYear(value);
     }
-    
+
     setStartDate(dateRange.startDate);
     setEndDate(dateRange.endDate);
-    setDateRangeError('');
-    
+    setDateRangeError("");
+
     // Apply filters immediately
     const params = {
       sortBy,
@@ -201,10 +238,11 @@ const PerformanceReportsPage: React.FC = () => {
       ...(department && { department }),
       ...(godownId && { godownId }),
       ...(selectedRoles.length > 0 && { roleIds: selectedRoles }),
-      ...(userActivityFilter && userActivityFilter !== "all" && { userActivityFilter }),
-      type: reportType === "orders" ? "order" : "visit"
+      ...(userActivityFilter &&
+        userActivityFilter !== "all" && { userActivityFilter }),
+      type: reportType === "orders" ? "order" : "visit",
     };
-    
+
     fetchReports(params);
     fetchGodowns(dateRange);
   };
@@ -232,21 +270,28 @@ const PerformanceReportsPage: React.FC = () => {
     fetchReports();
   }, [userActivityFilter]);
 
-  const fetchGodowns = async (overrideDates?: { startDate?: string; endDate?: string }) => {
+  const fetchGodowns = async (overrideDates?: {
+    startDate?: string;
+    endDate?: string;
+  }) => {
     try {
       // Build filter parameters for godown counts
       const params: any = {};
       params.onlySalesExecutive = true;
-      const effectiveStartDate = overrideDates?.startDate !== undefined ? overrideDates.startDate : startDate;
-      const effectiveEndDate = overrideDates?.endDate !== undefined ? overrideDates.endDate : endDate;
-      
+      const effectiveStartDate =
+        overrideDates?.startDate !== undefined
+          ? overrideDates.startDate
+          : startDate;
+      const effectiveEndDate =
+        overrideDates?.endDate !== undefined ? overrideDates.endDate : endDate;
+
       if (effectiveStartDate) params.dateFrom = effectiveStartDate;
       if (effectiveEndDate) params.dateTo = effectiveEndDate;
       if (selectedRoles.length > 0) params.roleIds = selectedRoles;
       // Pass department to ensure consistent counts with reports (only if specified)
       if (department) params.department = department;
       // Note: Don't pass godownId here as we want counts for all godowns
-      
+
       const resp = await godownService.getGodowns(params);
       setGodowns(resp.data?.godowns || []);
     } catch (error) {
@@ -257,15 +302,16 @@ const PerformanceReportsPage: React.FC = () => {
   const fetchReports = async (overrideParams?: any) => {
     try {
       setLoading(true);
-      const params: any = overrideParams || { 
-        sortBy, 
-        sortOrder, 
+      const params: any = overrideParams || {
+        sortBy,
+        sortOrder,
         ...(department && { department }),
         ...(startDate && { startDate }),
         ...(endDate && { endDate }),
         ...(godownId && { godownId }),
         ...(selectedRoles.length > 0 && { roleIds: selectedRoles }),
-        ...(userActivityFilter && userActivityFilter !== "all" && { userActivityFilter })
+        ...(userActivityFilter &&
+          userActivityFilter !== "all" && { userActivityFilter }),
       };
 
       // Add type filter for orders vs visits
@@ -284,10 +330,7 @@ const PerformanceReportsPage: React.FC = () => {
   const handleSync = async () => {
     setSyncing(true);
     try {
-      await Promise.all([
-        fetchReports(),
-        fetchGodowns()
-      ]);
+      await Promise.all([fetchReports(), fetchGodowns()]);
     } catch (error) {
       console.error("Failed to sync sales executive reports data:", error);
     } finally {
@@ -348,12 +391,12 @@ const PerformanceReportsPage: React.FC = () => {
     setSelectedRoles([]);
     setUserActivityFilter("active");
     setActiveQuickFilter(null); // Clear active quick filter
-    
+
     // Fetch reports with reset values immediately
     const resetParams = {
       sortBy: "totalRevenue",
       sortOrder: "desc",
-      department: ""
+      department: "",
       // startDate, endDate, godownId, selectedRoles, and userActivityFilter are intentionally omitted (reset to empty/default)
     };
     fetchReports(resetParams);
@@ -542,6 +585,23 @@ const PerformanceReportsPage: React.FC = () => {
             </div>
           ),
         },
+        {
+          key: "daysSinceLastOrder",
+          label: "Last Order",
+          render: (_: any, row: any) => (
+            <div className="text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="">
+                  {row.daysSinceLastOrder === 0
+                    ? "Today"
+                    : row.daysSinceLastOrder > 0
+                    ? `${row.daysSinceLastOrder} days ago`
+                    : "No orders yet"}
+                </span>
+              </div>
+            </div>
+          ),
+        },
       ];
     } else {
       return [
@@ -551,6 +611,23 @@ const PerformanceReportsPage: React.FC = () => {
           label: "Locations",
           render: (value: number) => (
             <span className="text-gray-900">{value}</span>
+          ),
+        },
+        {
+          key: "daysSinceLastOrder",
+          label: "Last Visit",
+          render: (_: any, row: any) => (
+            <div className="text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="">
+                  {row.daysSinceLastOrder === 0
+                    ? "Today"
+                    : row.daysSinceLastOrder > 0
+                    ? `${row.daysSinceLastOrder} days ago`
+                    : "No orders yet"}
+                </span>
+              </div>
+            </div>
           ),
         },
         // {
@@ -582,7 +659,9 @@ const PerformanceReportsPage: React.FC = () => {
                 <ChartBarIcon className="w-4 h-4 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Reports</h1>
+                <h1 className="text-lg font-semibold text-gray-900">
+                  Performance Reports
+                </h1>
                 <p className="text-xs text-gray-500 hidden sm:block">
                   Track performance insights
                 </p>
@@ -596,9 +675,10 @@ const PerformanceReportsPage: React.FC = () => {
                 className="inline-flex cursor-pointer gap-1 items-center px-3 py-1.5 text-sm font-medium rounded-lg text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Sync Reports Data"
               >
-                <ArrowPathIcon 
-                  className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} 
-                /> Sync
+                <ArrowPathIcon
+                  className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`}
+                />{" "}
+                Sync
               </button>
               <button
                 onClick={exportToCSV}
@@ -613,11 +693,12 @@ const PerformanceReportsPage: React.FC = () => {
           {/* Sub-tabs for Orders vs Visits */}
           <div className="flex space-x-2 bg-gray-100 p-1 rounded-lg w-fit">
             <button
-              onClick={() =>{ 
-                if(reportType !== "orders"){
-                  handleResetFilters()
+              onClick={() => {
+                if (reportType !== "orders") {
+                  handleResetFilters();
                 }
-                setReportType("orders")}}
+                setReportType("orders");
+              }}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 reportType === "orders"
                   ? "bg-white text-blue-600 shadow-sm"
@@ -629,10 +710,11 @@ const PerformanceReportsPage: React.FC = () => {
             </button>
             <button
               onClick={() => {
-                if(reportType !== "visits"){
-                  handleResetFilters()
+                if (reportType !== "visits") {
+                  handleResetFilters();
                 }
-                setReportType("visits")}}
+                setReportType("visits");
+              }}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 reportType === "visits"
                   ? "bg-white text-purple-600 shadow-sm"
@@ -646,32 +728,34 @@ const PerformanceReportsPage: React.FC = () => {
 
           {/* User Activity Filter Tabs */}
           <div className="mt-3">
-            <div className="flex space-x-2 bg-gray-100 p-1 rounded-lg w-fit">
+            <div className="flex flex-wrap md:flex-nowrap gap-2 bg-gray-100 p-2 rounded-lg w-full md:w-fit justify-center md:justify-start">
               <button
                 onClick={() => setUserActivityFilter("active")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors w-full sm:w-auto justify-center ${
                   userActivityFilter === "active"
                     ? "bg-white text-green-600 shadow-sm"
                     : "text-gray-600 hover:text-gray-900"
                 }`}
               >
                 <UserGroupIcon className="h-4 w-4" />
-                <span>Active Users</span>
+                <span>Performing Users</span>
               </button>
+
               <button
                 onClick={() => setUserActivityFilter("inactive")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors w-full sm:w-auto justify-center ${
                   userActivityFilter === "inactive"
                     ? "bg-white text-orange-600 shadow-sm"
                     : "text-gray-600 hover:text-gray-900"
                 }`}
               >
                 <UserGroupIcon className="h-4 w-4" />
-                <span>Inactive Users</span>
+                <span>Non-performing Users</span>
               </button>
+
               <button
                 onClick={() => setUserActivityFilter("all")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors w-full sm:w-auto justify-center ${
                   userActivityFilter === "all"
                     ? "bg-white text-blue-600 shadow-sm"
                     : "text-gray-600 hover:text-gray-900"
@@ -692,7 +776,9 @@ const PerformanceReportsPage: React.FC = () => {
             <div className="flex items-center gap-2 mb-2">
               <BuildingOfficeIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
               <span className="text-sm font-semibold text-gray-700">
-                {reportType === "orders" ? "Orders on Godown" : "Visits on Godown"}
+                {reportType === "orders"
+                  ? "Orders on Godown"
+                  : "Visits on Godown"}
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-2">
@@ -762,21 +848,21 @@ const PerformanceReportsPage: React.FC = () => {
                       <BuildingOfficeIcon className="h-4 w-4 text-blue-600" />
                     </div>
                     <div>
-                       <p className="text-sm font-medium flex gap-2 text-gray-900">
-                         {g.name}
-                         <span className="text-[10px] flex justify-center items-center text-gray-700 bg-gray-100 rounded px-1.5 py-0.5">
-                           {reportType === "orders" ? "Orders" : "Visits"}:{" "}
-                           {(reportType === "orders"
-                             ? g.orderCount
-                             : g.visitCount) || 0}
-                         </span>
-                       </p>
-                       <div className="flex items-center gap-2">
-                         <p className="text-xs text-gray-500">
-                           {g.location?.city || 'Location'}
-                         </p>
-                       </div>
-                     </div>
+                      <p className="text-sm font-medium flex gap-2 text-gray-900">
+                        {g.name}
+                        <span className="text-[10px] flex justify-center items-center text-gray-700 bg-gray-100 rounded px-1.5 py-0.5">
+                          {reportType === "orders" ? "Orders" : "Visits"}:{" "}
+                          {(reportType === "orders"
+                            ? g.orderCount
+                            : g.visitCount) || 0}
+                        </span>
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-gray-500">
+                          {g.location?.city || "Location"}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </button>
               ))}
@@ -861,59 +947,69 @@ const PerformanceReportsPage: React.FC = () => {
           </div>
         )}
 
-        
-
         {/* Quick Date Filters Section */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
-              <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-3 h-3 text-blue-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
             </div>
-            <h3 className="text-sm font-semibold text-gray-900">Quick Date Filters</h3>
+            <h3 className="text-sm font-semibold text-gray-900">
+              Quick Date Filters
+            </h3>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <button
               type="button"
-              onClick={() => handleQuickFilter('days', 0)}
+              onClick={() => handleQuickFilter("days", 0)}
               className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                activeQuickFilter === 'days-0'
-                  ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
-                  : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+                activeQuickFilter === "days-0"
+                  ? "bg-blue-600 text-white border border-blue-600 shadow-md"
+                  : "text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
               }`}
             >
               Today
             </button>
             <button
               type="button"
-              onClick={() => handleQuickFilter('days', 7)}
+              onClick={() => handleQuickFilter("days", 7)}
               className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                activeQuickFilter === 'days-7'
-                  ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
-                  : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+                activeQuickFilter === "days-7"
+                  ? "bg-blue-600 text-white border border-blue-600 shadow-md"
+                  : "text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
               }`}
             >
               Last 7 Days
             </button>
             <button
               type="button"
-              onClick={() => handleQuickFilter('days', 15)}
+              onClick={() => handleQuickFilter("days", 15)}
               className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                activeQuickFilter === 'days-15'
-                  ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
-                  : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+                activeQuickFilter === "days-15"
+                  ? "bg-blue-600 text-white border border-blue-600 shadow-md"
+                  : "text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
               }`}
             >
               Last 15 Days
             </button>
             <button
               type="button"
-              onClick={() => handleQuickFilter('months', 1)}
+              onClick={() => handleQuickFilter("months", 1)}
               className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                activeQuickFilter === 'months-1'
-                  ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
-                  : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+                activeQuickFilter === "months-1"
+                  ? "bg-blue-600 text-white border border-blue-600 shadow-md"
+                  : "text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
               }`}
             >
               Last Month
@@ -933,9 +1029,21 @@ const PerformanceReportsPage: React.FC = () => {
           >
             <FunnelIcon className="h-4 w-4" />
             {showFilters ? "Hide Filters" : "Show Filters"}
-            {(startDate || endDate || department !== "" || selectedRoles.length > 0) && (
+            {(startDate ||
+              endDate ||
+              department !== "" ||
+              selectedRoles.length > 0) && (
               <span className="ml-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
-                {[startDate, endDate, department, ...(selectedRoles.length > 0 ? [`${selectedRoles.length} roles`] : [])].filter(Boolean).length}
+                {
+                  [
+                    startDate,
+                    endDate,
+                    department,
+                    ...(selectedRoles.length > 0
+                      ? [`${selectedRoles.length} roles`]
+                      : []),
+                  ].filter(Boolean).length
+                }
               </span>
             )}
           </button>
@@ -971,8 +1079,8 @@ const PerformanceReportsPage: React.FC = () => {
                     value={startDate}
                     onChange={(e) => handleStartDateChange(e.target.value)}
                     className={`w-full px-2 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 ${
-                      dateRangeError 
-                        ? "border-red-300 focus:ring-red-500" 
+                      dateRangeError
+                        ? "border-red-300 focus:ring-red-500"
                         : "border-gray-300 focus:ring-blue-500"
                     }`}
                   />
@@ -986,13 +1094,13 @@ const PerformanceReportsPage: React.FC = () => {
                     value={endDate}
                     onChange={(e) => handleEndDateChange(e.target.value)}
                     className={`w-full px-2 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 ${
-                      dateRangeError 
-                        ? "border-red-300 focus:ring-red-500" 
+                      dateRangeError
+                        ? "border-red-300 focus:ring-red-500"
                         : "border-gray-300 focus:ring-blue-500"
                     }`}
                   />
                 </div>
-                
+
                 {/* Date Range Error Message */}
                 {dateRangeError && (
                   <div className="col-span-2 flex items-center text-red-600 text-sm">
@@ -1001,8 +1109,6 @@ const PerformanceReportsPage: React.FC = () => {
                   </div>
                 )}
               </div>
-
-
 
               {/* Department */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1038,7 +1144,7 @@ const PerformanceReportsPage: React.FC = () => {
                     ) : (
                       <div className="flex flex-wrap gap-1">
                         {selectedRoles.map((roleId) => {
-                          const role = roles.find(r => r._id === roleId);
+                          const role = roles.find((r) => r._id === roleId);
                           return (
                             <span
                               key={roleId}
@@ -1048,7 +1154,9 @@ const PerformanceReportsPage: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setSelectedRoles(prev => prev.filter(id => id !== roleId));
+                                  setSelectedRoles((prev) =>
+                                    prev.filter((id) => id !== roleId)
+                                  );
                                 }}
                                 className="text-blue-600 hover:text-blue-800"
                               >
@@ -1071,14 +1179,18 @@ const PerformanceReportsPage: React.FC = () => {
                           checked={selectedRoles.includes(role._id)}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setSelectedRoles(prev => [...prev, role._id]);
+                              setSelectedRoles((prev) => [...prev, role._id]);
                             } else {
-                              setSelectedRoles(prev => prev.filter(id => id !== role._id));
+                              setSelectedRoles((prev) =>
+                                prev.filter((id) => id !== role._id)
+                              );
                             }
                           }}
                           className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
-                        <span className="text-sm text-gray-700">{role.name}</span>
+                        <span className="text-sm text-gray-700">
+                          {role.name}
+                        </span>
                       </label>
                     ))}
                     {roles.length === 0 && (
@@ -1259,6 +1371,18 @@ const PerformanceReportsPage: React.FC = () => {
                     {report.completedOrders}
                   </span>
                 </div>
+              </div>
+              <div className="flex justify-between text-xs mt-2">
+                <span className="text-gray-500">
+                  {reportType === "orders" ? "Last Order:" : "Last Visit:"}
+                </span>
+                <span className="font-medium">
+                 {report.daysSinceLastOrder === 0
+                    ? "Today"
+                    : report.daysSinceLastOrder > 0
+                    ? `${report.daysSinceLastOrder} days ago`
+                    : "No orders yet"}
+                </span>
               </div>
             </div>
           ))}

@@ -570,7 +570,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
                 <ChartBarIcon className="w-4 h-4 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Reports</h1>
+                <h1 className="text-lg font-semibold text-gray-900">Sales Executive Reports</h1>
                 <p className="text-xs text-gray-500 hidden sm:block">
                   Track performance insights
                 </p>
