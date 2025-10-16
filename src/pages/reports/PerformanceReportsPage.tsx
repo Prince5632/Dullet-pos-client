@@ -48,14 +48,7 @@ const PerformanceReportsPage: React.FC = () => {
   const [godownId, setGodownId] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [dateRangeError, setDateRangeError] = useState("");
-  const [reportType, setReportType] = useState<ReportType>(() => {
-    const saved = persistenceService.getNS<string>(
-      PERSIST_NS.PERFORMANCE_REPORTS,
-      "reportType",
-      "orders"
-    );
-    return (saved as ReportType) || "orders";
-  });
+  const [reportType, setReportType] = useState<ReportType>("");
   const [syncing, setSyncing] = useState(false);
   const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(
     null
@@ -275,6 +268,7 @@ const PerformanceReportsPage: React.FC = () => {
     endDate?: string;
   }) => {
     try {
+      
       // Build filter parameters for godown counts
       const params: any = {};
       params.onlySalesExecutive = true;
@@ -302,6 +296,7 @@ const PerformanceReportsPage: React.FC = () => {
   const fetchReports = async (overrideParams?: any) => {
     try {
       setLoading(true);
+      if(!reportType) return
       const params: any = overrideParams || {
         sortBy,
         sortOrder,
@@ -313,10 +308,10 @@ const PerformanceReportsPage: React.FC = () => {
         ...(userActivityFilter &&
           userActivityFilter !== "all" && { userActivityFilter }),
       };
-
+      
       // Add type filter for orders vs visits
       params.type = reportType === "orders" ? "order" : "visit";
-
+      
       const data = await getSalesExecutiveReports(params);
       setReportData(data);
     } catch (error) {
@@ -586,17 +581,17 @@ const PerformanceReportsPage: React.FC = () => {
           ),
         },
         {
-          key: "daysSinceLastOrder",
+          key: "daysSinceLastActivity",
           label: "Last Order",
           render: (_: any, row: any) => (
             <div className="text-xs space-y-1">
               <div className="flex justify-between">
                 <span className="">
-                  {row.daysSinceLastOrder === 0
+                  {row.daysSinceLastActivity === 0
                     ? "Today"
-                    : row.daysSinceLastOrder > 0
-                    ? `${row.daysSinceLastOrder} days ago`
-                    : "No orders yet"}
+                    : row?.daysSinceLastActivity && row?.daysSinceLastActivity > 0
+                    ? `${row.daysSinceLastActivity} days ago`
+                    : `${row.daysSinceUserCreation} days ago`}
                 </span>
               </div>
             </div>
@@ -614,17 +609,17 @@ const PerformanceReportsPage: React.FC = () => {
           ),
         },
         {
-          key: "daysSinceLastOrder",
+          key: "daysSinceLastActivity",
           label: "Last Visit",
           render: (_: any, row: any) => (
             <div className="text-xs space-y-1">
               <div className="flex justify-between">
                 <span className="">
-                  {row.daysSinceLastOrder === 0
+                  {row.daysSinceLastActivity === 0
                     ? "Today"
-                    : row.daysSinceLastOrder > 0
-                    ? `${row.daysSinceLastOrder} days ago`
-                    : "No orders yet"}
+                    : row?.daysSinceLastActivity && row?.daysSinceLastActivity > 0
+                    ? `${row.daysSinceLastActivity} days ago`
+                    : `${row.daysSinceUserCreation} days ago`}
                 </span>
               </div>
             </div>
@@ -1377,11 +1372,11 @@ const PerformanceReportsPage: React.FC = () => {
                   {reportType === "orders" ? "Last Order:" : "Last Visit:"}
                 </span>
                 <span className="font-medium">
-                 {report.daysSinceLastOrder === 0
+                 {report.daysSinceLastActivity === 0
                     ? "Today"
-                    : report.daysSinceLastOrder > 0
-                    ? `${report.daysSinceLastOrder} days ago`
-                    : "No orders yet"}
+                    : report?.daysSinceLastActivity && report?.daysSinceLastActivity > 0
+                    ? `${report.daysSinceLastActivity} days ago`
+                    : `${report.daysSinceUserCreation} days ago`}
                 </span>
               </div>
             </div>

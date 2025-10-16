@@ -21,6 +21,9 @@ export interface SalesExecutiveReport {
   completedOrders: number;
   uniqueCustomersCount: number;
   conversionRate: number;
+  lastActivityDate: string | null;
+  daysSinceLastActivity: number | null;
+  daysSinceUserCreation: number;
 }
 
 export interface CustomerReport {

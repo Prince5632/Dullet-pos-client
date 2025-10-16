@@ -44,10 +44,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
   const [godownId, setGodownId] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [dateRangeError, setDateRangeError] = useState("");
-  const [reportType, setReportType] = useState<ReportType>(() => {
-    const saved = persistenceService.getNS<string>(PERSIST_NS.SALES_EXEC_REPORTS, 'reportType', "orders");
-    return (saved as ReportType) || "orders";
-  });
+  const [reportType, setReportType] = useState<ReportType>("");
   const [syncing, setSyncing] = useState(false);
   const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(null);
   const initRef = useRef(false);
@@ -247,6 +244,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
   const fetchReports = async (overrideParams?: any) => {
     try {
       setLoading(true);
+      if(!reportType) return 
       const params: any = overrideParams || { 
         sortBy, 
         sortOrder, 
@@ -541,6 +539,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
             <span className="text-gray-900">{value}</span>
           ),
         },
+     
         // {
         //   key: 'status',
         //   label: 'Visit Status',
@@ -1170,6 +1169,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
                     </div>
                   </>
                 )}
+               
               </div>
 
               {reportType === "orders" && (
