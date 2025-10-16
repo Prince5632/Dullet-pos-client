@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   ChartBarIcon,
@@ -24,6 +24,8 @@ import LoadingSpinner from "../../components/common/LoadingSpinner";
 import Table from "../../components/ui/Table";
 import Badge from "../../components/ui/Badge";
 import { formatCurrency, formatDate } from "../../utils";
+import type { Role } from "../../types";
+import roleService from "../../services/roleService";
 
 type ReportType = "orders" | "visits";
 
@@ -37,6 +39,8 @@ const SalesExecutiveReportsPage: React.FC = () => {
   const [sortOrder, setSortOrder] = useState("desc");
   const [department, setDepartment] = useState("");
   const [godowns, setGodowns] = useState<any[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [godownId, setGodownId] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [dateRangeError, setDateRangeError] = useState("");
@@ -56,6 +60,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
       endDate: "",
       department: "",
       godownId: "",
+      selectedRoles: [],
       showFilters: false,
       reportType: "orders",
       activeQuickFilter: null,
@@ -69,6 +74,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
     setEndDate(persistedFilters.endDate || "");
     setDepartment(persistedFilters.department || "");
     setGodownId(persistedFilters.godownId || "");
+    setSelectedRoles(persistedFilters.selectedRoles || []);
     setShowFilters(!!persistedFilters.showFilters);
     setReportType((persistedFilters.reportType as ReportType) || "orders");
     setSortBy(persistedSort.sortBy || "totalRevenue");
@@ -85,11 +91,12 @@ const SalesExecutiveReportsPage: React.FC = () => {
       endDate,
       department,
       godownId,
+      selectedRoles,
       showFilters,
       reportType,
       activeQuickFilter,
     });
-  }, [startDate, endDate, department, godownId, showFilters, reportType, activeQuickFilter]);
+  }, [startDate, endDate, department, godownId, selectedRoles, showFilters, reportType, activeQuickFilter]);
 
   // Persist sort
   useEffect(() => {
@@ -108,7 +115,14 @@ const SalesExecutiveReportsPage: React.FC = () => {
       endDate: endDate.toISOString().split('T')[0]
     };
   };
-
+  const loadRoles = useCallback(async () => {
+    try {
+      const roleList = await roleService.getSimpleRoles();
+      setRoles(roleList);
+    } catch (err) {
+      console.error("Failed to load roles:", err);
+    }
+  }, []);
   const getQuickDateRangeMonth = (months: number) => {
     const endDate = new Date();
     const startDate = new Date();
@@ -147,6 +161,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
         sortOrder,
         ...(department && { department }),
         ...(godownId && { godownId }),
+        ...(selectedRoles.length > 0 && { roleIds: selectedRoles }),
         type: reportType === "orders" ? "order" : "visit"
       };
       
@@ -180,6 +195,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
       endDate: dateRange.endDate,
       ...(department && { department }),
       ...(godownId && { godownId }),
+      ...(selectedRoles.length > 0 && { roleIds: selectedRoles }),
       type: reportType === "orders" ? "order" : "visit"
     };
     
@@ -201,6 +217,11 @@ const SalesExecutiveReportsPage: React.FC = () => {
     fetchReports();
   }, [department]);
 
+  useEffect(() => {
+    fetchReports();
+    fetchGodowns();
+  }, [selectedRoles]);
+
   const fetchGodowns = async (overrideDates?: { startDate?: string; endDate?: string }) => {
     try {
       // Build filter parameters for godown counts
@@ -211,6 +232,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
       
       if (effectiveStartDate) params.dateFrom = effectiveStartDate;
       if (effectiveEndDate) params.dateTo = effectiveEndDate;
+      if (selectedRoles.length > 0) params.roleIds = selectedRoles;
       // Pass department to ensure consistent counts with reports (only if specified)
       if (department) params.department = department;
       // Note: Don't pass godownId here as we want counts for all godowns
@@ -231,7 +253,8 @@ const SalesExecutiveReportsPage: React.FC = () => {
         ...(department && { department }),
         ...(startDate && { startDate }),
         ...(endDate && { endDate }),
-        ...(godownId && { godownId })
+        ...(godownId && { godownId }),
+        ...(selectedRoles.length > 0 && { roleIds: selectedRoles })
       };
 
       // Add type filter for orders vs visits
@@ -290,6 +313,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
   useEffect(() => {
     // Load godowns for filter on component mount
     fetchGodowns();
+    loadRoles();
   }, []);
 
   useEffect(() => {
@@ -310,6 +334,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
     setSortOrder("desc");
     setDepartment("");
     setGodownId("");
+    setSelectedRoles([]);
     setActiveQuickFilter(null); // Clear active quick filter
     
     // Fetch reports with reset values immediately
@@ -317,7 +342,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
       sortBy: "totalRevenue",
       sortOrder: "desc",
       department: ""
-      // startDate, endDate, and godownId are intentionally omitted (reset to empty)
+      // startDate, endDate, godownId, and selectedRoles are intentionally omitted (reset to empty)
     };
     fetchReports(resetParams);
     fetchGodowns({ startDate: "", endDate: "" });
@@ -824,25 +849,36 @@ const SalesExecutiveReportsPage: React.FC = () => {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <button
               type="button"
-              onClick={() => handleQuickFilter('days', 5)}
+              onClick={() => handleQuickFilter('days', 0)}
               className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                activeQuickFilter === 'days-5'
+                activeQuickFilter === 'days-0'
                   ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
                   : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
               }`}
             >
-              Last 5 Days
+              Today
             </button>
             <button
               type="button"
-              onClick={() => handleQuickFilter('days', 10)}
+              onClick={() => handleQuickFilter('days', 7)}
               className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                activeQuickFilter === 'days-10'
+                activeQuickFilter === 'days-7'
                   ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
                   : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
               }`}
             >
-              Last 10 Days
+              Last 7 Days
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickFilter('days', 15)}
+              className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                activeQuickFilter === 'days-15'
+                  ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
+                  : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+              }`}
+            >
+              Last 15 Days
             </button>
             <button
               type="button"
@@ -854,17 +890,6 @@ const SalesExecutiveReportsPage: React.FC = () => {
               }`}
             >
               Last Month
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFilter('years', 1)}
-              className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                activeQuickFilter === 'years-1'
-                  ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
-                  : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
-              }`}
-            >
-              Last Year
             </button>
           </div>
         </div>
@@ -881,9 +906,9 @@ const SalesExecutiveReportsPage: React.FC = () => {
           >
             <FunnelIcon className="h-4 w-4" />
             {showFilters ? "Hide Filters" : "Show Filters"}
-            {(startDate || endDate || department !== "") && (
-              <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-medium text-white bg-blue-600 rounded-full">
-                !
+            {(startDate || endDate || department !== "" || selectedRoles.length > 0) && (
+              <span className="ml-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
+                {[startDate, endDate, department, ...(selectedRoles.length > 0 ? [`${selectedRoles.length} roles`] : [])].filter(Boolean).length}
               </span>
             )}
           </button>
@@ -974,6 +999,69 @@ const SalesExecutiveReportsPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Roles Multi-Select */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Roles
+                </label>
+                <div className="relative">
+                  <div className="w-full min-h-[38px] px-2 py-1.5 text-sm border border-gray-300 rounded-md focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 bg-white">
+                    {selectedRoles.length === 0 ? (
+                      <span className="text-gray-500">Select roles...</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {selectedRoles.map((roleId) => {
+                          const role = roles.find(r => r._id === roleId);
+                          return (
+                            <span
+                              key={roleId}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-md"
+                            >
+                              {role?.name || roleId}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedRoles(prev => prev.filter(id => id !== roleId));
+                                }}
+                                className="text-blue-600 hover:text-blue-800"
+                              >
+                                <XMarkIcon className="h-3 w-3" />
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-1 max-h-40 overflow-y-auto border border-gray-200 rounded-md bg-white shadow-sm">
+                    {roles.map((role) => (
+                      <label
+                        key={role._id}
+                        className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedRoles.includes(role._id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedRoles(prev => [...prev, role._id]);
+                            } else {
+                              setSelectedRoles(prev => prev.filter(id => id !== role._id));
+                            }
+                          }}
+                          className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <span className="text-sm text-gray-700">{role.name}</span>
+                      </label>
+                    ))}
+                    {roles.length === 0 && (
+                      <div className="px-3 py-2 text-sm text-gray-500">
+                        No roles available
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
               {/* Sort Options */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {reportType === "orders" ? (

@@ -80,6 +80,7 @@ type OrdersFilters = {
   hasImage: string;
   address: string;
   roleId: string;
+  activeQuickFilter: string;
 };
 
 const OrdersPage: React.FC = () => {
@@ -115,6 +116,7 @@ const OrdersPage: React.FC = () => {
       hasImage: "",
       address: "",
       roleId: "",
+      activeQuickFilter: "",
     },
     defaultPagination: { page: 1, limit: 10 },
     defaultSort: { sortBy: "orderDate", sortOrder: "desc" },
@@ -178,6 +180,60 @@ const OrdersPage: React.FC = () => {
   const setAddressFilter = (v: string) => setFilters({ address: v });
   const roleFilter = filters.roleId;
   const setRoleFilter = (v: string) => setFilters({ roleId: v });
+
+  // Quick Date Filter Helper Functions
+   const getQuickDateRange = (days: number) => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - days);
+    
+    return {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0]
+    };
+  };
+
+  const getQuickDateRangeMonth = (months: number) => {
+    const endDate = new Date();
+    const startDate = new Date();
+    
+    startDate.setMonth(endDate.getMonth() - months);
+    startDate.setDate(1);
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+    
+    return {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0]
+    };
+  };
+
+  const handleQuickFilter = (type: 'days' | 'months', value: number) => {
+    const filterKey = `${type}-${value}`;
+    
+    if (filters.activeQuickFilter === filterKey) {
+      // Deselect if same filter is clicked
+      setFilters({
+        activeQuickFilter: '',
+        dateFrom: '',
+        dateTo: ''
+      });
+    } else {
+      // Apply new filter
+      let dateRange;
+      if (type === 'days') {
+        dateRange = getQuickDateRange(value);
+      } else {
+        dateRange = getQuickDateRangeMonth(value);
+      }
+      
+      setFilters({
+        activeQuickFilter: filterKey,
+        dateFrom: dateRange.startDate,
+        dateTo: dateRange.endDate
+      });
+    }
+  };
 
   // Pagination
   const currentPage = pagination.page;
@@ -277,18 +333,16 @@ const OrdersPage: React.FC = () => {
         sortOrder,
       };
 
-      const params =
-       {
-              ...commonParams,
-              status: statusFilter,
-              paymentStatus: paymentStatusFilter,
-              priority: priorityFilter,
-              minAmount: minAmountFilter,
-              maxAmount: maxAmountFilter,
-              godownId: godownFilter,
-              roleId: roleFilter,
-            }
-         
+      const params = {
+        ...commonParams,
+        status: statusFilter,
+        paymentStatus: paymentStatusFilter,
+        priority: priorityFilter,
+        minAmount: minAmountFilter,
+        maxAmount: maxAmountFilter,
+        godownId: godownFilter,
+        roleId: roleFilter,
+      };
 
       const response = await orderService.getOrders(params);
 
@@ -365,21 +419,19 @@ const OrdersPage: React.FC = () => {
 
       if (hasPermission("orders.read")) {
         // Build params for stats based on view type and current filters
-        const statsParams =
-         {
-                godownId: godownFilter,
-                search: debouncedSearchTerm,
-                status: statusFilter,
-                paymentStatus: paymentStatusFilter,
-                customerId: customerFilter,
-                dateFrom: dateFromFilter,
-                dateTo: dateToFilter,
-                priority: priorityFilter,
-                minAmount: minAmountFilter,
-                maxAmount: maxAmountFilter,
-                roleId: roleFilter,
-              }
-           
+        const statsParams = {
+          godownId: godownFilter,
+          search: debouncedSearchTerm,
+          status: statusFilter,
+          paymentStatus: paymentStatusFilter,
+          customerId: customerFilter,
+          dateFrom: dateFromFilter,
+          dateTo: dateToFilter,
+          priority: priorityFilter,
+          minAmount: minAmountFilter,
+          maxAmount: maxAmountFilter,
+          roleId: roleFilter,
+        };
 
         promises.push(orderService.getOrderStats(statsParams));
       }
@@ -495,21 +547,18 @@ const OrdersPage: React.FC = () => {
   // Load godowns with filtered counts
   const loadGodowns = useCallback(async () => {
     try {
-      const godownParams =
-
-     {
-              search: debouncedSearchTerm,
-              status: statusFilter,
-              paymentStatus: paymentStatusFilter,
-              customerId: customerFilter,
-              dateFrom: dateFromFilter,
-              dateTo: dateToFilter,
-              priority: priorityFilter,
-              minAmount: minAmountFilter,
-              maxAmount: maxAmountFilter,
-              roleId: roleFilter,
-            }
-          
+      const godownParams = {
+        search: debouncedSearchTerm,
+        status: statusFilter,
+        paymentStatus: paymentStatusFilter,
+        customerId: customerFilter,
+        dateFrom: dateFromFilter,
+        dateTo: dateToFilter,
+        priority: priorityFilter,
+        minAmount: minAmountFilter,
+        maxAmount: maxAmountFilter,
+        roleId: roleFilter,
+      };
 
       const res = await godownService.getGodowns(godownParams);
       if (res.success && res.data) setGodowns(res.data.godowns);
@@ -885,25 +934,27 @@ const OrdersPage: React.FC = () => {
                 {
                   value: "pending",
                   label: "Pending",
-                  count: orders.filter((o) => o.status === "pending").length,
                 },
                 {
                   value: "approved",
                   label: "Approved",
-                  count: orders.filter((o) => o.status === "approved").length,
                 },
-                // {
-                //   value: "processing",
-                //   label: "Production",
-                //   count: orders.filter((o) => o.status === "processing")
-                //     .length,
-                // },
-                // {
-                //   value: "completed",
-                //   label: "Done",
-                //   count: orders.filter((o) => o.status === "completed")
-                //     .length,
-                // },
+                {
+                  value: "driver-assigned",
+                  label: "Driver Assigned",
+                
+                },
+                
+                {
+                  value: "out-for-delivery",
+                  label: "Out for Delivery",
+                
+                },
+                {
+                  value: "delivered",
+                  label: "Delivered",
+                 
+                },
               ].map((status) => (
                 <button
                   key={status.value}
@@ -926,6 +977,64 @@ const OrdersPage: React.FC = () => {
                     )} */}
                 </button>
               ))}
+            </div>
+
+            {/* Quick Date Filters Section */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-sm font-semibold text-gray-900">Quick Date Filters</h3>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleQuickFilter('days', 0)}
+                  className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    filters.activeQuickFilter === 'days-0'
+                      ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
+                      : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+                  }`}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickFilter('days', 7)}
+                  className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    filters.activeQuickFilter === 'days-7'
+                      ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
+                      : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+                  }`}
+                >
+                  Last 7 Days
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickFilter('days', 15)}
+                  className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    filters.activeQuickFilter === 'days-15'
+                      ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
+                      : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+                  }`}
+                >
+                  Last 15 Days
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickFilter('months', 1)}
+                  className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    filters.activeQuickFilter === 'months-1'
+                      ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
+                      : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+                  }`}
+                >
+                  Last Month
+                </button>
+              </div>
             </div>
 
             {/* Filter Toggle */}
@@ -1087,29 +1196,28 @@ const OrdersPage: React.FC = () => {
                       className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
 
-                      <input
-                        type="number"
-                        value={maxAmountFilter}
-                        onChange={(e) => setMaxAmountFilter(e.target.value)}
-                        placeholder="Max Amount"
-                        className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
+                    <input
+                      type="number"
+                      value={maxAmountFilter}
+                      onChange={(e) => setMaxAmountFilter(e.target.value)}
+                      placeholder="Max Amount"
+                      className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
 
-                      <select
-                        value={roleFilter}
-                        onChange={(e) => setRoleFilter(e.target.value)}
-                        className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      >
-                        <option value="">All Roles</option>
-                        {roles.map((role) => (
-                          <option key={role._id} value={role._id}>
-                            {role.name}
-                          </option>
-                        ))}
-                      </select>
-                    </>
-
-          
+                    <select
+                      value={roleFilter}
+                      onChange={(e) => setRoleFilter(e.target.value)}
+                      className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="">All Roles</option>
+                      {roles.map((role) => (
+                        <option key={role._id} value={role._id}>
+                          {role.name}
+                        </option>
+                      ))}
+                    </select>
+               
+                  </>
                 </div>
               </div>
             )}

@@ -664,28 +664,39 @@ const CustomerReportsPage: React.FC = () => {
             </div>
             <h3 className="text-sm font-semibold text-gray-900">Quick Date Filters</h3>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <button
               type="button"
-              onClick={() => handleQuickFilter('days', 5)}
+              onClick={() => handleQuickFilter('days', 0)}
               className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                activeQuickFilter === 'days-5'
+                activeQuickFilter === 'days-0'
                   ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
                   : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
               }`}
             >
-              Last 5 Days
+              Today
             </button>
             <button
               type="button"
-              onClick={() => handleQuickFilter('days', 10)}
+              onClick={() => handleQuickFilter('days', 7)}
               className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                activeQuickFilter === 'days-10'
+                activeQuickFilter === 'days-7'
                   ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
                   : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
               }`}
             >
-              Last 10 Days
+              Last 7 Days
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickFilter('days', 15)}
+              className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                activeQuickFilter === 'days-15'
+                  ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
+                  : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+              }`}
+            >
+              Last 15 Days
             </button>
             <button
               type="button"
@@ -697,17 +708,6 @@ const CustomerReportsPage: React.FC = () => {
               }`}
             >
               Last Month
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFilter('years', 1)}
-              className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                activeQuickFilter === 'years-1'
-                  ? 'bg-blue-600 text-white border border-blue-600 shadow-md'
-                  : 'text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
-              }`}
-            >
-              Last Year
             </button>
           </div>
         </div>
