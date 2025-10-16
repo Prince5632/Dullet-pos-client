@@ -400,6 +400,28 @@ class OrderService {
     throw new Error(response.message || 'Failed to get customer order history');
   }
 
+  // Get all customer orders without pagination
+  async getCustomerOrdersAll(customerId: string, params: Omit<CustomerOrderHistoryParams, 'page' | 'limit'> = {}): Promise<Order[]> {
+    const queryParams = new URLSearchParams();
+    
+    // Add all=true to fetch all orders without pagination
+    queryParams.append('all', 'true');
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const url = `${API_CONFIG.ENDPOINTS.CUSTOMER_ORDER_HISTORY(customerId)}?${queryParams.toString()}`;
+    const response = await apiService.get<{ orders: Order[] }>(url);
+
+    if (response.success && response.data) {
+      return response.data.orders;
+    }
+    throw new Error(response.message || 'Failed to get customer orders');
+  }
+
   // Get order statistics
   async getOrderStats(params: { 
     godownId?: string;

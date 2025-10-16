@@ -218,21 +218,6 @@ const GodownSalesReportsPage: React.FC = () => {
         </div>
       </div>
 
-
-        <nav className="flex space-x-4 overflow-x-auto no-scrollbar mb-3">
-          <Link to="/reports/sales-executives" className="flex items-center gap-1.5 px-3 py-2 text-gray-500 font-medium text-sm whitespace-nowrap">
-            <UserGroupIcon className="h-5 w-5" />
-            Sales Executives
-          </Link>
-          <Link to="/reports/customers" className="flex items-center gap-1.5 px-3 py-2 text-gray-500 font-medium text-sm whitespace-nowrap">
-            <ChartBarIcon className="h-5 w-5" />
-            Customers
-          </Link>
-          <Link to="/reports/godowns" className="flex items-center gap-1.5 px-3 py-2 border-b-2 border-blue-500 text-blue-600 font-medium text-sm whitespace-nowrap">
-            <BuildingOffice2Icon className="h-5 w-5" />
-            Godowns
-          </Link>
-        </nav>
       </div>
 
       {/* Summary */}

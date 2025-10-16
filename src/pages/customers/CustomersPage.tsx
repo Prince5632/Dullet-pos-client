@@ -274,6 +274,21 @@ const CustomersPage: React.FC = () => {
         );
       },
     },
+     {
+      key: 'createdBy',
+      label: 'Created By',
+      render: (_, customer) => {
+       
+        return (
+          <div className='flex items-center gap-2'>
+            <Avatar name={customer.createdBy?.firstName + " " + customer.createdBy?.lastName || 'Unknown'} size="sm" />
+            <span className="text-xs font-medium text-gray-700">
+              {customer.createdBy?.firstName + " " + customer.createdBy?.lastName || 'Unknown'}
+            </span>
+          </div>
+        );
+      },
+    },
     {
       key: 'actions',
       label: '',
@@ -489,6 +504,13 @@ const CustomersPage: React.FC = () => {
                           <span className="text-gray-500 w-18">Net Balance:</span>
                           ₹{Math.abs(customer?.netBalance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}                </div>
                       </div>
+                       <div className='flex items-center gap-2 mb-4  text-xs'>
+                         <span className="text-gray-500 w-18 ">Created By:</span>
+            <Avatar name={customer.createdBy?.firstName + " " + customer.createdBy?.lastName || 'Unknown'} size="sm" />
+            <span className="text-xs font-medium text-gray-700">
+              {customer.createdBy?.firstName + " " + customer.createdBy?.lastName || 'Unknown'}
+            </span>
+          </div>
                       
                       <div className="flex items-center gap-2">
                         <Link 

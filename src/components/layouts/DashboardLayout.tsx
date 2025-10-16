@@ -71,9 +71,41 @@ const navigationItems: NavItem[] = [
   },
   {
     name: "Reports",
-    href: "/reports/sales-executives",
+    href: "/reports",
     icon: ChartBarIcon,
     permission: "reports.read",
+    children: [
+      {
+        name: "Sales Executive Reports",
+        href: "/reports/sales-executives",
+        icon: ChartBarIcon,
+        permission: "reports.read",
+      },
+      {
+        name: "Customer Reports",
+        href: "/reports/customers",
+        icon: ChartBarIcon,
+        permission: "reports.read",
+      },
+      {
+        name: "Godown Reports",
+        href: "/reports/godowns",
+        icon: ChartBarIcon,
+        permission: "reports.read",
+      },
+      {
+        name: "Billing Reports",
+        href: "/reports/billing",
+        icon: ChartBarIcon,
+        permission: "reports.read",
+      },
+      {
+        name: "Performance Reports",
+        href: "/reports/performance",
+        icon: ChartBarIcon,
+        permission: "reports.read",
+      },
+    ],
   },
   {
     name: "User Management",

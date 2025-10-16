@@ -13,20 +13,29 @@ import {
   DocumentTextIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  EyeIcon,
+  PencilIcon,
+  ClockIcon,
+  ExclamationTriangleIcon,
+  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import { customerService } from "../../services/customerService";
 import { transactionService } from "../../services/transactionService";
+import { orderService } from "../../services/orderService";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import Badge from "../../components/ui/Badge";
 import Avatar from "../../components/ui/Avatar";
 import { formatCurrency, formatDate, cn } from "../../utils";
-import type { Customer, Transaction } from "../../types";
+import type { Customer, Transaction, Order } from "../../types";
 import Modal from "../../components/ui/Modal";
+import OrderStatusDropdown from "../../components/orders/OrderStatusDropdown";
+import { useAuth } from "../../contexts/AuthContext";
 import toast from "react-hot-toast";
 
 const CustomerDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -47,6 +56,10 @@ const CustomerDetailsPage: React.FC = () => {
       totalItems: 0,
       itemsPerPage: 10,
     });
+
+  // Orders state
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
 
   // Payment modal state
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -90,9 +103,26 @@ const CustomerDetailsPage: React.FC = () => {
     }
   };
 
+  const fetchOrders = async () => {
+    if (!id) return;
+    try {
+      setOrdersLoading(true);
+      const ordersData = await orderService.getCustomerOrdersAll(id, {
+        sortBy: "orderDate",
+        sortOrder: "desc",
+      });
+      setOrders(ordersData || []);
+    } catch (error) {
+      console.error("Failed to fetch orders:", error);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchCustomer();
     fetchTransactions();
+    fetchOrders();
   }, [id]);
 
   // Open payment modal when outstanding > 0
@@ -151,6 +181,23 @@ const CustomerDetailsPage: React.FC = () => {
       default:
         return "default";
     }
+  };
+
+  const getOrderStatusColor = (status: string) => {
+    return orderService.getStatusColor(status);
+  };
+
+  const getPriorityColor = (priority: string) => {
+    return orderService.getPriorityColor(priority);
+  };
+
+  const formatOrderItems = (items: any[]) => {
+    if (!items || items.length === 0) return "No items";
+    const totalItems = items.reduce(
+      (sum, item) => sum + (item.quantity || 0),
+      0
+    );
+    return `${totalItems} item${totalItems !== 1 ? "s" : ""}`;
   };
 
   if (loading) {
@@ -403,7 +450,7 @@ const CustomerDetailsPage: React.FC = () => {
                       onClick={openPaymentModal}
                       className="inline-flex cursor-pointer items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white btn-outline text-purple-700 hover:text-white border border-purple-700 hover:bg-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2 dark:border-purple-400 dark:text-purple-400 dark:hover:text-white dark:hover:bg-purple-500 dark:focus:ring-purple-900"
                     >
-                     + Add Payment
+                      + Add Payment
                     </button>
                   </div>
                 )}
@@ -535,10 +582,13 @@ const CustomerDetailsPage: React.FC = () => {
                 step={0.01}
                 required
                 onChange={(e) => {
-                  if(Number(e.target.value) > Number(customer?.netBalance || 0)){
-                    return
+                  if (
+                    Number(e.target.value) > Number(customer?.netBalance || 0)
+                  ) {
+                    return;
                   }
-                  setPaymentAmount(Number(e.target.value))}}
+                  setPaymentAmount(Number(e.target.value));
+                }}
                 placeholder="Enter payment amount"
                 className="block w-full rounded-lg border border-gray-300 bg-gray-50 px-6 py-2.5 text-sm text-gray-700 
                    focus:border-green-600 focus:ring-2 focus:ring-green-100 focus:outline-none transition"
@@ -602,6 +652,278 @@ const CustomerDetailsPage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Orders Section */}
+      <div className="bg-white rounded-lg border mb-[35px] overflow-hidden border-gray-200 shadow-sm">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <h3 className="text-lg font-medium text-gray-900 flex items-center">
+            <ShoppingBagIcon className="h-5 w-5 mr-2" />
+            Orders ({orders.length})
+          </h3>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => {
+                fetchOrders();
+                fetchCustomer();
+              }}
+              className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              <ArrowPathIcon className="h-4 w-4 mr-1" />
+              Sync
+            </button>
+            {hasPermission("orders:create") && (
+              <Link
+                to={`/orders/new?customerId=${id}`}
+                className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+              >
+                <ShoppingBagIcon className="h-4 w-4 mr-1" />
+                New Order
+              </Link>
+            )}
+          </div>
+        </div>
+        <div className="overflow-hidden">
+          {ordersLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <LoadingSpinner />
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="text-center py-12">
+              <ShoppingBagIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-sm font-medium text-gray-900 mb-2">
+                No orders found
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                This customer hasn't placed any orders yet.
+              </p>
+              {hasPermission("orders:create") && (
+                <Link
+                  to={`/orders/new?customerId=${id}`}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                >
+                  <ShoppingBagIcon className="h-4 w-4 mr-2" />
+                  Create First Order
+                </Link>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Order
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Items
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Total
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Priority
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Created By
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {orders.map((order) => (
+                      <tr key={order._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <div className="text-sm font-medium text-gray-900">
+                              #{order.orderNumber}
+                            </div>
+                            {order.godown && (
+                              <div className="text-xs text-gray-500">
+                                {order.godown.name}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(order.orderDate)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatOrderItems(order.items)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {formatCurrency(order.totalAmount)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <OrderStatusDropdown
+                            order={order}
+                            onStatusChange={() => {
+                              fetchOrders(ordersPagination.currentPage);
+                              fetchCustomer();
+                            }}
+                            readOnly={true}
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge
+                            variant={getPriorityColor(order.priority)}
+                            size="sm"
+                          >
+                            {order.priority}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <div className="flex items-center">
+                            <Avatar
+                             
+                              name={`${order.createdBy?.firstName} ${order.createdBy?.lastName}`}
+                              size="sm"
+                              className="mr-2"
+                            />
+                            <span>
+                              {order.createdBy?.firstName}{" "}
+                              {order.createdBy?.lastName}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex items-center space-x-2">
+                            <Link
+                              to={`/orders/${order._id}`}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="View Order"
+                            >
+                              <EyeIcon className="h-4 w-4" />
+                            </Link>
+                            {hasPermission("orders:update") && (
+                              <Link
+                                to={`/orders/${order._id}/edit`}
+                                className="text-green-600 hover:text-green-900"
+                                title="Edit Order"
+                              >
+                                <PencilIcon className="h-4 w-4" />
+                              </Link>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden">
+                <div className="space-y-4 p-4">
+                  {orders.map((order) => (
+                    <div
+                      key={order._id}
+                      className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-2">
+                          <Badge
+                            variant={getPriorityColor(order.priority)}
+                            size="sm"
+                          >
+                            {order.priority}
+                          </Badge>
+                          <div className="flex items-center space-x-2">
+                            <Link
+                              to={`/orders/${order._id}`}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="View Order"
+                            >
+                              <EyeIcon className="h-4 w-4" />
+                            </Link>
+                            {hasPermission("orders:update") && (
+                              <Link
+                                to={`/orders/${order._id}/edit`}
+                                className="text-green-600 hover:text-green-900"
+                                title="Edit Order"
+                              >
+                                <PencilIcon className="h-4 w-4" />
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-900">
+                            #{order.orderNumber}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            {formatDate(order.orderDate)}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">
+                            Total Amount
+                          </span>
+                          <span className="text-sm font-medium text-gray-900">
+                            {formatCurrency(order.totalAmount)}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">Items</span>
+                          <span className="text-sm text-gray-900">
+                            {formatOrderItems(order.items)}
+                          </span>
+                        </div>
+
+                       
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">
+                            Created By
+                          </span>
+                          <div className="flex items-center">
+                            <Avatar
+                              name={`${order.createdBy?.firstName} ${order.createdBy?.lastName}`}
+                              size="xs"
+                              className="mr-1"
+                            />
+                            <span className="text-sm text-gray-900">
+                              {order.createdBy?.firstName}{" "}
+                              {order.createdBy?.lastName}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="pt-2">
+                          <OrderStatusDropdown
+                            order={order}
+                            onStatusChange={() => {
+                              fetchOrders(ordersPagination.currentPage);
+                              fetchCustomer();
+                            }}
+                            readOnly={true}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Orders Pagination */}
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Transactions Table */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
@@ -610,12 +932,10 @@ const CustomerDetailsPage: React.FC = () => {
             Transaction History
           </h3>
           <button
-            onClick={() =>
-            {
-              fetchTransactions(transactionsPagination.currentPage)
-              fetchCustomer()
-            }
-            }
+            onClick={() => {
+              fetchTransactions(transactionsPagination.currentPage);
+              fetchCustomer();
+            }}
             className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
           >
             Sync

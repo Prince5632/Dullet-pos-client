@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { APP_CONFIG } from '../../config/api';
 import type { NavItem } from '../../types';
 import { cn } from '../../utils';
@@ -18,6 +19,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onClose 
 }) => {
   const navigate = useNavigate();
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
   // Handle navigation item click
   const handleNavClick = (href: string) => {
@@ -26,6 +28,25 @@ const Sidebar: React.FC<SidebarProps> = ({
     if (mobile && onClose) {
       onClose();
     }
+  };
+
+  // Toggle submenu expansion
+  const toggleExpanded = (itemName: string) => {
+    const newExpanded = new Set(expandedItems);
+    if (newExpanded.has(itemName)) {
+      newExpanded.delete(itemName);
+    } else {
+      newExpanded.add(itemName);
+    }
+    setExpandedItems(newExpanded);
+  };
+
+  // Check if any child is active
+  const isChildActive = (children: NavItem[]) => {
+    return children.some(child => 
+      currentPath === child.href || 
+      (child.href !== '/dashboard' && currentPath.startsWith(child.href))
+    );
   };
 
   return (
@@ -76,19 +97,29 @@ const Sidebar: React.FC<SidebarProps> = ({
               mobile ? "-mx-1" : "-mx-2" // Smaller negative margin on mobile
             )}>
               {navigation.map((item) => {
+                const hasChildren = item.children && item.children.length > 0;
+                const isExpanded = expandedItems.has(item.name);
                 const isActive = currentPath === item.href || 
                   (item.href !== '/dashboard' && currentPath.startsWith(item.href));
+                const hasActiveChild = hasChildren && isChildActive(item.children!);
                 
                 return (
                   <li key={item.name}>
+                    {/* Main navigation item */}
                     <button
-                      onClick={() => handleNavClick(item.href)}
+                      onClick={() => {
+                        if (hasChildren) {
+                          toggleExpanded(item.name);
+                        } else {
+                          handleNavClick(item.href);
+                        }
+                      }}
                       className={cn(
                         'w-full group flex gap-x-3 rounded-md text-sm leading-6 font-semibold transition-all duration-200 text-left',
                         mobile 
                           ? 'p-2.5 active:scale-[0.98]' // Slightly larger padding and scale effect on mobile
                           : 'p-2 hover:scale-[1.02]', // Subtle hover scale on desktop
-                        isActive
+                        isActive || hasActiveChild
                           ? 'bg-blue-50 text-blue-700 shadow-sm' + (mobile ? '' : ' border-r-2 border-blue-600')
                           : 'text-gray-700 hover:text-blue-700 hover:bg-gray-50'
                       )}
@@ -97,18 +128,62 @@ const Sidebar: React.FC<SidebarProps> = ({
                         className={cn(
                           'shrink-0 transition-colors duration-200',
                           mobile ? 'h-5 w-5' : 'h-6 w-6', // Smaller icons on mobile
-                          isActive 
+                          isActive || hasActiveChild
                             ? 'text-blue-600' 
                             : 'text-gray-400 group-hover:text-blue-600'
                         )}
                         aria-hidden="true"
                       />
                       <span className={cn(
+                        'flex-1',
                         mobile ? 'text-sm' : 'text-sm'
                       )}>
                         {item.name}
                       </span>
+                      {hasChildren && (
+                        <div className="ml-auto">
+                          {isExpanded ? (
+                            <ChevronDownIcon className="h-4 w-4 transition-transform duration-200" />
+                          ) : (
+                            <ChevronRightIcon className="h-4 w-4 transition-transform duration-200" />
+                          )}
+                        </div>
+                      )}
                     </button>
+
+                    {/* Submenu items */}
+                    {hasChildren && isExpanded && (
+                      <ul className={cn(
+                        "mt-1 space-y-1",
+                        mobile ? "ml-4" : "ml-6"
+                      )}>
+                        {item.children!.map((child) => {
+                          const isChildItemActive = currentPath === child.href || 
+                            (child.href !== '/dashboard' && currentPath.startsWith(child.href));
+                          
+                          return (
+                            <li key={child.name}>
+                              <button
+                                onClick={() => handleNavClick(child.href)}
+                                className={cn(
+                                  'w-full group flex gap-x-3 rounded-md text-sm leading-6 transition-all duration-200 text-left',
+                                  mobile 
+                                    ? 'p-2 active:scale-[0.98]' 
+                                    : 'p-1.5 hover:scale-[1.01]',
+                                  isChildItemActive
+                                    ? 'bg-blue-100 text-blue-700 font-medium shadow-sm'
+                                    : 'text-gray-600 hover:text-blue-700 hover:bg-gray-50 font-normal'
+                                )}
+                              >  
+                                <span className="truncate">
+                                  {child.name}
+                                </span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
                   </li>
                 );
               })}

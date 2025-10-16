@@ -31,6 +31,7 @@ interface OrderStatusDropdownProps {
   compact?: boolean;
   onAssignDriver?: () => void;
   onRecordDelivery?: () => void;
+  readOnly?: boolean; // 👈 NEW FLAG
 }
 
 interface StatusAction {
@@ -55,6 +56,7 @@ const OrderStatusDropdown: React.FC<OrderStatusDropdownProps> = ({
   compact = false,
   onAssignDriver,
   onRecordDelivery,
+  readOnly = false, // 👈 DEFAULT TO FALSE
 }) => {
   const { hasPermission, hasRole, getUserId } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -256,6 +258,13 @@ const OrderStatusDropdown: React.FC<OrderStatusDropdownProps> = ({
       </Badge>
     );
   }
+if (readOnly) {
+  return (
+    <Badge className={orderService.getStatusColor(order.status)} size="sm">
+      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+    </Badge>
+  );
+}
 
   return (
     <>

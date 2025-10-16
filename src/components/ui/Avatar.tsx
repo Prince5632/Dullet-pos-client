@@ -4,14 +4,14 @@ import { resolveProfileImageSrc } from "../../utils/image";
 
 interface AvatarProps {
   src?: string;
-  name: string;
+  name?: string;
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
 }
 
 const Avatar: React.FC<AvatarProps> = ({
   src,
-  name,
+  name = "",
   size = "md",
   className,
 }) => {
@@ -27,12 +27,13 @@ const Avatar: React.FC<AvatarProps> = ({
     "inline-flex items-center justify-center rounded-full font-medium";
 
   const resolvedSrc = resolveProfileImageSrc(src);
+  const safeName = name || "";
 
   if (resolvedSrc) {
     return (
       <img
         src={resolvedSrc}
-        alt={name}
+        alt={safeName}
         className={cn(
           baseClasses,
           sizeClasses[size],
@@ -48,12 +49,12 @@ const Avatar: React.FC<AvatarProps> = ({
       className={cn(
         baseClasses,
         sizeClasses[size],
-        getAvatarColor(name),
+        getAvatarColor(safeName),
         "text-white",
         className
       )}
     >
-      {getInitials(name)}
+      {getInitials(safeName)}
     </div>
   );
 };

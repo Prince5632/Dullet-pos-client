@@ -29,7 +29,7 @@ import roleService from "../../services/roleService";
 
 type ReportType = "orders" | "visits";
 
-const SalesExecutiveReportsPage: React.FC = () => {
+const PerformanceReportsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] =
     useState<SalesExecutiveReportResponse | null>(null);
@@ -597,8 +597,6 @@ const SalesExecutiveReportsPage: React.FC = () => {
               </button>
             </div>
           </div>
-
-         
 
           {/* Sub-tabs for Orders vs Visits */}
           <div className="flex space-x-2 bg-gray-100 p-1 rounded-lg w-fit">
@@ -1238,4 +1236,4 @@ const SalesExecutiveReportsPage: React.FC = () => {
   );
 };
 
-export default SalesExecutiveReportsPage;
+export default PerformanceReportsPage;

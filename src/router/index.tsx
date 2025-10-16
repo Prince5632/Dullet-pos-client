@@ -56,6 +56,8 @@ const CustomerReportsPage = lazy(() => import('../pages/reports/CustomerReportsP
 const GodownSalesReportsPage = lazy(() => import('../pages/reports/GodownSalesReportsPage'));
 const SalesExecutiveDetailPage = lazy(() => import('../pages/reports/SalesExecutiveDetailPage'));
 const CustomerDetailPage = lazy(() => import('../pages/reports/CustomerDetailPage'));
+const BillingReportsPage = lazy(() => import('../pages/reports/BillingReportsPage'));
+const PerformanceReportsPage = lazy(() => import('../pages/reports/PerformanceReportsPage'));
 
 // Delivery Pages
 const DeliveryInvoicePreview = lazy(() => import('../pages/delivery/DeliveryInvoicePreview'));
@@ -427,6 +429,22 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute requiredPermission="reports.read">
                 <CustomerDetailPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'billing',
+            element: (
+              <ProtectedRoute requiredPermission="reports.read">
+                <BillingReportsPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'performance',
+            element: (
+              <ProtectedRoute requiredPermission="reports.read">
+                <PerformanceReportsPage />
               </ProtectedRoute>
             ),
           },

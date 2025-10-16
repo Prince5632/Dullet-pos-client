@@ -22,7 +22,7 @@ import Badge from '../../components/ui/Badge';
 import { formatCurrency, formatDate } from '../../utils';
 import { persistenceService, PERSIST_NS, clearOtherNamespaces } from '../../services/persistenceService';
 
-const CustomerReportsPage: React.FC = () => {
+const BillingReportsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState<CustomerReportResponse | null>(null);
   const [inactiveData, setInactiveData] = useState<InactiveCustomersResponse | null>(null);
@@ -237,10 +237,10 @@ const CustomerReportsPage: React.FC = () => {
         'Total Orders',
         'Total Spent',
         'Total Outstanding',
-        'Avg Order Value',
-        'Last Order Date',
-        'Days Since Last Order',
-        'Lifetime Value',
+        // 'Avg Order Value',
+        // 'Last Order Date',
+        // 'Days Since Last Order',
+        // 'Lifetime Value',
       ];
 
       const rows = reportData.reports.map((report) => [
@@ -372,30 +372,30 @@ const CustomerReportsPage: React.FC = () => {
         </span>
       ),
     },
-    {
-      key: 'avgOrderValue',
-      label: 'Avg Order',
-      render: (value: number) => (
-        <span className="text-gray-700">{formatCurrency(value)}</span>
-      ),
-    },
-    {
-      key: 'daysSinceLastOrder',
-      label: 'Last Order',
-      render: (value: number, row: any) => (
-        <div>
-          <div className="text-sm text-gray-900">{value} days ago</div>
-          <div className="text-xs text-gray-500">{formatDate(row.lastOrderDate)}</div>
-        </div>
-      ),
-    },
-    {
-      key: 'lifetimeValue',
-      label: 'LTV',
-      render: (value: number) => (
-        <span className="font-semibold text-blue-600">{formatCurrency(value)}</span>
-      ),
-    },
+    // {
+    //   key: 'avgOrderValue',
+    //   label: 'Avg Order',
+    //   render: (value: number) => (
+    //     <span className="text-gray-700">{formatCurrency(value)}</span>
+    //   ),
+    // },
+    // {
+    //   key: 'daysSinceLastOrder',
+    //   label: 'Last Order',
+    //   render: (value: number, row: any) => (
+    //     <div>
+    //       <div className="text-sm text-gray-900">{value} days ago</div>
+    //       <div className="text-xs text-gray-500">{formatDate(row.lastOrderDate)}</div>
+    //     </div>
+    //   ),
+    // },
+    // {
+    //   key: 'lifetimeValue',
+    //   label: 'LTV',
+    //   render: (value: number) => (
+    //     <span className="font-semibold text-blue-600">{formatCurrency(value)}</span>
+    //   ),
+    // },
     {
       key: 'actions',
       label: 'Actions',
@@ -532,33 +532,8 @@ const CustomerReportsPage: React.FC = () => {
             </div>
           </div>
 
-          
 
-          {/* Sub Tabs */}
-          <nav className="flex space-x-4 overflow-x-auto no-scrollbar">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`flex items-center gap-1.5 px-3 py-2 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'all'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <UsersIcon className="h-4 w-4" />
-              <span>All Customers</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('inactive')}
-              className={`flex items-center gap-1.5 px-3 py-2 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'inactive'
-                  ? 'border-orange-500 text-orange-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <ExclamationTriangleIcon className="h-4 w-4" />
-              <span>Inactive</span>
-            </button>
-          </nav>
+
         </div>
       </div>
 
@@ -776,9 +751,9 @@ const CustomerReportsPage: React.FC = () => {
                     >
                       <option value="totalSpent">Total Spent</option>
                       <option value="totalOrders">Total Orders</option>
-                      <option value="avgOrderValue">Avg Order Value</option>
+                      {/* <option value="avgOrderValue">Avg Order Value</option>
                       <option value="daysSinceLastOrder">Days Since Last Order</option>
-                      <option value="lifetimeValue">Lifetime Value</option>
+                      <option value="lifetimeValue">Lifetime Value</option> */}
                     </select>
                   </div>
                   <div>
@@ -868,10 +843,10 @@ const CustomerReportsPage: React.FC = () => {
                     <div className="text-xs text-gray-500">Orders</div>
                     <div className="text-sm font-semibold text-gray-900">{report.totalOrders}</div>
                   </div>
-                  <div className="bg-gray-50 p-2 rounded">
+                  {/* <div className="bg-gray-50 p-2 rounded">
                     <div className="text-xs text-gray-500">Avg Order</div>
                     <div className="text-sm font-semibold text-gray-900">{formatCurrency(report.avgOrderValue)}</div>
-                  </div>
+                  </div> */}
                   <div className="bg-green-50 p-2 rounded">
                     <div className="text-xs text-green-600">Total Spent</div>
                     <div className="text-sm font-semibold text-green-700">{formatCurrency(report.totalSpent)}</div>
@@ -886,9 +861,9 @@ const CustomerReportsPage: React.FC = () => {
                   <div className="text-gray-600">
                     Last order: {report.daysSinceLastOrder} days ago
                   </div>
-                  <div className="font-semibold text-blue-600">
+                  {/* <div className="font-semibold text-blue-600">
                     LTV: {formatCurrency(report.lifetimeValue)}
-                  </div>
+                  </div> */}
                 </div>
               </div>
             ))}
@@ -974,4 +949,4 @@ const CustomerReportsPage: React.FC = () => {
   );
 };
 
-export default CustomerReportsPage;
+export default BillingReportsPage;

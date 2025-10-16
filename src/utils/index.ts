@@ -248,7 +248,12 @@ export const throttle = <T extends (...args: any[]) => any>(
 
 // Color utilities
 export const getInitials = (name: string): string => {
+  if (!name || typeof name !== 'string' || name.trim() === '') {
+    return '??';
+  }
+  
   return name
+    .trim()
     .split(' ')
     .map(part => part.charAt(0).toUpperCase())
     .join('')
@@ -276,9 +281,14 @@ export const getAvatarColor = (name: string): string => {
     'bg-rose-500',
   ];
   
+  if (!name || typeof name !== 'string' || name.trim() === '') {
+    return colors[0]; // Default to first color
+  }
+  
   let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  const trimmedName = name.trim();
+  for (let i = 0; i < trimmedName.length; i++) {
+    hash = trimmedName.charCodeAt(i) + ((hash << 5) - hash);
   }
   
   return colors[Math.abs(hash) % colors.length];
