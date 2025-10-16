@@ -324,7 +324,7 @@ const BillingReportsPage: React.FC = () => {
       key: 'businessName',
       label: 'Customer',
       render: (value: string, row: any) => (
-        <Link to={`/customers/${row._id}`} className="hover:underline">
+        <Link to={`/reports/billing/${row._id}`} className="hover:underline">
           <div className="font-medium text-gray-900">{value}</div>
           <div className="text-sm text-gray-500">{row.customerId}</div>
         </Link>
@@ -401,7 +401,7 @@ const BillingReportsPage: React.FC = () => {
       label: 'Actions',
       render: (value: any, row: any) => (
         <Link
-          to={`/customers/${row._id}`}
+          to={`/reports/billing/${row._id}`}
           className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
         >
           <EyeIcon className="h-3 w-3" />
@@ -416,7 +416,7 @@ const BillingReportsPage: React.FC = () => {
       key: 'businessName',
       label: 'Customer',
       render: (value: string, row: any) => (
-        <Link to={`/customers/${row._id}`} className="hover:underline">
+        <Link to={`/reports/billing/${row._id}`} className="hover:underline">
           <div className="font-medium text-gray-900">{value}</div>
           <div className="text-sm text-gray-500">{row.customerId}</div>
         </Link>
@@ -485,7 +485,7 @@ const BillingReportsPage: React.FC = () => {
       label: 'Actions',
       render: (value: any, row: any) => (
         <Link
-          to={`/customers/${row._id}`}
+          to={`/reports/billing/${row._id}`}
           className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
         >
           <EyeIcon className="h-3 w-3" />
@@ -815,7 +815,7 @@ const BillingReportsPage: React.FC = () => {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0">
                     <Link 
-                      to={`/customers/${report._id}`}
+                      to={`/reports/billing/${report._id}`}
                       className="font-medium text-gray-900 hover:text-blue-600 truncate block"
                     >
                       {report.businessName}
@@ -831,7 +831,7 @@ const BillingReportsPage: React.FC = () => {
                     </div>
                   </div>
                   <Link
-                    to={`/customers/${report._id}`}
+                    to={`/reports/billing/${report._id}`}
                     className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors flex-shrink-0"
                   >
                     <EyeIcon className="h-4 w-4" />

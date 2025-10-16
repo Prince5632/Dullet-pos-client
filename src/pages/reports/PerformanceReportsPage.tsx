@@ -50,6 +50,7 @@ const PerformanceReportsPage: React.FC = () => {
   });
   const [syncing, setSyncing] = useState(false);
   const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(null);
+  const [userActivityFilter, setUserActivityFilter] = useState<"all" | "active" | "inactive">("active");
   const initRef = useRef(false);
 
   // Load persisted state on mount and clear other namespaces
@@ -64,6 +65,7 @@ const PerformanceReportsPage: React.FC = () => {
       showFilters: false,
       reportType: "orders",
       activeQuickFilter: null,
+      userActivityFilter: "active",
     });
     const persistedSort = persistenceService.getNS<any>(PERSIST_NS.SALES_EXEC_REPORTS, 'sort', {
       sortBy: "totalRevenue",
@@ -80,6 +82,7 @@ const PerformanceReportsPage: React.FC = () => {
     setSortBy(persistedSort.sortBy || "totalRevenue");
     setSortOrder(persistedSort.sortOrder || "desc");
     setActiveQuickFilter(persistedFilters.activeQuickFilter || null);
+    setUserActivityFilter(persistedFilters.userActivityFilter || "active");
     initRef.current = true;
   }, []);
 
@@ -95,8 +98,9 @@ const PerformanceReportsPage: React.FC = () => {
       showFilters,
       reportType,
       activeQuickFilter,
+      userActivityFilter,
     });
-  }, [startDate, endDate, department, godownId, selectedRoles, showFilters, reportType, activeQuickFilter]);
+  }, [startDate, endDate, department, godownId, selectedRoles, showFilters, reportType, activeQuickFilter, userActivityFilter]);
 
   // Persist sort
   useEffect(() => {
@@ -162,6 +166,7 @@ const PerformanceReportsPage: React.FC = () => {
         ...(department && { department }),
         ...(godownId && { godownId }),
         ...(selectedRoles.length > 0 && { roleIds: selectedRoles }),
+        ...(userActivityFilter && userActivityFilter !== "all" && { userActivityFilter }),
         type: reportType === "orders" ? "order" : "visit"
       };
       
@@ -196,6 +201,7 @@ const PerformanceReportsPage: React.FC = () => {
       ...(department && { department }),
       ...(godownId && { godownId }),
       ...(selectedRoles.length > 0 && { roleIds: selectedRoles }),
+      ...(userActivityFilter && userActivityFilter !== "all" && { userActivityFilter }),
       type: reportType === "orders" ? "order" : "visit"
     };
     
@@ -221,6 +227,10 @@ const PerformanceReportsPage: React.FC = () => {
     fetchReports();
     fetchGodowns();
   }, [selectedRoles]);
+
+  useEffect(() => {
+    fetchReports();
+  }, [userActivityFilter]);
 
   const fetchGodowns = async (overrideDates?: { startDate?: string; endDate?: string }) => {
     try {
@@ -254,7 +264,8 @@ const PerformanceReportsPage: React.FC = () => {
         ...(startDate && { startDate }),
         ...(endDate && { endDate }),
         ...(godownId && { godownId }),
-        ...(selectedRoles.length > 0 && { roleIds: selectedRoles })
+        ...(selectedRoles.length > 0 && { roleIds: selectedRoles }),
+        ...(userActivityFilter && userActivityFilter !== "all" && { userActivityFilter })
       };
 
       // Add type filter for orders vs visits
@@ -335,6 +346,7 @@ const PerformanceReportsPage: React.FC = () => {
     setDepartment("");
     setGodownId("");
     setSelectedRoles([]);
+    setUserActivityFilter("active");
     setActiveQuickFilter(null); // Clear active quick filter
     
     // Fetch reports with reset values immediately
@@ -342,7 +354,7 @@ const PerformanceReportsPage: React.FC = () => {
       sortBy: "totalRevenue",
       sortOrder: "desc",
       department: ""
-      // startDate, endDate, godownId, and selectedRoles are intentionally omitted (reset to empty)
+      // startDate, endDate, godownId, selectedRoles, and userActivityFilter are intentionally omitted (reset to empty/default)
     };
     fetchReports(resetParams);
     fetchGodowns({ startDate: "", endDate: "" });
@@ -452,7 +464,7 @@ const PerformanceReportsPage: React.FC = () => {
         label: "Sales Executive",
         render: (value: string, row: any) => (
           <Link
-            to={`/reports/sales-executives/${row._id}?type=${reportType}`}
+            to={`/reports/performance/${row._id}?type=${reportType}`}
             className="hover:underline"
           >
             <div className="font-medium text-gray-900">{value}</div>
@@ -631,88 +643,49 @@ const PerformanceReportsPage: React.FC = () => {
               <span>Visits</span>
             </button>
           </div>
+
+          {/* User Activity Filter Tabs */}
+          <div className="mt-3">
+            <div className="flex space-x-2 bg-gray-100 p-1 rounded-lg w-fit">
+              <button
+                onClick={() => setUserActivityFilter("active")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  userActivityFilter === "active"
+                    ? "bg-white text-green-600 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                <UserGroupIcon className="h-4 w-4" />
+                <span>Active Users</span>
+              </button>
+              <button
+                onClick={() => setUserActivityFilter("inactive")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  userActivityFilter === "inactive"
+                    ? "bg-white text-orange-600 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                <UserGroupIcon className="h-4 w-4" />
+                <span>Inactive Users</span>
+              </button>
+              <button
+                onClick={() => setUserActivityFilter("all")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  userActivityFilter === "all"
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                <UserGroupIcon className="h-4 w-4" />
+                <span>All Users</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="px-3 sm:px-4 py-3">
-        {/* Summary Cards - Mobile Grid */}
-        {summary && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
-            <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500 mb-1">Executives</p>
-                  <p className="text-xl font-bold text-gray-900 truncate">
-                    {summary.totalExecutives}
-                  </p>
-                </div>
-                <UserGroupIcon className="h-8 w-8 text-blue-500 flex-shrink-0" />
-              </div>
-            </div>
-
-            <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500 mb-1">
-                    {reportType === "orders" ? "Orders" : "Visits"}
-                  </p>
-                  <p className="text-xl font-bold text-gray-900 truncate">
-                    {summary.totalOrdersAll}
-                  </p>
-                </div>
-                {reportType === "orders" ? (
-                  <ShoppingBagIcon className="h-8 w-8 text-purple-500 flex-shrink-0" />
-                ) : (
-                  <ClipboardDocumentListIcon className="h-8 w-8 text-purple-500 flex-shrink-0" />
-                )}
-              </div>
-            </div>
-
-            {reportType === "orders" && (
-              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-500 mb-1">Revenue</p>
-                    <p className="text-xl font-bold text-green-600 truncate">
-                      {formatCurrency(summary.totalRevenueAll)}
-                    </p>
-                  </div>
-                  <CurrencyDollarIcon className="h-8 w-8 text-green-500 flex-shrink-0" />
-                </div>
-              </div>
-            )}
-
-            {reportType === "visits" && (
-              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-500 mb-1">Locations</p>
-                    <p className="text-xl font-bold text-blue-600 truncate">
-                      {reports.reduce(
-                        (sum, r) => sum + r.uniqueCustomersCount,
-                        0
-                      )}
-                    </p>
-                  </div>
-                  <MapPinIcon className="h-8 w-8 text-blue-500 flex-shrink-0" />
-                </div>
-              </div>
-            )}
-
-            {/* <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500 mb-1">Avg Order</p>
-                  <p className="text-xl font-bold text-blue-600 truncate">
-                    {formatCurrency(summary.avgOrderValueAll)}
-                  </p>
-                </div>
-                <ChartBarIcon className="h-8 w-8 text-blue-500 flex-shrink-0" />
-              </div>
-            </div> */}
-          </div>
-        )}
-
         {/* Godown Selector - Cards (matches OrdersPage design) */}
         {godowns.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 p-3 mb-4">
@@ -810,6 +783,85 @@ const PerformanceReportsPage: React.FC = () => {
             </div>
           </div>
         )}
+        {/* Summary Cards - Mobile Grid */}
+        {summary && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
+            <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500 mb-1">Executives</p>
+                  <p className="text-xl font-bold text-gray-900 truncate">
+                    {summary.totalExecutives}
+                  </p>
+                </div>
+                <UserGroupIcon className="h-8 w-8 text-blue-500 flex-shrink-0" />
+              </div>
+            </div>
+
+            <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500 mb-1">
+                    {reportType === "orders" ? "Orders" : "Visits"}
+                  </p>
+                  <p className="text-xl font-bold text-gray-900 truncate">
+                    {summary.totalOrdersAll}
+                  </p>
+                </div>
+                {reportType === "orders" ? (
+                  <ShoppingBagIcon className="h-8 w-8 text-purple-500 flex-shrink-0" />
+                ) : (
+                  <ClipboardDocumentListIcon className="h-8 w-8 text-purple-500 flex-shrink-0" />
+                )}
+              </div>
+            </div>
+
+            {reportType === "orders" && (
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 mb-1">Revenue</p>
+                    <p className="text-xl font-bold text-green-600 truncate">
+                      {formatCurrency(summary.totalRevenueAll)}
+                    </p>
+                  </div>
+                  <CurrencyDollarIcon className="h-8 w-8 text-green-500 flex-shrink-0" />
+                </div>
+              </div>
+            )}
+
+            {reportType === "visits" && (
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 mb-1">Locations</p>
+                    <p className="text-xl font-bold text-blue-600 truncate">
+                      {reports.reduce(
+                        (sum, r) => sum + r.uniqueCustomersCount,
+                        0
+                      )}
+                    </p>
+                  </div>
+                  <MapPinIcon className="h-8 w-8 text-blue-500 flex-shrink-0" />
+                </div>
+              </div>
+            )}
+
+            {/* <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500 mb-1">Avg Order</p>
+                  <p className="text-xl font-bold text-blue-600 truncate">
+                    {formatCurrency(summary.avgOrderValueAll)}
+                  </p>
+                </div>
+                <ChartBarIcon className="h-8 w-8 text-blue-500 flex-shrink-0" />
+              </div>
+            </div> */}
+          </div>
+        )}
+
+        
 
         {/* Quick Date Filters Section */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
@@ -1037,6 +1089,7 @@ const PerformanceReportsPage: React.FC = () => {
                   </div>
                 </div>
               </div>
+
               {/* Sort Options */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {reportType === "orders" ? (

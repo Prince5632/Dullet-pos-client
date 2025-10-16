@@ -32,8 +32,8 @@ import OrderStatusDropdown from "../../components/orders/OrderStatusDropdown";
 import { useAuth } from "../../contexts/AuthContext";
 import toast from "react-hot-toast";
 
-const CustomerDetailsPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+const BillingDetailsPage: React.FC = () => {
+  const { customerId: id } = useParams<{ customerId: string }>();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -220,11 +220,11 @@ const CustomerDetailsPage: React.FC = () => {
             The customer you're looking for doesn't exist or has been removed.
           </p>
           <Link
-            to="/customers"
+            to="/reports/billing"
             className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
           >
             <ArrowLeftIcon className="h-4 w-4 mr-2" />
-            Back to Customers
+            Back To Billing Reports
           </Link>
         </div>
       </div>
@@ -240,21 +240,14 @@ const CustomerDetailsPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <Link
-                  to="/customers"
+                  to="/reports/billing"
                   className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors"
                 >
                   <ArrowLeftIcon className="h-4 w-4 mr-1" />
-                  Back to Customers
+                  Back to Billing Reports
                 </Link>
               </div>
-              <div className="flex items-center space-x-3">
-                <Link
-                  to={`/customers/${customer._id}/edit`}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Edit Customer
-                </Link>
-              </div>
+             
             </div>
 
             {/* Customer Header Info */}
@@ -1178,4 +1171,4 @@ const CustomerDetailsPage: React.FC = () => {
   );
 };
 
-export default CustomerDetailsPage;
+export default BillingDetailsPage;

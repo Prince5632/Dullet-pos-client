@@ -25,7 +25,7 @@ import Modal from "../../components/ui/Modal";
 import { formatCurrency, formatDate } from "../../utils";
 import { resolveCapturedImageSrc } from "../../utils/image";
 
-const SalesExecutiveDetailPage: React.FC = () => {
+const PerformanceDetailPage: React.FC = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -114,7 +114,7 @@ const SalesExecutiveDetailPage: React.FC = () => {
           </h3>
           <p className="text-gray-500 mb-4">Unable to load executive details</p>
           <button
-            onClick={() =>{ navigate("/reports/sales-executives")}}
+            onClick={() =>{ navigate("/reports/performance")}}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Back to Reports
@@ -140,7 +140,7 @@ const SalesExecutiveDetailPage: React.FC = () => {
         <div className="px-3 sm:px-4 py-3">
           <div className="flex items-center gap-2 mb-2">
             <button
-              onClick={() => navigate("/reports/sales-executives")}
+              onClick={() => navigate("/reports/performance")}
               className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <ArrowLeftIcon className="h-5 w-5" />
@@ -701,4 +701,4 @@ const SalesExecutiveDetailPage: React.FC = () => {
   );
 };
 
-export default SalesExecutiveDetailPage;
+export default PerformanceDetailPage;

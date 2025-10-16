@@ -55,8 +55,10 @@ const SalesExecutiveReportsPage = lazy(() => import('../pages/reports/SalesExecu
 const CustomerReportsPage = lazy(() => import('../pages/reports/CustomerReportsPage'));
 const GodownSalesReportsPage = lazy(() => import('../pages/reports/GodownSalesReportsPage'));
 const SalesExecutiveDetailPage = lazy(() => import('../pages/reports/SalesExecutiveDetailPage'));
-const CustomerDetailPage = lazy(() => import('../pages/reports/CustomerDetailPage'));
+const PerformanceDetailPage = lazy(() => import('../pages/reports/PerformanceDetailPage'));
+const CustomerDetailPage = lazy(() => import('../pages/reports/CustomerDetailsPage.tsx'));
 const BillingReportsPage = lazy(() => import('../pages/reports/BillingReportsPage'));
+const BillingDetailPage = lazy(() => import('../pages/reports/BillingDetailsPage'));
 const PerformanceReportsPage = lazy(() => import('../pages/reports/PerformanceReportsPage'));
 
 // Delivery Pages
@@ -417,6 +419,14 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: 'performance/:userId',
+            element: (
+              <ProtectedRoute requiredPermission="reports.read">
+                <PerformanceDetailPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
             path: 'customers',
             element: (
               <ProtectedRoute requiredPermission="reports.read">
@@ -437,6 +447,14 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute requiredPermission="reports.read">
                 <BillingReportsPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'billing/:customerId',
+            element: (
+              <ProtectedRoute requiredPermission="reports.read">
+                <BillingDetailPage />
               </ProtectedRoute>
             ),
           },
