@@ -103,12 +103,28 @@ export interface CustomerReportResponse {
   filters: {
     inactiveDays?: number;
   };
+  pagination?: {
+    currentPage: number;
+    totalPages: number;
+    totalRecords: number;
+    limit: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
 }
 
 export interface InactiveCustomersResponse {
   days: number;
   count: number;
   customers: InactiveCustomer[];
+  pagination?: {
+    currentPage: number;
+    totalPages: number;
+    totalRecords: number;
+    limit: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
 }
 
 // Get Sales Executive Reports
@@ -137,6 +153,9 @@ export const getCustomerReports = async (params?: {
   sortBy?: string;
   sortOrder?: string;
   inactiveDays?: number;
+  page?: number;
+  limit?: number;
+  godownId?: string;
 }): Promise<CustomerReportResponse> => {
   const response = await axiosInstance.get<ApiResponse<CustomerReportResponse>>(
     '/api/reports/customers',
@@ -146,10 +165,16 @@ export const getCustomerReports = async (params?: {
 };
 
 // Get Inactive Customers
-export const getInactiveCustomers = async (days: number = 7, godownId?: string): Promise<InactiveCustomersResponse> => {
+export const getInactiveCustomers = async (days: number = 7, godownId?: string, page?: number, limit?: number): Promise<InactiveCustomersResponse> => {
   const params: any = { days };
   if (godownId) {
     params.godownId = godownId;
+  }
+  if (page) {
+    params.page = page;
+  }
+  if (limit) {
+    params.limit = limit;
   }
   const response = await axiosInstance.get<ApiResponse<InactiveCustomersResponse>>(
     '/api/reports/customers/inactive',

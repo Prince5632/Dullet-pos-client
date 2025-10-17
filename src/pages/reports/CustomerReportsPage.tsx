@@ -28,6 +28,7 @@ import type { Godown } from "../../types";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import Table from "../../components/ui/Table";
 import Badge from "../../components/ui/Badge";
+import Pagination from "../../components/ui/Pagination";
 import { formatCurrency, formatDate } from "../../utils";
 import {
   persistenceService,
@@ -58,6 +59,10 @@ const CustomerReportsPage: React.FC = () => {
   const [allCustomerGodowns, setAllCustomerGodowns] = useState("");
   const [godownId, setGodownId] = useState("");
   const [godownsLoading, setGodownsLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
   const initRef = useRef(false);
 
   // Load persisted state on mount and clear other namespaces
@@ -87,6 +92,8 @@ const CustomerReportsPage: React.FC = () => {
     setActiveTab((persistedFilters.activeTab as "all" | "inactive") || "all");
     setActiveQuickFilter(persistedFilters.activeQuickFilter || null);
     setGodownId(persistedFilters.godownId || "");
+    setPage(persistedFilters.page || 1);
+    setLimit(persistedFilters.limit || 10);
     initRef.current = true;
   }, []);
 
@@ -103,6 +110,8 @@ const CustomerReportsPage: React.FC = () => {
       activeTab,
       activeQuickFilter,
       godownId,
+      page,
+      limit,
     });
   }, [
     startDate,
@@ -114,6 +123,8 @@ const CustomerReportsPage: React.FC = () => {
     activeTab,
     activeQuickFilter,
     godownId,
+    page,
+    limit,
   ]);
 
   // Quick date filter helper functions
@@ -190,7 +201,7 @@ const CustomerReportsPage: React.FC = () => {
     if (initRef.current) {
       fetchReports();
     }
-  }, [startDate, endDate, sortBy, sortOrder, inactiveDays, godownId]);
+  }, [startDate, endDate, sortBy, sortOrder, inactiveDays, godownId, page, limit]);
 
   // Fetch godowns
   const fetchGodowns = async (overrideDates?: {
@@ -238,16 +249,24 @@ const CustomerReportsPage: React.FC = () => {
       setLoading(true);
 
       if (activeTab === "all") {
-        const params: any = { sortBy, sortOrder };
+        const params: any = { sortBy, sortOrder, page, limit };
         if (startDate) params.startDate = startDate;
         if (endDate) params.endDate = endDate;
         if (godownId) params.godownId = godownId;
 
         const data = await getCustomerReports(params);
         setReportData(data);
+        if (data.pagination) {
+          setTotalPages(data.pagination.totalPages);
+          setTotalRecords(data.pagination.totalRecords);
+        }
       } else {
-        const data = await getInactiveCustomers(inactiveDays, godownId);
+        const data = await getInactiveCustomers(inactiveDays, godownId, page, limit);
         setInactiveData(data);
+        if (data.pagination) {
+          setTotalPages(data.pagination.totalPages);
+          setTotalRecords(data.pagination.totalRecords);
+        }
       }
     } catch (error) {
       console.error("Error fetching customer reports:", error);
@@ -1273,6 +1292,16 @@ const CustomerReportsPage: React.FC = () => {
                 : `No inactive customers found (${inactiveDays} days)`
             }
           />
+          {totalPages > 1 && (
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalItems={totalRecords}
+              itemsPerPage={limit}
+              onPageChange={setPage}
+              onItemsPerPageChange={setLimit}
+            />
+          )}
         </div>
       </div>
     </div>
