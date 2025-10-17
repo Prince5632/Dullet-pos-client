@@ -118,6 +118,7 @@ export interface Godown {
   orderCount?: number;
   visitCount?: number;
   inventoryCount?: number;
+  customerCount?: number;
 }
 
 // Attendance Types

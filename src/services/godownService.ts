@@ -46,6 +46,35 @@ class GodownService {
     };
   }
 
+  // Get godowns with customer counts for customer reports
+  async getGodownsForCustomerReports(params: {
+    dateFrom?: string;
+    dateTo?: string;
+  } = {}): Promise<ApiResponse<Godown[]>> {
+    const queryParams = new URLSearchParams();
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const url = queryParams.toString() 
+      ? `/api/reports/customers/godowns?${queryParams.toString()}`
+      : '/api/reports/customers/godowns';
+
+    const response = await apiService.get<Godown[]>(url);
+    if (response.data) {
+      return response;
+    }
+
+    return {
+      success: response.success,
+      message: response.message,
+      data: []
+    };
+  }
+
   // Get godown by ID
   async getGodownById(id: string): Promise<Godown> {
     const response = await apiService.get<Godown>(API_CONFIG.ENDPOINTS.GODOWN_BY_ID(id));
