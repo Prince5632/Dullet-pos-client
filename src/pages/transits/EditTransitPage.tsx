@@ -383,51 +383,51 @@ newErrors.driverId = validateField(
     }
     if (file.type === 'application/pdf') {
       return <DocumentIcon className="w-8 h-8 text-red-500" />;
-    } else if (file.type.startsWith('image/')) {
+    }
+    if (file.type.startsWith('image/')) {
       return <PhotoIcon className="w-8 h-8 text-blue-500" />;
     }
     return <DocumentIcon className="w-8 h-8 text-gray-500" />;
   };
-
-  const openPreviewModal = (file: File, identifier?: string | number, isExisting: boolean = false) => {
-    let previewUrl = null;
-    
-    if (file.type.startsWith('image/')) {
-      if (isExisting) {
-        // For existing attachments, create blob URL
-        previewUrl = URL.createObjectURL(file);
-      } else {
-        // For new files, use the preview from filePreviews
-        const fileWithId = typeof identifier === 'string' ? selectedFiles.find(f => f.id === identifier) : 
-                          typeof identifier === 'number' ? selectedFiles[identifier] : null;
-        previewUrl = fileWithId ? filePreviews[fileWithId.id] : null;
-      }
-    } else if (file.type === 'application/pdf') {
-      // Create a blob URL for PDF preview
-      previewUrl = URL.createObjectURL(file);
-    }
-    
-    setPreviewModal({
-      isOpen: true,
-      file,
-      fileId: typeof identifier === 'string' ? identifier : null,
-      previewUrl,
-      isExisting
-    });
-  };
-
-  const closePreviewModal = () => {
-    // Clean up blob URL if it exists
-    if (previewModal.previewUrl && previewModal.previewUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(previewModal.previewUrl);
-    }
-    
+  const closePreviewModal  = () => {
     setPreviewModal({
       isOpen: false,
       file: null,
       fileId: null,
       previewUrl: null,
-      isExisting: false
+      isExisting: false,
+    });
+  };
+  const openPreviewModal = (
+    file: File,
+    identifier?: string | number,
+    isExisting: boolean = false,
+    existingUrl?: string | null
+  ) => {
+    let previewUrl: string | null = null;
+
+    if (isExisting && existingUrl) {
+      previewUrl = existingUrl.startsWith('http')
+        ? existingUrl
+        : `data:${file.type};base64,${existingUrl}`;
+    } else if (file.type.startsWith('image/')) {
+      const fileWithId =
+        typeof identifier === 'string'
+          ? selectedFiles.find((f) => f.id === identifier)
+          : typeof identifier === 'number'
+          ? selectedFiles[identifier]
+          : null;
+      previewUrl = fileWithId ? filePreviews[fileWithId.id] : null;
+    } else if (file.type === 'application/pdf') {
+      previewUrl = URL.createObjectURL(file);
+    }
+
+    setPreviewModal({
+      isOpen: true,
+      file,
+      fileId: typeof identifier === 'string' ? identifier : null,
+      previewUrl,
+      isExisting,
     });
   };
 
@@ -1082,15 +1082,18 @@ newErrors.driverId = validateField(
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setPreviewModal({
-                                    isOpen: true,
-                                    file: {
-                                      name: attachment.fileName,
-                                      type: attachment.fileType,
-                                      size: attachment.fileSize
-                                    } as File,
-                                    previewUrl: `data:${attachment.fileType};base64,${attachment.base64Data}`
-                                  });
+                                  const fileStub = {
+                                    name: attachment.fileName,
+                                    type: attachment.fileType,
+                                    size: attachment.fileSize || 0
+                                  } as File;
+
+                                  openPreviewModal(
+                                    fileStub,
+                                    attachment._id,
+                                    true,
+                                    attachment.base64Data
+                                  );
                                 }}
                                 className="p-1 text-blue-600 hover:text-blue-800"
                                 title="Preview"
@@ -1337,17 +1340,7 @@ newErrors.driverId = validateField(
                     Remove File
                   </button>
                 )}
-                {previewModal.isExisting && (
-                  <button
-                    onClick={() => {
-                      removeExistingAttachment(previewModal.file!.name);
-                      closePreviewModal();
-                    }}
-                    className="px-3 sm:px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors border border-red-200"
-                  >
-                    Remove Attachment
-                  </button>
-                )}
+               
                 <button
                   onClick={closePreviewModal}
                   className="px-3 sm:px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"

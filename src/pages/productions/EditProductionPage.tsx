@@ -326,7 +326,7 @@ const EditProductionPage: React.FC = () => {
       newErrors.outputDetails = [
         "At least one output detail is required when status is Finished",
       ];
-    } else {
+    } else if(isFinished && form.outputDetails.length > 0) {
       form.outputDetails.forEach((output: OutputDetail, index: number) => {
         if (isFinished) {
           // Mandatory validation for "Finished" status
@@ -362,7 +362,6 @@ const EditProductionPage: React.FC = () => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -376,7 +375,8 @@ const EditProductionPage: React.FC = () => {
 
       const formData: UpdateProductionForm = {
         ...form,
-        attachments: selectedFiles,
+        attachments: selectedFiles || [],
+        outputDetails: form.outputDetails?.filter((output) => output.productQty > 0),
       };
 
       const res = await productionService.updateProduction(id!, formData);
@@ -540,16 +540,18 @@ const EditProductionPage: React.FC = () => {
   const openPreview = (file: File | any, isExisting: boolean = false) => {
     if (!file) return;
 
-    let previewUrl = null;
+    let previewUrl: string | null = null;
 
     if (isExisting) {
-      if (file.fileType?.startsWith("image/") && file.base64Data) {
-        previewUrl = `data:${file.fileType};base64,${file.base64Data}`;
-      }
-    } else {
-      if (file.type?.startsWith("image/")) {
-        previewUrl = filePreviews[file.name] || null;
-      }
+      const base64Data = file?.base64Data;
+      const fileType = file?.fileType || file?.type || '';
+      previewUrl = typeof base64Data === 'string'
+        ? base64Data.startsWith('http')
+          ? base64Data
+          : `data:${fileType};base64,${base64Data}`
+        : null;
+    } else if (file.type?.startsWith('image/')) {
+      previewUrl = filePreviews[file.name] || null;
     }
 
     setPreviewModal({

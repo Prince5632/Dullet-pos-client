@@ -185,9 +185,18 @@ const ViewTransitPage: React.FC = () => {
   };
 
   const openPreviewModal = (attachment: any) => {
-    let previewUrl = null;
+    let previewUrl: string | null = null;
 
-    if (attachment.fileType?.startsWith("image/") && attachment.base64Data) {
+    const isS3Url =
+      typeof attachment.base64Data === "string" &&
+      attachment.base64Data.startsWith("http");
+
+    if (isS3Url) {
+      previewUrl = attachment.base64Data;
+    } else if (
+      attachment.fileType?.startsWith("image/") &&
+      attachment.base64Data
+    ) {
       previewUrl = `data:${attachment.fileType};base64,${attachment.base64Data}`;
     } else if (
       attachment.fileType === "application/pdf" &&
@@ -876,8 +885,8 @@ const ViewTransitPage: React.FC = () => {
 
             {/* Modal Content - Scrollable */}
             <div className="flex-1 overflow-auto p-3 sm:p-4 bg-gray-50">
-              {previewModal.file?.fileType.startsWith("image/") &&
-              previewModal.previewUrl ? (
+              {previewModal.previewUrl &&
+              previewModal.file?.fileType.startsWith("image/") ? (
                 <div className="flex justify-center items-center min-h-full">
                   <img
                     src={previewModal.previewUrl}
@@ -885,8 +894,8 @@ const ViewTransitPage: React.FC = () => {
                     className="max-w-full max-h-full object-contain rounded border shadow-sm bg-white"
                   />
                 </div>
-              ) : previewModal.file?.fileType === "application/pdf" &&
-                previewModal.previewUrl ? (
+              ) : previewModal.previewUrl &&
+                previewModal.file?.fileType === "application/pdf" ? (
                 <div className="h-full flex flex-col">
                   <iframe
                     src={previewModal.previewUrl}

@@ -140,17 +140,16 @@ const ViewProductionPage: React.FC = () => {
   };
 
   const openPreviewModal = (file: any, isExisting: boolean = true) => {
-    let previewUrl = null;
+    let previewUrl: string | null = null;
+    const fileType = file?.fileType || file?.type || '';
+    const base64Data = file?.base64Data;
 
-    if (
-      file.fileType?.startsWith("image/") ||
-      file.type?.startsWith("image/")
-    ) {
-      if (isExisting && file.base64Data) {
-        previewUrl = `data:${file.fileType};base64,${file.base64Data}`;
-      } else if (!isExisting && file instanceof File) {
-        previewUrl = URL.createObjectURL(file);
-      }
+    if (isExisting && typeof base64Data === 'string') {
+      previewUrl = base64Data.startsWith('http')
+        ? base64Data
+        : `data:${fileType};base64,${base64Data}`;
+    } else if (!isExisting && file instanceof File) {
+      previewUrl = URL.createObjectURL(file);
     }
 
     setPreviewModal({
