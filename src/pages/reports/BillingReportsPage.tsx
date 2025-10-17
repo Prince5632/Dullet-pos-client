@@ -8,14 +8,16 @@ import {
   ArrowDownTrayIcon,
   FunnelIcon,
   ExclamationTriangleIcon,
-  UserGroupIcon,
   XMarkIcon,
   EyeIcon,
   ArrowPathIcon,
   ExclamationCircleIcon,
+  BuildingOfficeIcon,
 } from '@heroicons/react/24/outline';
 import { getCustomerReports, getInactiveCustomers } from '../../services/reportService';
 import type { CustomerReportResponse, InactiveCustomersResponse } from '../../services/reportService';
+import { godownService } from '../../services/godownService';
+import type { Godown } from '../../types';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Table from '../../components/ui/Table';
 import Badge from '../../components/ui/Badge';
@@ -36,6 +38,9 @@ const BillingReportsPage: React.FC = () => {
   const [syncing, setSyncing] = useState(false);
   const [dateRangeError, setDateRangeError] = useState('');
   const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(null);
+  const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [allCustomerGodowns, setAllCustomerGodowns] = useState<string | number>("");
+  const [godownId, setGodownId] = useState("");
   const initRef = useRef(false);
 
   // Load persisted state on mount and clear other namespaces
@@ -50,6 +55,7 @@ const BillingReportsPage: React.FC = () => {
       showFilters: false,
       activeTab: 'all',
       activeQuickFilter: null,
+      godownId: '',
     });
     setStartDate(persistedFilters.startDate || '');
     setEndDate(persistedFilters.endDate || '');
@@ -59,6 +65,7 @@ const BillingReportsPage: React.FC = () => {
     setShowFilters(!!persistedFilters.showFilters);
     setActiveTab((persistedFilters.activeTab as 'all' | 'inactive') || 'all');
     setActiveQuickFilter(persistedFilters.activeQuickFilter || null);
+    setGodownId(persistedFilters.godownId || '');
     initRef.current = true;
   }, []);
 
@@ -74,8 +81,9 @@ const BillingReportsPage: React.FC = () => {
       showFilters,
       activeTab,
       activeQuickFilter,
+      godownId,
     });
-  }, [startDate, endDate, inactiveDays, sortBy, sortOrder, showFilters, activeTab, activeQuickFilter]);
+  }, [startDate, endDate, inactiveDays, sortBy, sortOrder, showFilters, activeTab, activeQuickFilter, godownId]);
 
   // Quick date filter helper functions
   const getQuickDateRange = (days: number) => {
@@ -154,7 +162,48 @@ const BillingReportsPage: React.FC = () => {
     if (initRef.current) {
       fetchReports();
     }
-  }, [startDate, endDate, sortBy, sortOrder, inactiveDays]);
+  }, [startDate, endDate, sortBy, sortOrder, inactiveDays, godownId]);
+
+  // Fetch godowns
+  const fetchGodowns = async (overrideDates?: {
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    try {
+      // Build filter parameters for godown counts
+      const params: any = {};
+
+      if (activeTab === "inactive") {
+        // For inactive tab, only use inactiveDays parameter (no date filters)
+        params.inactiveDays = inactiveDays;
+      } else {
+        // For all customers tab, use date filters and only count customers with orders
+        const effectiveStartDate =
+          overrideDates?.startDate !== undefined
+            ? overrideDates.startDate
+            : startDate;
+        const effectiveEndDate =
+          overrideDates?.endDate !== undefined ? overrideDates.endDate : endDate;
+
+        if (effectiveStartDate) params.dateFrom = effectiveStartDate;
+        if (effectiveEndDate) params.dateTo = effectiveEndDate;
+        params.onlyWithOrders = 'true'; // Only count customers who have placed orders
+      }
+
+      const resp = await godownService.getGodowns(params);
+      setGodowns(resp.data?.godowns || []);
+      setAllCustomerGodowns(resp.data?.allCustomerCount || 0);
+    } catch (error) {
+      console.error("Error fetching godowns:", error);
+    }
+  };
+
+  // Fetch godowns when date range, active tab, or inactive days changes
+  useEffect(() => {
+    if (initRef.current) {
+      fetchGodowns();
+    }
+  }, [startDate, endDate, activeTab, inactiveDays]);
   const fetchReports = async () => {
     try {
       setLoading(true);
@@ -163,11 +212,12 @@ const BillingReportsPage: React.FC = () => {
         const params: any = { sortBy, sortOrder };
         if (startDate) params.startDate = startDate;
         if (endDate) params.endDate = endDate;
+        if (godownId) params.godownId = godownId;
 
         const data = await getCustomerReports(params);
         setReportData(data);
       } else {
-        const data = await getInactiveCustomers(inactiveDays);
+        const data = await getInactiveCustomers(inactiveDays, godownId);
         setInactiveData(data);
       }
     } catch (error) {
@@ -197,6 +247,7 @@ const BillingReportsPage: React.FC = () => {
   const handleResetFilters = () => {
     setStartDate('');
     setEndDate('');
+    setGodownId('');
     setInactiveDays(7);
     setSortBy('totalSpent');
     setSortOrder('desc');
@@ -605,8 +656,90 @@ const BillingReportsPage: React.FC = () => {
             </div>
           </div>
         )}
+        {/* Godown Selector - Cards */}
+        {godowns.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 p-3 mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <BuildingOfficeIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              <span className="text-sm font-semibold text-gray-700">
+                Customers on godown
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              {/* All Godowns card */}
+              <button
+                type="button"
+                onClick={() => {
+                  setGodownId("");
+                }}
+                className={`text-left rounded-lg border p-3 transition-colors ${
+                  godownId === ""
+                    ? "border-emerald-500 bg-emerald-50"
+                    : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
+                }`}
+                aria-pressed={godownId === ""}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-md bg-emerald-100">
+                    <BuildingOfficeIcon className="h-4 w-4 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm flex items-center gap-2 font-medium text-gray-900">
+                      All Customers
+                      
+                        <span className="text-[10px] text-blue-700 bg-blue-100 rounded px-1.5 py-0.5">{allCustomerGodowns}</span>
+                      
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-gray-500">
+                        View across locations
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </button>
 
-        {/* Quick Date Filters Section */}
+              {godowns.map((g) => (
+                <button
+                  key={g._id}
+                  type="button"
+                  onClick={() => {
+                    setGodownId(g._id);
+                  }}
+                  className={`text-left rounded-lg border p-3 transition-colors ${
+                    godownId === g._id
+                      ? "border-emerald-500 bg-emerald-50"
+                      : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
+                  }`}
+                  aria-pressed={godownId === g._id}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-md bg-blue-100">
+                      <BuildingOfficeIcon className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium flex gap-2 text-gray-900">
+                        {g.name}
+                        <span className="text-[10px] flex justify-center items-center text-gray-700 bg-gray-100 rounded px-1.5 py-0.5">
+                          Customers:
+                          {" " + (g.customerCount || 0)}
+                        </span>
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-gray-500">
+                          {g.location?.city || "Location"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Quick Date Filters Section - Only show for "all" tab */}
+        {activeTab === 'all' && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -663,6 +796,7 @@ const BillingReportsPage: React.FC = () => {
             </button>
           </div>
         </div>
+        )}
 
         {/* Filter Toggle Button */}
         <div className="mb-4">

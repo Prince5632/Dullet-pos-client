@@ -146,10 +146,14 @@ export const getCustomerReports = async (params?: {
 };
 
 // Get Inactive Customers
-export const getInactiveCustomers = async (days: number = 7): Promise<InactiveCustomersResponse> => {
+export const getInactiveCustomers = async (days: number = 7, godownId?: string): Promise<InactiveCustomersResponse> => {
+  const params: any = { days };
+  if (godownId) {
+    params.godownId = godownId;
+  }
   const response = await axiosInstance.get<ApiResponse<InactiveCustomersResponse>>(
     '/api/reports/customers/inactive',
-    { params: { days } }
+    { params }
   );
   return response.data.data;
 };

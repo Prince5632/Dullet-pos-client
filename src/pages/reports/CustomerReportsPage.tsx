@@ -200,30 +200,38 @@ const CustomerReportsPage: React.FC = () => {
     try {
       // Build filter parameters for godown counts
       const params: any = {};
-      const effectiveStartDate =
-        overrideDates?.startDate !== undefined
-          ? overrideDates.startDate
-          : startDate;
-      const effectiveEndDate =
-        overrideDates?.endDate !== undefined ? overrideDates.endDate : endDate;
 
-      if (effectiveStartDate) params.dateFrom = effectiveStartDate;
-      if (effectiveEndDate) params.dateTo = effectiveEndDate;
+      if (activeTab === "inactive") {
+        // For inactive tab, only use inactiveDays parameter (no date filters)
+        params.inactiveDays = inactiveDays;
+      } else {
+        // For all customers tab, use date filters and only count customers with orders
+        const effectiveStartDate =
+          overrideDates?.startDate !== undefined
+            ? overrideDates.startDate
+            : startDate;
+        const effectiveEndDate =
+          overrideDates?.endDate !== undefined ? overrideDates.endDate : endDate;
+
+        if (effectiveStartDate) params.dateFrom = effectiveStartDate;
+        if (effectiveEndDate) params.dateTo = effectiveEndDate;
+        params.onlyWithOrders = 'true'; // Only count customers who have placed orders
+      }
 
       const resp = await godownService.getGodowns(params);
       setGodowns(resp.data?.godowns || []);
-      setAllCustomerGodowns(resp?.data?.allCustomerCount || 0);
+      setAllCustomerGodowns(resp.data?.allCustomerCount || 0);
     } catch (error) {
       console.error("Error fetching godowns:", error);
     }
   };
 
-  // Fetch godowns when date range changes
+  // Fetch godowns when date range, active tab, or inactive days changes
   useEffect(() => {
     if (initRef.current) {
       fetchGodowns();
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate, activeTab, inactiveDays]);
 
   const fetchReports = async () => {
     try {
@@ -238,7 +246,7 @@ const CustomerReportsPage: React.FC = () => {
         const data = await getCustomerReports(params);
         setReportData(data);
       } else {
-        const data = await getInactiveCustomers(inactiveDays);
+        const data = await getInactiveCustomers(inactiveDays, godownId);
         setInactiveData(data);
       }
     } catch (error) {
@@ -831,75 +839,77 @@ const CustomerReportsPage: React.FC = () => {
             </div>
           </div>
         )}
-        {/* Quick Date Filters Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
-              <svg
-                className="w-3 h-3 text-blue-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+        {/* Quick Date Filters Section - Only show for "all" tab */}
+        {activeTab === "all" && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+                <svg
+                  className="w-3 h-3 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-sm font-semibold text-gray-900">
+                Quick Date Filters
+              </h3>
             </div>
-            <h3 className="text-sm font-semibold text-gray-900">
-              Quick Date Filters
-            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <button
+                type="button"
+                onClick={() => handleQuickFilter("days", 0)}
+                className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                  activeQuickFilter === "days-0"
+                    ? "bg-blue-600 text-white border border-blue-600 shadow-md"
+                    : "text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
+                }`}
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickFilter("days", 7)}
+                className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                  activeQuickFilter === "days-7"
+                    ? "bg-blue-600 text-white border border-blue-600 shadow-md"
+                    : "text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
+                }`}
+              >
+                Last 7 Days
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickFilter("days", 15)}
+                className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                  activeQuickFilter === "days-15"
+                    ? "bg-blue-600 text-white border border-blue-600 shadow-md"
+                    : "text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
+                }`}
+              >
+                Last 15 Days
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickFilter("months", 1)}
+                className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                  activeQuickFilter === "months-1"
+                    ? "bg-blue-600 text-white border border-blue-600 shadow-md"
+                    : "text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
+                }`}
+              >
+                Last Month
+              </button>
+            </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <button
-              type="button"
-              onClick={() => handleQuickFilter("days", 0)}
-              className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                activeQuickFilter === "days-0"
-                  ? "bg-blue-600 text-white border border-blue-600 shadow-md"
-                  : "text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
-              }`}
-            >
-              Today
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFilter("days", 7)}
-              className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                activeQuickFilter === "days-7"
-                  ? "bg-blue-600 text-white border border-blue-600 shadow-md"
-                  : "text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
-              }`}
-            >
-              Last 7 Days
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFilter("days", 15)}
-              className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                activeQuickFilter === "days-15"
-                  ? "bg-blue-600 text-white border border-blue-600 shadow-md"
-                  : "text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
-              }`}
-            >
-              Last 15 Days
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFilter("months", 1)}
-              className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                activeQuickFilter === "months-1"
-                  ? "bg-blue-600 text-white border border-blue-600 shadow-md"
-                  : "text-gray-700 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
-              }`}
-            >
-              Last Month
-            </button>
-          </div>
-        </div>
+        )}
 
         {/* Filter Toggle Button */}
         <div className="mb-4">

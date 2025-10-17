@@ -14,6 +14,7 @@ export interface CustomerListParams {
   dateTo?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  godownId?: string;
 }
 
 class CustomerService {

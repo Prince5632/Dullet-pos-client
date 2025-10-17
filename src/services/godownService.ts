@@ -21,7 +21,7 @@ class GodownService {
     hasImage?: string;
     address?: string;
     roleId?: string;
-  } = {}): Promise<ApiResponse<{ godowns: Godown[] }>> {
+  } = {}): Promise<ApiResponse<{ godowns: Godown[]; allCustomerCount: number }>> {
     const queryParams = new URLSearchParams();
     
     Object.entries(params).forEach(([key, value]) => {
@@ -34,7 +34,7 @@ class GodownService {
       ? `${API_CONFIG.ENDPOINTS.GODOWNS}?${queryParams.toString()}`
       : API_CONFIG.ENDPOINTS.GODOWNS;
 
-    const response = await apiService.get<{ godowns: Godown[] }>(url);
+    const response = await apiService.get<{ godowns: Godown[]; allCustomerCount: number }>(url);
     if (response.data) {
       return response;
     }
@@ -42,38 +42,11 @@ class GodownService {
     return {
       success: response.success,
       message: response.message,
-      data: { godowns: [] }
+      data: { godowns: [], allCustomerCount: 0 }
     };
   }
 
-  // Get godowns with customer counts for customer reports
-  async getGodownsForCustomerReports(params: {
-    dateFrom?: string;
-    dateTo?: string;
-  } = {}): Promise<ApiResponse<Godown[]>> {
-    const queryParams = new URLSearchParams();
-    
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        queryParams.append(key, String(value));
-      }
-    });
 
-    const url = queryParams.toString() 
-      ? `/api/reports/customers/godowns?${queryParams.toString()}`
-      : '/api/reports/customers/godowns';
-
-    const response = await apiService.get<Godown[]>(url);
-    if (response.data) {
-      return response;
-    }
-
-    return {
-      success: response.success,
-      message: response.message,
-      data: []
-    };
-  }
 
   // Get godown by ID
   async getGodownById(id: string): Promise<Godown> {

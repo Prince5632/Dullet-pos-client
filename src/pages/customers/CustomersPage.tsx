@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { customerService } from '../../services/customerService';
-import type { Customer, TableColumn } from '../../types';
+import { godownService } from '../../services/godownService';
+import type { Customer, TableColumn, Godown } from '../../types';
 import { MagnifyingGlassIcon, PlusIcon, FunnelIcon, XMarkIcon, BuildingOfficeIcon, TrashIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import Table from '../../components/ui/Table';
 import Pagination from '../../components/ui/Pagination';
@@ -25,6 +26,7 @@ const CustomersPage: React.FC = () => {
     dateFrom?: string;
     dateTo?: string;
     showFilters: boolean;
+    godownId?: string;
   };
 
   const {
@@ -44,6 +46,7 @@ const CustomersPage: React.FC = () => {
       dateFrom: '',
       dateTo: '',
       showFilters: false,
+      godownId: '',
     },
     defaultPagination: { page: 1, limit: 10 },
     defaultSort: { sortBy: 'businessName', sortOrder: 'asc' },
@@ -63,6 +66,8 @@ const CustomersPage: React.FC = () => {
   const setDateFrom = (v: string) => setFilters({ dateFrom: v });
   const dateTo = filters.dateTo || '';
   const setDateTo = (v: string) => setFilters({ dateTo: v });
+  const godownId = filters.godownId || '';
+  const setGodownId = (v: string) => setFilters({ godownId: v });
   const page = pagination.page;
   const setPage = (p: number) => setPagination({ page: p });
   const limit = pagination.limit;
@@ -82,6 +87,8 @@ const CustomersPage: React.FC = () => {
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [allCustomerGodowns, setAllCustomerGodowns] = useState<string | number>("");
 
   // Check if current user is super admin
   const isSuperAdmin = hasRole('Super Admin');
@@ -99,6 +106,7 @@ const CustomersPage: React.FC = () => {
         city: city,
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
+        godownId: godownId || undefined,
         sortBy: 'businessName',
         sortOrder: 'asc',
       });
@@ -124,17 +132,37 @@ const CustomersPage: React.FC = () => {
     }
   };
 
+  // Fetch godowns
+  const fetchGodowns = async () => {
+    try {
+      const params: any = {};
+      if (dateFrom) params.dateFrom = dateFrom;
+      if (dateTo) params.dateTo = dateTo;
+
+      const resp = await godownService.getGodowns(params);
+      setGodowns(resp.data?.godowns || []);
+      setAllCustomerGodowns(resp.data?.allCustomerCount || 0);
+    } catch (error) {
+      console.error("Error fetching godowns:", error);
+    }
+  };
+
   // Clear all filters function
   const clearFilters = () => {
     // Clear persisted filters and reset pagination to defaults
-    setFilters({ search: '', type: '', stateFilter: '', city: '', status: '', dateFrom: '', dateTo: '', showFilters: false });
+    setFilters({ search: '', type: '', stateFilter: '', city: '', status: '', dateFrom: '', dateTo: '', showFilters: false, godownId: '' });
     setPagination({ page: 1 });
   };
 
   useEffect(() => {
     const t = setTimeout(loadCustomers, 100);
     return () => clearTimeout(t);
-  }, [page, limit, search, type, status, stateFilter, city, dateFrom, dateTo]);
+  }, [page, limit, search, type, status, stateFilter, city, dateFrom, dateTo, godownId]);
+
+  // Fetch godowns when date range changes
+  useEffect(() => {
+    fetchGodowns();
+  }, [dateFrom, dateTo]);
 
   // Reset to page 1 when filters change
   const didMountRef = useRef(false);
@@ -146,7 +174,7 @@ const CustomersPage: React.FC = () => {
     if (page !== 1) {
       setPage(1);
     }
-  }, [search, type, status, stateFilter, city, dateFrom, dateTo]);
+  }, [search, type, status, stateFilter, city, dateFrom, dateTo, godownId]);
 
   // Client-side date validation feedback
   const [dateError, setDateError] = useState<string>('');
@@ -365,7 +393,72 @@ const CustomersPage: React.FC = () => {
               )}
             </div>
 
-            <div className="flex items-center justify-between">
+            {/* Godown Selector */}
+            {godowns.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <BuildingOfficeIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                  <span className="text-xs font-semibold text-gray-700">
+                    Filter by Godown
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                  {/* All Godowns button */}
+                  <button
+                    type="button"
+                    onClick={() => setGodownId("")}
+                    className={`text-left rounded-lg border p-2 transition-colors ${
+                      godownId === ""
+                        ? "border-emerald-500 bg-emerald-50"
+                        : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-md bg-emerald-100">
+                        <BuildingOfficeIcon className="h-3.5 w-3.5 text-emerald-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-900 truncate">
+                          All Godowns
+                        </p>
+                        <p className="text-[10px] text-gray-500">
+                          {allCustomerGodowns} customers
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+
+                  {godowns.map((g) => (
+                    <button
+                      key={g._id}
+                      type="button"
+                      onClick={() => setGodownId(g._id)}
+                      className={`text-left rounded-lg border p-2 transition-colors ${
+                        godownId === g._id
+                          ? "border-emerald-500 bg-emerald-50"
+                          : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-md bg-blue-100">
+                          <BuildingOfficeIcon className="h-3.5 w-3.5 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-gray-900 truncate">
+                            {g.name}
+                          </p>
+                          <p className="text-[10px] text-gray-500">
+                            {g.customerCount || 0} customers
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between mt-3">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowFilters(!showFilters)}
@@ -376,7 +469,7 @@ const CustomersPage: React.FC = () => {
                   <FunnelIcon className="h-3.5 w-3.5" />
                   Filters
                 </button>
-                {(search || type || stateFilter || city || status || dateFrom || dateTo) && (
+                {(search || type || stateFilter || city || status || dateFrom || dateTo || godownId) && (
                   <button
                     onClick={clearFilters}
                     className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
