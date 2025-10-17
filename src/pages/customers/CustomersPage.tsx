@@ -402,7 +402,7 @@ const CustomersPage: React.FC = () => {
                     Filter by Godown
                   </span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-4 gap-2">
                   {/* All Godowns button */}
                   <button
                     type="button"
