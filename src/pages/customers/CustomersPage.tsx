@@ -136,8 +136,14 @@ const CustomersPage: React.FC = () => {
   const fetchGodowns = async () => {
     try {
       const params: any = {};
-      if (dateFrom) params.dateFrom = dateFrom;
-      if (dateTo) params.dateTo = dateTo;
+      // Pass customer filters to godown API for accurate customer counts
+      if (search) params.customerSearch = search;
+      if (type) params.customerType = type;
+      if (status) params.customerIsActive = status;
+      if (stateFilter) params.customerState = stateFilter;
+      if (city) params.customerCity = city;
+      if (dateFrom) params.customerDateFrom = dateFrom;
+      if (dateTo) params.customerDateTo = dateTo;
 
       const resp = await godownService.getGodowns(params);
       setGodowns(resp.data?.godowns || []);
@@ -159,10 +165,10 @@ const CustomersPage: React.FC = () => {
     return () => clearTimeout(t);
   }, [page, limit, search, type, status, stateFilter, city, dateFrom, dateTo, godownId]);
 
-  // Fetch godowns when date range changes
+  // Fetch godowns when any customer filter changes
   useEffect(() => {
     fetchGodowns();
-  }, [dateFrom, dateTo]);
+  }, [search, type, status, stateFilter, city, dateFrom, dateTo]);
 
   // Reset to page 1 when filters change
   const didMountRef = useRef(false);
