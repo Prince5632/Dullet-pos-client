@@ -16,7 +16,7 @@ import {
   ArrowPathIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
-import { getSalesExecutiveReports } from "../../services/reportService";
+import { getSalesExecutiveReports, exportSalesExecutiveReportsToExcel } from "../../services/reportService";
 import { godownService } from "../../services/godownService";
 import type { SalesExecutiveReportResponse } from "../../services/reportService";
 import { persistenceService, PERSIST_NS, clearOtherNamespaces } from "../../services/persistenceService";
@@ -346,94 +346,29 @@ const SalesExecutiveReportsPage: React.FC = () => {
     fetchGodowns({ startDate: "", endDate: "" });
   };
 
-  const exportToCSV = () => {
+  const exportToExcel = async () => {
     if (!reportData?.reports) return;
 
-    let headers: string[];
-    let rows: any[][];
+    try {
+      // Build the same params used for fetching reports
+      const params: any = {
+        sortBy,
+        sortOrder,
+        type: reportType === "orders" ? "order" : "visit",
+      };
 
-    if (reportType === "orders") {
-      headers = [
-        "Employee ID",
-        "Name",
-        "Department",
-        "Position",
-        "Role",
-        "Total Orders",
-        "Total Revenue",
-        "Total Paid",
-        "Outstanding",
-        "Avg Order Value",
-        "Unique Customers",
-        "Conversion Rate",
-        "Pending",
-        "Approved",
-        "Delivered",
-        "Completed",
-      ];
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+      if (department) params.department = department;
+      if (godownId) params.godownId = godownId;
+      if (selectedRoles.length > 0) params.roleIds = selectedRoles;
 
-      rows = reportData.reports.map((report) => [
-        report.employeeId,
-        report.executiveName,
-        report.department,
-        report.position,
-        report.roleName,
-        report.totalOrders,
-        report.totalRevenue,
-        report.totalPaidAmount,
-        report.totalOutstanding,
-        report.avgOrderValue,
-        report.uniqueCustomersCount,
-        `${report.conversionRate}%`,
-        report.pendingOrders,
-        report.approvedOrders,
-        report.deliveredOrders,
-        report.completedOrders,
-      ]);
-    } else {
-      headers = [
-        "Employee ID",
-        "Name",
-        "Department",
-        "Position",
-        "Role",
-        "Total Visits",
-        "Unique Locations",
-        // "Conversion Rate",
-        // "Pending",
-        // "Approved",
-        // "Delivered",
-        // "Completed",
-      ];
-
-      rows = reportData.reports.map((report) => [
-        report.employeeId,
-        report.executiveName,
-        report.department,
-        report.position,
-        report.roleName,
-        report.totalOrders,
-        report.uniqueCustomersCount,
-        // `${report.conversionRate}%`,
-        // report.pendingOrders,
-        // report.approvedOrders,
-        // report.deliveredOrders,
-        // report.completedOrders,
-      ]);
+      // Call backend Excel export API
+      await exportSalesExecutiveReportsToExcel(params);
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+      alert("Failed to export data to Excel. Please try again.");
     }
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) => row.join(",")),
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `sales-executive-${reportType}-reports-${
-      new Date().toISOString().split("T")[0]
-    }.csv`;
-    link.click();
   };
 
   if (loading) {
@@ -588,7 +523,7 @@ const SalesExecutiveReportsPage: React.FC = () => {
                 /> Sync
               </button>
               <button
-                onClick={exportToCSV}
+                onClick={exportToExcel}
                 className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <ArrowDownTrayIcon className="h-4 w-4 sm:mr-2" />

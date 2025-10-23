@@ -221,3 +221,53 @@ export const getGodownSalesReports = async (params?: {
   return response.data.data;
 };
 
+// Export Sales Executive Reports to Excel
+export const exportSalesExecutiveReportsToExcel = async (params?: {
+  startDate?: string;
+  endDate?: string;
+  userId?: string;
+  sortBy?: string;
+  sortOrder?: string;
+  department?: string;
+  godownId?: string;
+  type?: string;
+  roleIds?: string[];
+}): Promise<void> => {
+  const response = await axiosInstance.get(
+    '/api/reports/sales-executives/export/excel',
+    { 
+      params,
+      responseType: 'blob' // Important for file download
+    }
+  );
+  
+  // Create a blob from the response
+  const blob = new Blob([response.data], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+  
+  // Create download link
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  
+  // Extract filename from Content-Disposition header or use default
+  const contentDisposition = response.headers['content-disposition'];
+  let filename = `sales-executive-${params?.type === 'visit' ? 'visits' : 'orders'}-reports-${new Date().toISOString().split('T')[0]}.xlsx`;
+  
+  if (contentDisposition) {
+    const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+    if (filenameMatch && filenameMatch[1]) {
+      filename = filenameMatch[1];
+    }
+  }
+  
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  
+  // Cleanup
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
+
